@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { z } from "zod";
 import {
   Account,
@@ -9,6 +8,10 @@ import {
   User,
   type FinancialSnapshot,
 } from "@finvantage/contracts";
+// A static import, not a file read, so the fixture survives bundling for serverless deploys.
+import planner from "../fixtures/planner.json" with { type: "json" };
+
+const FIXTURES: Record<string, unknown> = { planner };
 
 export const IncomeProfile = z.object({
   monthlyIncomeCents: Cents,
@@ -34,8 +37,10 @@ export const DEMO_USER_ID = "user_demo";
 
 /** Editing the fixture changes cards and projections with no code change (PRD section 6). */
 export function loadDemoProfileFixture(name = "planner"): DemoProfile {
-  const url = new URL(`../fixtures/${name}.json`, import.meta.url);
-  return DemoProfile.parse(JSON.parse(readFileSync(url, "utf8")));
+  const fixture = FIXTURES[name];
+  if (fixture === undefined) throw new Error(`Unknown demo profile fixture: ${name}`);
+  // structuredClone so callers can never mutate the shared imported object.
+  return DemoProfile.parse(structuredClone(fixture));
 }
 
 function nextPayday(asOf: string, dayOfMonth: number): string {

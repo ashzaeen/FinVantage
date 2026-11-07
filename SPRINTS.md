@@ -1,0 +1,95 @@
+# Sprints: Platform workstream
+
+Platform work (CI/CD, hosting, auth, data) in evenly sized slices of about 1 to 2 hours each. Each sprint has a checklist and a notes section. Other workstreams can add their own section below.
+
+**Stack (decided 2026-11-07):**
+- Vercel hosts the web app and the API. The API does the math, the simulator, and the Gemini calls.
+- SpacetimeDB (Maincloud) holds relational data, handles auth (SpacetimeAuth), and pushes live updates. The dashboard subscribes through the TypeScript SDK, as the Spacetime team recommended.
+- MongoDB Atlas holds documents.
+- Tiger Data and Vultr are no longer used. See `docs/DECISIONS.md`.
+
+**Done means:** `npm run check` passes locally and in CI, and the sprint's "Done when" item is checked against the real deployment.
+
+**Out of scope:** production bank connections, real user financial data, and anything that moves money (PRD section 11).
+
+---
+
+## Sprint 1: CI on every PR and push
+
+- [x] `.github/workflows/ci.yml`: runs `npm ci`, `npm run check`, and `npm run build` on pull requests and on pushes to `main`
+- [x] Upload the built extension (`apps/extension/dist`) as a downloadable artifact
+- [x] `.nvmrc` pins Node 22
+- [ ] Done when: a PR shows a green check, and a deliberately broken type turns it red
+
+Notes:
+- `next build` doesn't need the API: every page is rendered on request, so CI runs without one.
+
+## Sprint 2: Web and API live on Vercel (memory backend)
+
+- [x] Add a Vercel entry for the Hono API in `apps/api`, keeping `src/server.ts` for local dev
+- [x] Load the fixture with a static JSON import in `packages/data/src/profile.ts`, so it survives bundling
+- [x] `WEB_ORIGIN` accepts a comma-separated list (production plus preview URLs)
+- [ ] Two Vercel projects, with root directories `apps/web` and `apps/api`. Pushes to `main` deploy production, and each PR gets a preview
+- [ ] Set env vars in Vercel: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_DEMO_TOKEN`, `WEB_ORIGIN`, `DEMO_API_TOKEN`
+- [x] Extension: the build adds the API origin to `host_permissions`. CI builds against the `EXTENSION_API_URL` repository variable
+- [ ] Done when: `/health` returns 200 publicly, and the deployed dashboard loads data from the deployed API
+
+Notes:
+- Went straight to an esbuild bundle in Vercel's Build Output format (`apps/api/scripts/build-vercel.mjs`), so Vercel never has to compile the workspace's raw `.ts` packages. The bundle was tested locally: health, accounts, Copilot, and CORS all work.
+- The Vercel project setup steps are in `infra/README.md`.
+- Live updates (SSE) are unreliable on Vercel until Sprint 5. They work locally.
+
+## Sprint 3: Auth with SpacetimeAuth
+
+- [ ] Create a SpacetimeAuth project, with redirect URLs for Vercel and `localhost:3000`
+- [ ] Web: sign-in and callback (authorization code with PKCE). `apps/web/src/lib/api.ts` sends the token as `Authorization: Bearer`
+- [ ] API: the auth middleware in `apps/api/src/app.ts` verifies the JWT against SpacetimeAuth's keys (JWKS) and maps `sub` to `userId`
+- [ ] The first sign-in loads the demo profile for that user
+- [ ] The demo token stays as a fallback for the extension and for tests
+- [ ] Done when: sign-in works on the deployed site, a bad token gets a 401, and the API tests pass
+
+Notes:
+
+## Sprint 4: Spacetime module and publish pipeline
+
+- [ ] `apps/spacetime/`: a TypeScript module with tables for `user`, `user_identity`, `income_profile`, `account`, `transaction`, `goal`, and `live_event`
+- [ ] Reducers: `save_user`, `replace_accounts`, `add_transaction`, `create_goal`, `load_demo_profile`, `publish_live_event`. Only the API's identity can write
+- [ ] `.github/workflows/spacetime.yml` publishes to Maincloud on pushes to `main` that touch `apps/spacetime/**`. It never passes `--delete-data`
+- [ ] GitHub secret `SPACETIME_TOKEN`. The first publish is done by hand, to claim the `finvantage` name
+- [ ] Generated TS bindings in `apps/web/src/spacetime/`, and CI fails if they're stale
+- [ ] Done when: `spacetime sql` against Maincloud returns seeded rows
+
+Notes:
+
+## Sprint 5: Live subscriptions with the TS SDK
+
+- [ ] `SpacetimeBus.publish` calls `publish_live_event` over HTTP, fire-and-forget. Production sets `LIVE_TRANSPORT=spacetime`
+- [ ] Each signed-in user sees only their own `live_event` rows
+- [ ] `useLiveEvents` keeps its signature. It subscribes through the `spacetimedb` SDK and validates each payload with `LiveEvent`. When signed out, or locally, it falls back to SSE
+- [ ] Subscriptions only trigger a refetch through `api`. Figures always come from the API
+- [ ] Update `apps/web/AGENTS.md` and `docs/DECISIONS.md` for the new web imports (heads-up to Ashzaeen)
+- [ ] Done when: the demo checkout updates the deployed Copilot feed live in two tabs, and not for a second user
+
+Notes:
+
+## Sprint 6: SpacetimeLedgerStore and live data
+
+- [ ] `packages/data/src/spacetime/`: an HTTP client (SQL and reducer calls) with SATS-JSON decoding, plus `SpacetimeLedgerStore`
+- [ ] Shared store contract tests in `packages/data/src/stores.test.ts`. They always run against the memory store, and against Spacetime when `SPACETIME_TEST_URL` is set
+- [ ] Replace `DATA_BACKEND` with `LEDGER_BACKEND` and `DOCS_BACKEND`, and remove `src/tiger/`
+- [ ] Production sets `LEDGER_BACKEND=spacetime`
+- [ ] The web app subscribes to `account` and `transaction`, and refetches when they change
+- [ ] Done when: the contract tests pass on both backends, and `spacetime call ... add_transaction` updates an open dashboard live
+
+Notes:
+
+## Sprint 7: MongoDB wiring (handoff to the quarterly-agent teammate)
+
+- [ ] `mongodb` driver, a cached client, and `ensureIndexes()` for the five collections
+- [ ] `MongoDocumentStore` methods throw `NotImplementedError`, tagged `STUB(advisory)`
+- [ ] `/health` reports `mongo: "ok" | "unconfigured" | "error"`
+- [ ] Set `MONGODB_URI` in Vercel, and allow `0.0.0.0/0` in Atlas network access
+- [ ] Production keeps `DOCS_BACKEND=memory` until the Mongo contract tests pass
+- [ ] Done when: production `/health` shows `mongo: "ok"`
+
+Notes:

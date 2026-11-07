@@ -1,4 +1,4 @@
-import { copyFileSync, createReadStream, existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,8 +13,16 @@ const MOCK_PORT = 4100;
 const rootEnv = join(root, "../../.env");
 if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
+const apiUrl = process.env.EXTENSION_API_URL ?? "http://localhost:4000";
+
 mkdirSync(dist, { recursive: true });
-copyFileSync(join(root, "manifest.json"), join(dist, "manifest.json"));
+// The service worker may only call hosts listed here, so the API origin it was built for is
+// added automatically. Building against a deployed API then needs no manifest edit.
+const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
+const apiPermission = `${new URL(apiUrl).origin}/*`;
+if (!manifest.host_permissions.includes(apiPermission)) manifest.host_permissions.push(apiPermission);
+writeFileSync(join(dist, "manifest.json"), `${JSON.stringify(manifest, null, 2)}
+`);
 copyFileSync(join(root, "popup.html"), join(dist, "popup.html"));
 
 const options = {
@@ -29,7 +37,7 @@ const options = {
   target: "chrome120",
   logLevel: "info",
   define: {
-    __API_URL__: JSON.stringify(process.env.EXTENSION_API_URL ?? "http://localhost:4000"),
+    __API_URL__: JSON.stringify(apiUrl),
     __WEB_URL__: JSON.stringify(process.env.EXTENSION_WEB_URL ?? "http://localhost:3000"),
     __API_TOKEN__: JSON.stringify(process.env.EXTENSION_API_TOKEN ?? "demo-token"),
   },

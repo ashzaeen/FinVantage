@@ -1,0 +1,35 @@
+name: Smoke test production
+
+# Vercel reports each deployment to GitHub. When a production deploy succeeds, check it responds.
+on: deployment_status
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      startsWith(github.event.deployment.environment, 'Production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Request the deployment
+        env:
+          URL: ${{ github.event.deployment_status.environment_url }}
+          ENVIRONMENT: ${{ github.event.deployment.environment }}
+        run: |
+          # The API project answers /health. The web project renders its Overview at /.
+          if [[ "$ENVIRONMENT" == *api* ]]; then path=/health; else path=/; fi
+          for attempt in 1 2 3 4 5; do
+            code=$(curl -s -o body.txt -w '%{http_code}' --max-time 30 "$URL$path" || echo 000)
+            if [ "$code" = 200 ]; then
+              echo "OK: $URL$path"
+              head -c 300 body.txt
+              exit 0
+            fi
+            echo "Attempt $attempt: HTTP $code from $URL$path"
+            sleep 10
+          done
+          echo "::error::$ENVIRONMENT did not answer 200 at $URL$path"
+          exit 1

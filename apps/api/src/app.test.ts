@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createApiClient, type CopilotContext } from "@finvantage/contracts";
-import { createApp } from "./app";
+import { createApp, originMatcher } from "./app";
 import { createDeps } from "./deps";
 
 /** A real client against the real app, in process. Every call validates against the contracts. */
@@ -131,4 +131,25 @@ test("an unmatched life event sentence returns the supported types", async () =>
   const result = await client.parseLifeEvent({ body: { text: "we adopted a llama" } });
   assert.equal(result.matched, false);
   assert.equal((await client.listLifeEvents()).length, 0);
+});
+
+test("CORS allows listed origins and wildcard previews, and nothing else", async () => {
+  const allow = originMatcher("http://localhost:3000, https://finvantage-web-*.vercel.app");
+  assert.ok(allow("http://localhost:3000"));
+  assert.ok(allow("https://finvantage-web-git-feature-team.vercel.app"));
+  assert.ok(!allow("https://evil.example"));
+  assert.ok(!allow("https://finvantage-web-x.vercel.app.evil.example"));
+  assert.ok(!allow("https://finvantage-web-a.b.vercel.app"), "a wildcard spans one label only");
+
+  const app = createApp(createDeps({}), { WEB_ORIGIN: "https://web.example" });
+  const preflight = (origin: string) =>
+    app.request("/v1/me", {
+      method: "OPTIONS",
+      headers: { origin, "access-control-request-method": "GET" },
+    });
+  assert.equal(
+    (await preflight("https://web.example")).headers.get("access-control-allow-origin"),
+    "https://web.example",
+  );
+  assert.equal((await preflight("https://evil.example")).headers.get("access-control-allow-origin"), null);
 });

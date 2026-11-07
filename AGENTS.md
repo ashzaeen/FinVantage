@@ -22,7 +22,7 @@ The repo is a running skeleton. **Most logic is a stub by design.** A passing te
 | `apps/web` | Next.js dashboard | Port 3000 |
 | `apps/extension` | Manifest V3 extension and demo pages | Port 4100 for demo pages |
 | `docs` | Architecture, recipes, decisions, PRD, workstream briefs | |
-| `infra` | Deployment notes | |
+| `infra` | Deployment notes: Vercel setup, limits | |
 
 Dependency direction is one way. Never add an import that points back up this list:
 
@@ -46,7 +46,7 @@ Run from the repo root.
 | `npm run typecheck` | All workspaces |
 | `npm test` | All workspaces |
 | `npm test -w @finvantage/simulator` | One workspace |
-| `npm run build` | Build the web app and extension |
+| `npm run build` | Build the web app, the API bundle for Vercel, and the extension |
 
 Tests use Node's built-in runner through `tsx`. Test files sit beside the code as `*.test.ts`.
 

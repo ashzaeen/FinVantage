@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Cache the Next.js build
+        uses: actions/cache@v4
+        with:
+          path: apps/web/.next/cache
+          key: nextjs-${{ hashFiles('package-lock.json') }}-${{ hashFiles('apps/web/src/**', 'packages/contracts/src/**') }}
+          restore-keys: nextjs-${{ hashFiles('package-lock.json') }}-
+
+      - name: Typecheck and test
+        run: npm run check
+
+      - name: Build web, API bundle, and extension
+        run: npm run build
+        env:
+          # Repository variables (Settings > Secrets and variables > Actions > Variables).
+          # Unset, the extension artifact targets localhost. These values are public by design.
+          EXTENSION_API_URL: ${{ vars.EXTENSION_API_URL || 'http://localhost:4000' }}
+          EXTENSION_WEB_URL: ${{ vars.EXTENSION_WEB_URL || 'http://localhost:3000' }}
+          EXTENSION_API_TOKEN: ${{ vars.EXTENSION_API_TOKEN || 'demo-token' }}
+
+      - name: Upload built extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: finvantage-extension
+          path: apps/extension/dist
+          if-no-files-found: error
