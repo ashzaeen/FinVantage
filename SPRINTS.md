@@ -29,14 +29,18 @@ Notes:
 - [x] Add a Vercel entry for the Hono API in `apps/api`, keeping `src/server.ts` for local dev
 - [x] Load the fixture with a static JSON import in `packages/data/src/profile.ts`, so it survives bundling
 - [x] `WEB_ORIGIN` accepts a comma-separated list (production plus preview URLs)
-- [ ] Two Vercel projects, with root directories `apps/web` and `apps/api`. Pushes to `main` deploy production, and each PR gets a preview
-- [ ] Set env vars in Vercel: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_DEMO_TOKEN`, `WEB_ORIGIN`, `DEMO_API_TOKEN`
+- [x] `.github/workflows/deploy.yml`: deploys each changed app to Vercel with the CLI on pushes to `main`, then smoke-tests it
+- [ ] Two Vercel projects on the platform owner's account (`finvantage-api`, `finvantage-web`), with their env vars
+- [ ] First deploy of both from the laptop
+- [ ] Ashzaeen adds the `VERCEL_TOKEN` repository secret
 - [x] Extension: the build adds the API origin to `host_permissions`. CI builds against the `EXTENSION_API_URL` repository variable
 - [ ] Done when: `/health` returns 200 publicly, and the deployed dashboard loads data from the deployed API
 
 Notes:
 - Went straight to an esbuild bundle in Vercel's Build Output format (`apps/api/scripts/build-vercel.mjs`), so Vercel never has to compile the workspace's raw `.ts` packages. The bundle was tested locally: health, accounts, Copilot, and CORS all work.
 - The Vercel project setup steps are in `infra/README.md`.
+- The repo owner is Ashzaeen, and the platform owner is a write collaborator who can't install the Vercel GitHub app. So deploys go through Actions plus the CLI, with one secret.
+- CI is manual-only. It failed on Linux in the build step, and the logs weren't visible without signing in. Deprioritized for the hackathon.
 - Live updates (SSE) are unreliable on Vercel until Sprint 5. They work locally.
 
 ## Sprint 3: Auth with SpacetimeAuth
@@ -54,9 +58,9 @@ Notes:
 
 - [ ] `apps/spacetime/`: a TypeScript module with tables for `user`, `user_identity`, `income_profile`, `account`, `transaction`, `goal`, and `live_event`
 - [ ] Reducers: `save_user`, `replace_accounts`, `add_transaction`, `create_goal`, `load_demo_profile`, `publish_live_event`. Only the API's identity can write
-- [ ] `.github/workflows/spacetime.yml` publishes to Maincloud on pushes to `main` that touch `apps/spacetime/**`. It never passes `--delete-data`
-- [ ] GitHub secret `SPACETIME_TOKEN`. The first publish is done by hand, to claim the `finvantage` name
-- [ ] Generated TS bindings in `apps/web/src/spacetime/`, and CI fails if they're stale
+- [ ] Publish from the platform owner's laptop: `spacetime publish finvantage --server maincloud -p apps/spacetime`. Never use `--delete-data` without warning the team
+- [ ] Put the API's Spacetime token into Vercel without displaying it: `spacetime login show --token | npx vercel env add SPACETIME_TOKEN production`
+- [ ] Generated TS bindings committed in `apps/web/src/spacetime/`
 - [ ] Done when: `spacetime sql` against Maincloud returns seeded rows
 
 Notes:

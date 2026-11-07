@@ -2,12 +2,11 @@
 
 | Piece | Where | Deploys |
 | --- | --- | --- |
-| Web app | Vercel project, root directory `apps/web` | On every push to `main`. A preview for each PR |
-| API | Vercel project, root directory `apps/api` | Same as the web app |
-| Relational data, auth, live updates | SpacetimeDB Maincloud | Planned. See `SPRINTS.md`, Sprints 3 to 6 |
+| Web app | Vercel project `finvantage-web` (platform owner's account), root directory `apps/web` | `.github/workflows/deploy.yml`, on pushes to `main` that touch it |
+| API | Vercel project `finvantage-api` (same account), root directory `apps/api` | Same workflow |
+| Relational data, auth, live updates | SpacetimeDB Maincloud, database `finvantage` | Published from the platform owner's laptop with `spacetime publish`. Planned, see `SPRINTS.md` |
 | Documents | MongoDB Atlas | Planned. See `SPRINTS.md`, Sprint 7 |
-| CI | GitHub Actions, `.github/workflows/ci.yml` | Typecheck, test, and build on every PR and push |
-| Smoke test | GitHub Actions, `.github/workflows/smoke.yml` | After each successful production deploy, checks the API's `/health` and the web app's `/` |
+| CI | `.github/workflows/ci.yml` | Manual only (Actions tab > CI > Run workflow) |
 | LLM | Gemini API | Server-side key only |
 
 Tiger Data and Vultr are no longer used. See `docs/DECISIONS.md`.
@@ -18,64 +17,53 @@ Tiger Data and Vultr are no longer used. See `docs/DECISIONS.md`.
 
 To check a bundle locally: run `npm run build -w @finvantage/api`, then serve the default export of `apps/api/.vercel/output/functions/index.func/index.mjs` with `node:http`'s `createServer`.
 
-## Skipped builds
+## How deploys work
 
-Each project's `vercel.json` has an `ignoreCommand`, so Vercel skips a build when a commit doesn't touch that app:
+The repo belongs to Ashzaeen, but the Vercel projects belong to the platform owner, so the Vercel GitHub app isn't used. Instead, `.github/workflows/deploy.yml` deploys on each push to `main`:
 
-- The web project rebuilds on changes to `apps/web`, `packages/contracts`, or the root `package.json`, lockfile, and `tsconfig.base.json`.
-- The API project rebuilds on changes to `apps/api`, any of `packages/`, or those same root files.
+1. Each app (`api`, `web`) deploys only if its paths changed.
+2. The workflow links the project by name (`vercel link --project finvantage-api`), then runs `vercel deploy --prod` from the repo root.
+3. Vercel uploads the repo (minus `.vercelignore`) and builds remotely on Linux, using the project's Root Directory. Build logs are in the Vercel dashboard.
+4. A smoke step checks `/health` (API) or `/` (web), and fails the job if there's no 200.
 
-Docs-only and extension-only commits deploy nothing. A skipped build shows as **Canceled** in Vercel, and that is expected.
+You can also run it by hand: Actions tab > Deploy > Run workflow.
 
 ## First-time setup
 
-Do this once. After that, every push deploys by itself.
+### 1. Platform owner: create the projects (once)
 
-### 1. API project
+From the repo root, with the Vercel CLI (`npx vercel@65.2.0 ...`):
 
-1. On vercel.com, choose **Add New > Project** and import `ashzaeen/FinVantage`.
-2. Set **Root Directory** to `apps/api`. Leave **Framework Preset** as **Other**, because `apps/api/vercel.json` sets the build.
-3. Name it `finvantage-api`.
-4. Add these environment variables, for Production and Preview:
+1. `npx vercel@65.2.0 login`
+2. Create and configure each project in the Vercel dashboard (**Add New > Project**, skip the Git import), or with `vercel link`:
+   - `finvantage-api`: Root Directory `apps/api`, Framework **Other**. Env vars for Production and Preview:
+     - `WEB_ORIGIN` = `https://finvantage-web.vercel.app,https://finvantage-web-*.vercel.app`
+     - `DEMO_API_TOKEN` = `demo-token`
+   - `finvantage-web`: Root Directory `apps/web`, Framework **Next.js**. Env vars:
+     - `NEXT_PUBLIC_API_URL` = `https://finvantage-api.vercel.app`
+     - `NEXT_PUBLIC_DEMO_TOKEN` = `demo-token`
+3. First deploy, from the repo root: `npx vercel@65.2.0 link --yes --project finvantage-api`, then `npx vercel@65.2.0 deploy --prod`. Repeat for `finvantage-web`.
+4. Create a token at vercel.com/account/tokens and send it privately to the repo owner.
 
-   | Name | Value |
-   | --- | --- |
-   | `WEB_ORIGIN` | `https://finvantage-web.vercel.app,https://finvantage-web-*.vercel.app` |
-   | `DEMO_API_TOKEN` | `demo-token` |
+If Vercel assigns different domains, update the env vars above and the `smoke` URLs in `deploy.yml`.
 
-5. Deploy, then open `https://finvantage-api.vercel.app/health`. It should show `{"ok":true,...}`.
+### 2. Repo owner: add the secret (once, about 2 minutes)
 
-### 2. Web project
+On GitHub, go to **Settings > Secrets and variables > Actions > New repository secret**. Set Name to `VERCEL_TOKEN` and Value to the platform owner's token. Until this exists, the Deploy workflow skips with a notice instead of failing.
 
-1. Import the same repository again, with **Root Directory** `apps/web`. Vercel detects Next.js.
-2. Name it `finvantage-web`.
-3. Add these environment variables:
+### 3. Extension against the deployed API
 
-   | Name | Value |
-   | --- | --- |
-   | `NEXT_PUBLIC_API_URL` | `https://finvantage-api.vercel.app` |
-   | `NEXT_PUBLIC_DEMO_TOKEN` | `demo-token` |
+```bash
+EXTENSION_API_URL=https://finvantage-api.vercel.app EXTENSION_WEB_URL=https://finvantage-web.vercel.app npm run build -w @finvantage/extension
+```
 
-4. Deploy, then open the site. The Overview page should show the demo profile.
+The build adds the API origin to `host_permissions` automatically. Load `apps/extension/dist` unpacked.
 
-If Vercel gives either project a different domain, use the real domains in `WEB_ORIGIN` and `NEXT_PUBLIC_API_URL`. A `*` in `WEB_ORIGIN` matches one subdomain label, which covers preview URLs.
+### If a deploy fails
 
-### 3. Extension built against the deployed API
-
-In GitHub, go to **Settings > Secrets and variables > Actions > Variables** and add these repository variables:
-
-| Name | Value |
-| --- | --- |
-| `EXTENSION_API_URL` | `https://finvantage-api.vercel.app` |
-| `EXTENSION_WEB_URL` | `https://finvantage-web.vercel.app` |
-
-Each CI run then uploads a `finvantage-extension` artifact built against production. The build adds the API origin to `host_permissions` automatically. Download it, unzip it, and load it unpacked in `chrome://extensions`.
-
-### If a deploy doesn't happen or fails
-
-- **The first deploy shows "Canceled by Ignored Build Step":** the newest commit didn't touch that app. Open the deployment and choose **Redeploy**.
-- **API install fails, or workspace packages are missing:** set the API project's **Install Command** to `cd ../.. && npm ci`.
-- **API module or bundling errors:** run `npm run build -w @finvantage/api` locally. It is the same build.
+- Open the failed deployment in the Vercel dashboard and read its **Build Logs**.
+- **The API can't find workspace packages:** set the API project's Install Command to `cd ../.. && npm ci`.
+- **API bundling errors:** `npm run build -w @finvantage/api` locally runs the same build.
 
 ## Known limits on Vercel
 
