@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "FinVantage Copilot",
+  "version": "0.0.1",
+  "description": "Shows the impact of a big purchase on your finances before you commit. Suggestions only.",
+  "permissions": ["storage"],
+  "host_permissions": ["http://localhost:4000/*"],
+  "action": { "default_popup": "popup.html", "default_title": "FinVantage Copilot" },
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:4100/*",
+        "https://www.zillow.com/*",
+        "https://www.apartments.com/*",
+        "https://www.bestbuy.com/*",
+        "https://www.amazon.com/*",
+        "https://www.apple.com/*",
+        "https://www.carmax.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

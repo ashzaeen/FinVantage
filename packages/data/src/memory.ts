@@ -1,0 +1,158 @@
+import { randomUUID } from "node:crypto";
+import type {
+  CopilotAction,
+  CopilotEvent,
+  Goal,
+  LifeEvent,
+  NewGoal,
+  NewTransaction,
+  QuarterlyReport,
+  Recommendation,
+  SimulationRun,
+  Transaction,
+  User,
+  Account,
+} from "@finvantage/contracts";
+import { loadDemoProfileFixture, type IncomeProfile } from "./profile";
+import type { DocumentStore, LedgerStore } from "./stores";
+
+/** Default store: the demo profile in memory, reset on restart. No database needed. */
+export class MemoryLedgerStore implements LedgerStore {
+  private users = new Map<string, User>();
+  private incomes = new Map<string, IncomeProfile>();
+  private accounts: Account[] = [];
+  private transactions: Transaction[] = [];
+  private goals: Goal[] = [];
+
+  constructor() {
+    this.seed();
+  }
+
+  private seed() {
+    const profile = loadDemoProfileFixture();
+    this.users.set(profile.user.id, profile.user);
+    this.incomes.set(profile.user.id, profile.income);
+    this.accounts = profile.accounts;
+    this.transactions = profile.transactions;
+    this.goals = profile.goals;
+  }
+
+  async getUser(userId: string) {
+    return this.users.get(userId) ?? null;
+  }
+
+  async saveUser(user: User) {
+    this.users.set(user.id, user);
+    return user;
+  }
+
+  async getIncomeProfile(userId: string) {
+    return this.incomes.get(userId) ?? null;
+  }
+
+  async listAccounts(userId: string) {
+    return this.accounts.filter((a) => a.userId === userId);
+  }
+
+  async replaceAccounts(userId: string, accounts: Account[]) {
+    this.accounts = [...this.accounts.filter((a) => a.userId !== userId), ...accounts];
+  }
+
+  async listTransactions(userId: string, limit: number) {
+    const ids = new Set((await this.listAccounts(userId)).map((a) => a.id));
+    return this.transactions
+      .filter((t) => ids.has(t.accountId))
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, limit);
+  }
+
+  async addTransaction(transaction: NewTransaction) {
+    const saved: Transaction = {
+      ...transaction,
+      id: randomUUID(),
+      category: null,
+      isRecurring: false,
+    };
+    this.transactions.push(saved);
+    return saved;
+  }
+
+  async listGoals(userId: string) {
+    return this.goals
+      .filter((g) => g.userId === userId)
+      .sort((a, b) => a.priorityRank - b.priorityRank);
+  }
+
+  async createGoal(userId: string, goal: NewGoal) {
+    const saved: Goal = { ...goal, id: randomUUID(), userId };
+    this.goals.push(saved);
+    return saved;
+  }
+
+  async loadDemoProfile() {
+    this.seed();
+  }
+}
+
+export class MemoryDocumentStore implements DocumentStore {
+  private lifeEvents: LifeEvent[] = [];
+  private runs: SimulationRun[] = [];
+  private copilotEvents: CopilotEvent[] = [];
+  private recommendations: Recommendation[] = [];
+  private reports: QuarterlyReport[] = [];
+
+  async listLifeEvents(userId: string) {
+    return this.lifeEvents.filter((e) => e.userId === userId);
+  }
+
+  async saveLifeEvent(event: LifeEvent) {
+    this.lifeEvents.push(event);
+    return event;
+  }
+
+  async saveSimulationRun(run: SimulationRun) {
+    this.runs.unshift(run);
+    return run;
+  }
+
+  async getSimulationRun(userId: string, id: string) {
+    return this.runs.find((r) => r.userId === userId && r.id === id) ?? null;
+  }
+
+  async listSimulationRuns(userId: string) {
+    return this.runs.filter((r) => r.userId === userId);
+  }
+
+  async saveCopilotEvent(event: CopilotEvent) {
+    this.copilotEvents.unshift(event);
+    return event;
+  }
+
+  async getCopilotEvent(userId: string, id: string) {
+    return this.copilotEvents.find((e) => e.userId === userId && e.id === id) ?? null;
+  }
+
+  async setCopilotAction(userId: string, id: string, action: CopilotAction) {
+    const event = await this.getCopilotEvent(userId, id);
+    if (event) event.userAction = action;
+    return event;
+  }
+
+  async listCopilotEvents(userId: string) {
+    return this.copilotEvents.filter((e) => e.userId === userId);
+  }
+
+  async saveRecommendation(recommendation: Recommendation) {
+    this.recommendations.unshift(recommendation);
+    return recommendation;
+  }
+
+  async saveReport(report: QuarterlyReport) {
+    this.reports.unshift(report);
+    return report;
+  }
+
+  async listReports(userId: string) {
+    return this.reports.filter((r) => r.userId === userId);
+  }
+}

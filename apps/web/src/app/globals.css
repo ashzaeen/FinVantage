@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/* Placeholder tokens. Design owns these. Components use the names, never raw colors. */
+:root {
+  --surface: #fbfaf7;
+  --surface-raised: #ffffff;
+  --border: #e4e1d8;
+  --ink: #1d1d1b;
+  --ink-muted: #66645d;
+  --accent: #2563a8;
+  --fan-outer: #cfe0f2;
+  --fan-inner: #9dbfe3;
+  --fan-line: #1f5a9c;
+  --good: #2c7a4b;
+  --critical: #b3392f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #161614;
+    --surface-raised: #1f1f1c;
+    --border: #35342f;
+    --ink: #f1efe9;
+    --ink-muted: #a5a299;
+    --accent: #7fb0e6;
+    --fan-outer: #24405f;
+    --fan-inner: #33608f;
+    --fan-line: #9cc6f2;
+    --good: #6cc48f;
+    --critical: #ef8e84;
+  }
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-line: var(--border);
+  --color-ink: var(--ink);
+  --color-muted: var(--ink-muted);
+  --color-accent: var(--accent);
+  --color-good: var(--good);
+  --color-critical: var(--critical);
+}
+
+body {
+  background: var(--surface);
+  color: var(--ink);
+}

@@ -1,0 +1,45 @@
+{
+  "user": {
+    "id": "user_demo",
+    "displayName": "Jordan Rivera",
+    "preferences": { "bufferTargetCents": 250000 },
+    "extensionSettings": { "enabled": true, "snoozedSites": [] }
+  },
+  "income": {
+    "monthlyIncomeCents": 620000,
+    "monthlyFixedCostsCents": 260000,
+    "monthlyDebtPaymentsCents": 98000,
+    "monthlySpendingCents": 430000,
+    "monthlySavingsCents": 120000,
+    "paydayDayOfMonth": 15
+  },
+  "accounts": [
+    { "id": "acc_checking", "userId": "user_demo", "type": "checking", "loanKind": null, "name": "Everyday Checking", "institution": "Demo Bank", "balanceCents": 340000, "annualRate": null, "minimumPaymentCents": null, "promoRateEndsOn": null },
+    { "id": "acc_savings", "userId": "user_demo", "type": "savings", "loanKind": null, "name": "High-Yield Savings", "institution": "Demo Bank", "balanceCents": 1850000, "annualRate": 0.04, "minimumPaymentCents": null, "promoRateEndsOn": null },
+    { "id": "acc_cd", "userId": "user_demo", "type": "cd", "loanKind": null, "name": "12-Month CD", "institution": "Demo Bank", "balanceCents": 500000, "annualRate": 0.045, "minimumPaymentCents": null, "promoRateEndsOn": null },
+    { "id": "acc_ira", "userId": "user_demo", "type": "ira", "loanKind": null, "name": "Roth IRA", "institution": "Demo Brokerage", "balanceCents": 2240000, "annualRate": null, "minimumPaymentCents": null, "promoRateEndsOn": null },
+    { "id": "acc_auto", "userId": "user_demo", "type": "loan", "loanKind": "auto", "name": "Auto Loan", "institution": "Demo Bank", "balanceCents": 1120000, "annualRate": 0.059, "minimumPaymentCents": 34000, "promoRateEndsOn": null },
+    { "id": "acc_personal", "userId": "user_demo", "type": "loan", "loanKind": "personal", "name": "Personal Loan", "institution": "Demo Bank", "balanceCents": 310000, "annualRate": 0.099, "minimumPaymentCents": 14000, "promoRateEndsOn": null },
+    { "id": "acc_card", "userId": "user_demo", "type": "credit_card", "loanKind": null, "name": "Cash Rewards Card", "institution": "Demo Bank", "balanceCents": 86000, "annualRate": 0.2299, "minimumPaymentCents": 3500, "promoRateEndsOn": null },
+    { "id": "acc_promo", "userId": "user_demo", "type": "credit_card", "loanKind": null, "name": "0% Promo Card", "institution": "Demo Bank", "balanceCents": 0, "annualRate": 0, "minimumPaymentCents": 0, "promoRateEndsOn": "2027-09-30" },
+    { "id": "acc_mortgage", "userId": "user_demo", "type": "mortgage", "loanKind": null, "name": "Condo Mortgage", "institution": "Demo Bank", "balanceCents": 21500000, "annualRate": 0.0625, "minimumPaymentCents": 46500, "promoRateEndsOn": null }
+  ],
+  "goals": [
+    { "id": "goal_emergency", "userId": "user_demo", "name": "Emergency fund", "targetCents": 1800000, "currentCents": 1200000, "targetDate": "2027-12-01", "priorityRank": 1, "flexibility": "non_negotiable", "linkedAccountId": "acc_savings" },
+    { "id": "goal_house", "userId": "user_demo", "name": "House down payment", "targetCents": 6000000, "currentCents": 650000, "targetDate": "2030-06-01", "priorityRank": 2, "flexibility": "flexible", "linkedAccountId": "acc_savings" },
+    { "id": "goal_car", "userId": "user_demo", "name": "Next car", "targetCents": 1200000, "currentCents": 0, "targetDate": "2029-01-01", "priorityRank": 3, "flexibility": "flexible", "linkedAccountId": null }
+  ],
+  "transactions": [
+    { "id": "txn_01", "accountId": "acc_checking", "date": "2026-10-15", "amountCents": 310000, "merchant": "Acme Payroll", "category": "income", "isRecurring": true },
+    { "id": "txn_02", "accountId": "acc_checking", "date": "2026-10-31", "amountCents": 310000, "merchant": "Acme Payroll", "category": "income", "isRecurring": true },
+    { "id": "txn_03", "accountId": "acc_checking", "date": "2026-11-01", "amountCents": -46500, "merchant": "Demo Mortgage Servicing", "category": "housing", "isRecurring": true },
+    { "id": "txn_04", "accountId": "acc_checking", "date": "2026-11-02", "amountCents": -34000, "merchant": "Demo Auto Finance", "category": "debt", "isRecurring": true },
+    { "id": "txn_05", "accountId": "acc_card", "date": "2026-11-02", "amountCents": -1599, "merchant": "StreamFlix", "category": "subscriptions", "isRecurring": true },
+    { "id": "txn_06", "accountId": "acc_card", "date": "2026-11-03", "amountCents": -8742, "merchant": "Green Grocer", "category": "groceries", "isRecurring": false },
+    { "id": "txn_07", "accountId": "acc_card", "date": "2026-11-04", "amountCents": -3210, "merchant": "Taqueria Norte", "category": "dining", "isRecurring": false },
+    { "id": "txn_08", "accountId": "acc_checking", "date": "2026-11-05", "amountCents": -12300, "merchant": "City Power", "category": "utilities", "isRecurring": true },
+    { "id": "txn_09", "accountId": "acc_card", "date": "2026-11-05", "amountCents": -4500, "merchant": "Fuel Stop", "category": "transport", "isRecurring": false },
+    { "id": "txn_10", "accountId": "acc_card", "date": "2026-11-06", "amountCents": -999, "merchant": "Tunewave", "category": "subscriptions", "isRecurring": true }
+  ],
+  "lifeEvents": []
+}

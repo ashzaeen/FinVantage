@@ -1,0 +1,15 @@
+export const NAV_ITEMS = [
+  { href: "/", label: "Overview" },
+  { href: "/accounts", label: "Accounts" },
+  { href: "/transactions", label: "Transactions" },
+  { href: "/goals", label: "Goals" },
+  { href: "/simulator", label: "Simulator" },
+  { href: "/life-events", label: "Life events" },
+  { href: "/copilot", label: "Copilot" },
+  { href: "/advisor", label: "Advisor" },
+  { href: "/spending", label: "Spending" },
+  { href: "/portfolio", label: "Portfolio" },
+  { href: "/credit", label: "Credit" },
+  { href: "/reports", label: "Reports" },
+  { href: "/settings", label: "Settings" },
+] as const;
