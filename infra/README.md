@@ -2,8 +2,8 @@
 
 | Piece | Where | Deploys |
 | --- | --- | --- |
-| Web app | Vercel project `finvantage-web` (platform owner's account), root directory `apps/web` | `.github/workflows/deploy.yml`, on pushes to `main` that touch it |
-| API | Vercel project `finvantage-api` (same account), root directory `apps/api` | Same workflow |
+| Web app | Vercel project `finvantage-web` (platform owner's account), root directory `apps/web`. Live at https://finvantage-web-ten.vercel.app | `.github/workflows/deploy.yml`, on pushes to `main` that touch it |
+| API | Vercel project `finvantage-api` (same account), root directory `apps/api`. Live at https://finvantage-api.vercel.app | Same workflow |
 | Relational data, auth, live updates | SpacetimeDB Maincloud, database `finvantage` | Published from the platform owner's laptop with `spacetime publish`. Planned, see `SPRINTS.md` |
 | Documents | MongoDB Atlas | Planned. See `SPRINTS.md`, Sprint 7 |
 | CI | `.github/workflows/ci.yml` | Manual only (Actions tab > CI > Run workflow) |
@@ -37,7 +37,7 @@ From the repo root, with the Vercel CLI (`npx vercel@65.2.0 ...`):
 1. `npx vercel@65.2.0 login`
 2. Create and configure each project in the Vercel dashboard (**Add New > Project**, skip the Git import), or with `vercel link`:
    - `finvantage-api`: Root Directory `apps/api`, Framework **Other**. Env vars for Production and Preview:
-     - `WEB_ORIGIN` = `https://finvantage-web.vercel.app,https://finvantage-web-*.vercel.app`
+     - `WEB_ORIGIN` = `https://finvantage-web-ten.vercel.app,http://localhost:3000`
      - `DEMO_API_TOKEN` = `demo-token`
    - `finvantage-web`: Root Directory `apps/web`, Framework **Next.js**. Env vars:
      - `NEXT_PUBLIC_API_URL` = `https://finvantage-api.vercel.app`
@@ -45,7 +45,11 @@ From the repo root, with the Vercel CLI (`npx vercel@65.2.0 ...`):
 3. First deploy, from the repo root: `npx vercel@65.2.0 link --yes --project finvantage-api`, then `npx vercel@65.2.0 deploy --prod`. Repeat for `finvantage-web`.
 4. Create a token at vercel.com/account/tokens and send it privately to the repo owner.
 
-If Vercel assigns different domains, update the env vars above and the `smoke` URLs in `deploy.yml`.
+Vercel gave the web project `finvantage-web-ten.vercel.app`, because `finvantage-web` was taken. If a domain changes, update the env vars above and the `smoke` URLs in `deploy.yml`.
+
+Only production is deployed. Vercel's preview URLs sit behind Vercel Authentication, so the `*` wildcard in `WEB_ORIGIN` is there if previews are ever needed.
+
+- **The web build reports that TypeScript is missing:** Vercel installs only the web workspace's own dependencies, so anything `next build` needs must be listed in `apps/web/package.json`, not just the root. This already caught `typescript` and `@types/node`.
 
 ### 2. Repo owner: add the secret (once, about 2 minutes)
 
@@ -54,7 +58,7 @@ On GitHub, go to **Settings > Secrets and variables > Actions > New repository s
 ### 3. Extension against the deployed API
 
 ```bash
-EXTENSION_API_URL=https://finvantage-api.vercel.app EXTENSION_WEB_URL=https://finvantage-web.vercel.app npm run build -w @finvantage/extension
+EXTENSION_API_URL=https://finvantage-api.vercel.app EXTENSION_WEB_URL=https://finvantage-web-ten.vercel.app npm run build -w @finvantage/extension
 ```
 
 The build adds the API origin to `host_permissions` automatically. Load `apps/extension/dist` unpacked.

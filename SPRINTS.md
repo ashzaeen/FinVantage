@@ -30,8 +30,8 @@ Notes:
 - [x] Load the fixture with a static JSON import in `packages/data/src/profile.ts`, so it survives bundling
 - [x] `WEB_ORIGIN` accepts a comma-separated list (production plus preview URLs)
 - [x] `.github/workflows/deploy.yml`: deploys each changed app to Vercel with the CLI on pushes to `main`, then smoke-tests it
-- [ ] Two Vercel projects on the platform owner's account (`finvantage-api`, `finvantage-web`), with their env vars
-- [ ] First deploy of both from the laptop
+- [x] Two Vercel projects on the platform owner's account (`finvantage-api`, `finvantage-web`), with their env vars
+- [x] First deploy of both from the laptop: https://finvantage-api.vercel.app and https://finvantage-web-ten.vercel.app
 - [ ] Ashzaeen adds the `VERCEL_TOKEN` repository secret
 - [x] Extension: the build adds the API origin to `host_permissions`. CI builds against the `EXTENSION_API_URL` repository variable
 - [ ] Done when: `/health` returns 200 publicly, and the deployed dashboard loads data from the deployed API
@@ -41,6 +41,7 @@ Notes:
 - The Vercel project setup steps are in `infra/README.md`.
 - The repo owner is Ashzaeen, and the platform owner is a write collaborator who can't install the Vercel GitHub app. So deploys go through Actions plus the CLI, with one secret.
 - CI is manual-only. It failed on Linux in the build step, and the logs weren't visible without signing in. Deprioritized for the hackathon.
+- The first Vercel web build showed the likely cause: `apps/web` didn't declare `typescript` and `@types/node`, so `next build` failed when only the web workspace's deps were installed. Fixed by declaring them.
 - Live updates (SSE) are unreliable on Vercel until Sprint 5. They work locally.
 
 ## Sprint 3: Auth with SpacetimeAuth
