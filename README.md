@@ -33,7 +33,7 @@ Claim a workstream by putting your name in the table, then read its brief.
 
 | Workstream | Tier | Owner | Brief | Code |
 | --- | --- | --- | --- | --- |
-| Dashboard and design | P0 | Frontend lead | [web-dashboard](docs/workstreams/web-dashboard.md) | `apps/web` |
+| Dashboard and design | P0 | Ashzaeen | [web-dashboard](docs/workstreams/web-dashboard.md) | `apps/web` |
 | Life-Event Simulator | P0 | _unclaimed_ | [simulator](docs/workstreams/simulator.md) | `packages/simulator` |
 | Copilot extension | P0 | _unclaimed_ | [extension](docs/workstreams/extension.md) | `apps/extension` |
 | Copilot backend | P0 | _unclaimed_ | [copilot-backend](docs/workstreams/copilot-backend.md) | `packages/math-core`, `packages/llm` |

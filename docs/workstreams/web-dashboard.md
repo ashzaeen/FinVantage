@@ -1,6 +1,6 @@
 # Dashboard and design
 
-**Tier:** P0. **Code:** `apps/web`. **Guide:** `apps/web/AGENTS.md`. **PRD:** sections 1, 4, 5, 11.
+**Owner:** Ashzaeen. **Tier:** P0. **Code:** `apps/web`. **Guide:** `apps/web/AGENTS.md`. **PRD:** sections 1, 4, 5, 11.
 
 ## Scope
 
