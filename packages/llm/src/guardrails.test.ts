@@ -142,7 +142,7 @@ test("how far under the cushion is a math figure, so a model never has to subtra
   const noSplit = { ...metrics, liquidBufferAfterCents: 190_100, splitPlan: null };
   assert.equal((await generateCopilotCard(underBy, context, noSplit)).source, "llm");
   // Any other subtraction is still rejected.
-  const wrong: LlmClient = { ...underBy, generate: async () => (await underBy.generate()).replace("$599 under", "$600 under") };
+  const wrong: LlmClient = { ...underBy, generate: async (request) => (await underBy.generate(request)).replace("$599 under", "$600 under") };
   assert.equal((await generateCopilotCard(wrong, context, noSplit)).source, "template");
 });
 
