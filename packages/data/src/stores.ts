@@ -82,6 +82,10 @@ export interface DocumentStore {
   setCopilotAction(userId: string, id: string, action: CopilotAction): Promise<CopilotEvent | null>;
   /** Newest first. */
   listCopilotEvents(userId: string, range?: TimeRange): Promise<CopilotEvent[]>;
+  /** False when the user has no such event. */
+  deleteCopilotEvent(userId: string, id: string): Promise<boolean>;
+  /** Removes all of the user's Copilot events; returns how many. */
+  clearCopilotEvents(userId: string): Promise<number>;
   saveRecommendation(recommendation: Recommendation): Promise<Recommendation>;
   /** Newest first. */
   listRecommendations(userId: string, range?: TimeRange): Promise<Recommendation[]>;

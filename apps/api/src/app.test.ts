@@ -519,3 +519,18 @@ test("the spending breakdown lists this month's spending at each transaction's m
   assert.equal(at("transfers"), undefined);
   assert.deepEqual(rows.map((r) => r.spentCents), [...rows.map((r) => r.spentCents)].sort((a, b) => b - a));
 });
+
+test("Copilot events can be deleted one at a time or cleared, only the user's own", async () => {
+  const { client } = setup();
+  const first = await client.evaluateCopilot({ body: rental });
+  const second = await client.evaluateCopilot({ body: { ...rental, priceCents: 150_000 } });
+  assert.ok(first.status === "ok" && second.status === "ok");
+  if (first.status !== "ok" || second.status !== "ok") return;
+
+  assert.deepEqual(await client.deleteCopilotEvent({ params: { id: first.eventId } }), { deleted: true });
+  assert.deepEqual((await client.listCopilotEvents()).map((e) => e.id), [second.eventId]);
+  await assert.rejects(client.deleteCopilotEvent({ params: { id: first.eventId } }), /No such Copilot event/);
+
+  assert.deepEqual(await client.clearCopilotEvents(), { deleted: 1 });
+  assert.deepEqual(await client.listCopilotEvents(), []);
+});

@@ -290,6 +290,18 @@ export class MemoryDocumentStore implements DocumentStore {
     return this.copilotEvents.filter((e) => e.userId === userId && inRange(e.createdAt, range));
   }
 
+  async deleteCopilotEvent(userId: string, id: string) {
+    const before = this.copilotEvents.length;
+    this.copilotEvents = this.copilotEvents.filter((e) => !(e.userId === userId && e.id === id));
+    return this.copilotEvents.length < before;
+  }
+
+  async clearCopilotEvents(userId: string) {
+    const before = this.copilotEvents.length;
+    this.copilotEvents = this.copilotEvents.filter((e) => e.userId !== userId);
+    return before - this.copilotEvents.length;
+  }
+
   async saveRecommendation(recommendation: Recommendation) {
     this.recommendations.unshift(recommendation);
     return recommendation;

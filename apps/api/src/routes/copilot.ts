@@ -50,4 +50,15 @@ export function registerCopilotRoutes(app: Hono<AppEnv>, deps: AppDeps) {
   });
 
   mount(app, deps, routes.listCopilotEvents, ({ userId }) => deps.docs.listCopilotEvents(userId));
+
+  mount(app, deps, routes.deleteCopilotEvent, async ({ userId, params }) => {
+    if (!(await deps.docs.deleteCopilotEvent(userId, params.id ?? ""))) {
+      throw new HttpError(404, "not_found", "No such Copilot event.");
+    }
+    return { deleted: true as const };
+  });
+
+  mount(app, deps, routes.clearCopilotEvents, async ({ userId }) => ({
+    deleted: await deps.docs.clearCopilotEvents(userId),
+  }));
 }
