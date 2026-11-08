@@ -51,7 +51,7 @@ const ICONS: Record<string, LucideIcon> = {
   savings_investing: PiggyBank, "savings_investing.savings": PiggyBank, "savings_investing.investments": TrendingUp,
   "savings_investing.crypto": Bitcoin,
   // Not spending
-  income: Wallet, transfers: ArrowLeftRight, "transfers.credit_card_payment": CreditCard,
+  income: Wallet, "income.interest": Landmark, "income.dividends": TrendingUp, transfers: ArrowLeftRight, "transfers.credit_card_payment": CreditCard,
 };
 
 /** The icon for a category id. Walks up through parents, then falls back to a plain tag. */

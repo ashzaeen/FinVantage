@@ -57,3 +57,8 @@ test("a split must add up to 100%", () => {
   assert.ok(SpendingSplit.safeParse({ needs: 0.6, wants: 0.2, savings: 0.2 }).success);
   assert.equal(SpendingSplit.safeParse({ needs: 0.5, wants: 0.3, savings: 0.3 }).success, false);
 });
+
+test("interest and dividends are separate income categories", () => {
+  assert.equal(categorizePlaid({ primary: "INCOME", detailed: "INCOME_INTEREST_EARNED" }).subcategory, "income.interest");
+  assert.equal(categorizePlaid({ primary: "INCOME", detailed: "INCOME_DIVIDENDS" }).subcategory, "income.dividends");
+});

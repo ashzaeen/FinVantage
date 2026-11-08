@@ -519,3 +519,33 @@ test("the spending breakdown lists this month's spending at each transaction's m
   assert.equal(at("transfers"), undefined);
   assert.deepEqual(rows.map((r) => r.spentCents), [...rows.map((r) => r.spentCents)].sort((a, b) => b - a));
 });
+
+test("the income summary totals deposits by month and source, and leaves out transfers", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-10";
+  const [account] = await client.listAccounts();
+  const deposit = (date: string, amountCents: number, merchant: string, category: string) =>
+    client.addTransaction({ body: { accountId: account!.id, date, amountCents, merchant, category } });
+  await deposit("2026-11-03", 300_000, "Acme Payroll", "income");
+  await deposit("2026-10-03", 300_000, "Acme Payroll", "income");
+  await deposit("2026-09-03", 300_000, "Acme Payroll", "income");
+  await deposit("2026-08-03", 300_000, "Acme Payroll", "income");
+  await deposit("2026-11-05", 50_000, "Savings Transfer", "transfers");
+  await client.addTransaction({ body: { accountId: account!.id, date: "2026-11-04", amountCents: 12_000, merchant: "Side Gig", category: "income", subcategory: "income.self_employed" } });
+
+  const income = await client.getIncomeSummary();
+  assert.equal(income.thisMonthCents >= 300_000, true);
+  assert.equal(income.lastMonthCents >= 300_000, true);
+  assert.ok(!income.sources.some((s) => s.merchant === "Savings Transfer"));
+  const acme = income.sources.find((s) => s.merchant === "Acme Payroll")!;
+  assert.ok(acme.deposits >= 4);
+  assert.equal(income.trend.length, 6);
+  assert.equal(income.debtToIncome.ratio, income.debtToIncome.monthlyDebtCents / income.debtToIncome.monthlyIncomeCents);
+  const gig = income.categories.find((c) => c.categoryId === "income.self_employed");
+  assert.equal(gig?.totalCents, 12_000);
+  assert.ok(income.categories.some((c) => c.categoryId === "income.other"), "deposits with no subcategory fall under Other Income");
+  assert.ok(!income.categories.some((c) => c.categoryId === "transfers"));
+  assert.ok(Math.abs(income.categories.reduce((sum, c) => sum + c.share, 0) - 1) < 1e-9);
+  assert.ok(income.recent.every((t) => t.amountCents > 0 && t.category === "income"));
+  assert.ok(income.recent.length <= 10);
+});

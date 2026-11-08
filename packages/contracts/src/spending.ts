@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Transaction } from "./account";
 import { Cents, Id, IsoDate } from "./common";
 
 /** A budget envelope the user set: a monthly limit for one spending category. */
@@ -73,3 +74,47 @@ export const CreditScore = z.object({
   history: z.array(z.object({ date: IsoDate, score: z.number().int() })),
 });
 export type CreditScore = z.infer<typeof CreditScore>;
+
+/** Where income came from, over the last six months. */
+export const IncomeSource = z.object({
+  merchant: z.string(),
+  totalCents: Cents,
+  deposits: z.number().int(),
+  lastDate: IsoDate,
+  /** The bank flagged these deposits as repeating, like a paycheck. */
+  isRecurring: z.boolean(),
+});
+export type IncomeSource = z.infer<typeof IncomeSource>;
+
+/** Income by category this month. Deposits with no subcategory count as Other Income. */
+export const IncomeCategoryRow = z.object({
+  categoryId: z.string(),
+  totalCents: Cents,
+  deposits: z.number().int(),
+  /** Share of this month's income: 0.4 means 40%. */
+  share: z.number(),
+});
+export type IncomeCategoryRow = z.infer<typeof IncomeCategoryRow>;
+
+/** Money in: this month, the recent past, where it comes from, and what is left after spending. */
+export const IncomeSummary = z.object({
+  month: z.string(),
+  /** What the user's profile expects each month. Zero when none is set. */
+  expectedMonthlyCents: Cents,
+  thisMonthCents: Cents,
+  lastMonthCents: Cents,
+  /** The average over the last three full months. */
+  averageMonthlyCents: Cents,
+  yearToDateCents: Cents,
+  /** Share of the last six months' income not spent: 0.2 means 20%. Null with no income. */
+  savingsRate: z.number().nullable(),
+  /** "steady" when full months are within 15% of their average, else "varies". */
+  stability: z.enum(["steady", "varies", "not_enough_data"]),
+  trend: z.array(z.object({ month: z.string(), incomeCents: Cents, spendingCents: Cents })),
+  /** Monthly debt payments against monthly income, both from the profile. Ratio is null with no income. */
+  debtToIncome: z.object({ monthlyDebtCents: Cents, monthlyIncomeCents: Cents, ratio: z.number().nullable() }),
+  categories: z.array(IncomeCategoryRow),
+  sources: z.array(IncomeSource),
+  recent: z.array(Transaction),
+});
+export type IncomeSummary = z.infer<typeof IncomeSummary>;

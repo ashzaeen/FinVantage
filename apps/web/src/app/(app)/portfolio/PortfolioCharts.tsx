@@ -11,7 +11,7 @@ export function PortfolioCharts({ holdings, benchmark }: { holdings: Holding[]; 
   const data = holdings.map((holding) => ({ ...holding, value: holding.valueCents }));
   return <div className="grid gap-5 xl:grid-cols-2">
     <section className="rounded-3xl border border-[#edf0f7] bg-white p-6 shadow-[0_2px_12px_rgba(22,25,44,0.03)]">
-      <h2 className="font-poppins text-base font-bold text-[#16192c]">Portfolio allocation</h2>
+      <h2 className="font-poppins text-base font-bold text-[#16192c]">Investment allocation</h2>
       <p className="mt-1 text-xs text-[#8d94a8]">Share of total portfolio value</p>
       {holdings.length ? <div className="mt-4 grid items-center gap-4 sm:grid-cols-[minmax(200px,0.9fr)_1.1fr]">
         <div className="relative h-56 min-w-0">
@@ -40,7 +40,7 @@ export function PortfolioCharts({ holdings, benchmark }: { holdings: Holding[]; 
       </div> : <p className="py-16 text-center text-sm text-[#8d94a8]">No holdings available.</p>}
     </section>
     <section className="rounded-3xl border border-[#edf0f7] bg-white p-6 shadow-[0_2px_12px_rgba(22,25,44,0.03)] xl:col-span-2">
-      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-poppins text-base font-bold text-[#16192c]">Portfolio performance</h2><p className="mt-1 text-xs text-[#8d94a8]">Indexed comparison over time · starting value = 100</p></div><span className="rounded-full bg-[#fff5e6] px-3 py-1 text-xs font-semibold text-[#9a5b00]">Mock data</span></div>
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-poppins text-base font-bold text-[#16192c]">Investment performance</h2><p className="mt-1 text-xs text-[#8d94a8]">Indexed comparison over time · starting value = 100</p></div><span className="rounded-full bg-[#fff5e6] px-3 py-1 text-xs font-semibold text-[#9a5b00]">Mock data</span></div>
       {benchmark.length ? <div className="mt-5 h-72 min-w-0"><ResponsiveContainer width="100%" height="100%"><LineChart data={benchmark} margin={{ top: 8, right: 18, bottom: 4, left: 0 }}>
         <CartesianGrid stroke="#edf0f7" strokeDasharray="4 4" />
         <XAxis dataKey="date" tickFormatter={(date) => new Date(`${date}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "2-digit" })} tick={{ fill: "#8d94a8", fontSize: 11 }} axisLine={false} tickLine={false} />

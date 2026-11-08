@@ -42,7 +42,7 @@ import {
   SpendingSplit,
   UpdateSpendingCategory,
 } from "./categories";
-import { Budget, BudgetLimit, CreditScore, Portfolio, RecurringCharge, SpendingBreakdownRow, SpendingSummary } from "./spending";
+import { Budget, BudgetLimit, CreditScore, Portfolio, IncomeSummary, RecurringCharge, SpendingBreakdownRow, SpendingSummary } from "./spending";
 import { AuthResponse, ExtensionSettings, LogInRequest, SignUpRequest, User } from "./user";
 
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
@@ -295,6 +295,7 @@ export const routes = {
     path: "/v1/budgets/:category",
     response: z.object({ deleted: z.literal(true) }),
   }),
+  getIncomeSummary: route({ method: "GET", path: "/v1/income/summary", response: IncomeSummary }),
   getSpendingBreakdown: route({
     method: "GET",
     path: "/v1/spending/breakdown",

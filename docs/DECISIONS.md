@@ -168,6 +168,7 @@ Answers to the open questions above. These replace those rows.
 | Users can add subcategories up to three levels (Shopping → Superstores → Walmart) | Planned as step 3 in `docs/workstreams/spending.md` |
 | Merchant rules apply on read to every transaction still at its Plaid category, including bank-synced ones; a transaction the user moved by hand keeps their choice (`withCategoryRules`, wired in `deps.ts`) | Rules used to run only on manual adds and "apply to past", so synced purchases ignored them |
 | A merchant Plaid cannot place, or a manual add with no rule, gets the Unknown category (Wants bucket), not null | Nothing is blank. The Wants bucket is a placeholder call for the owner to confirm. The LLM fallback is still a stub |
+| Income is a deposit in the Income category (`GET /v1/income/summary`); transfers and refunds are not income. The sidebar has an Income page above Spending | Keeps pay separate from money moving between the user's own accounts. Next expected paycheck is not built yet |
 | Old category ids (`dining`, `transport`, `debt`, `subscriptions`, `fees`, `transfer`, `home`, `services`) are read as the new ones through `canonicalCategoryId` | Stored data from before the change keeps working without a migration. Spending totals group by the current id |
 | **Open, for the Spacetime store:** `transaction.subcategory` and `User.preferences.spendingSplit` have no columns yet, so they are not saved in production | Until then, subcategories read as null and the split stays at 50/30/20 there. The memory store keeps both |
 
