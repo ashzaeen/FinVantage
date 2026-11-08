@@ -1,4 +1,5 @@
 import { formatUsd, type RecurringCharge, type SpendingCategory, type Transaction } from "@finvantage/contracts";
+import { CategoryIcon } from "@/components/spending/CategoryIcon";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { api } from "@/lib/api";
@@ -27,10 +28,13 @@ function ChargeList({ charges, label, showCadence }: { charges: RecurringCharge[
     <ul className="space-y-2">
       {charges.map((charge) => (
         <li key={`${charge.accountId}:${charge.merchant}`} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "var(--surface-inset)" }}>
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-medium" style={{ color: "var(--ink)" }}>{charge.merchant}</span>
-            <span className="text-xs" style={{ color: "var(--ink-muted)" }}>
-              {label(charge.category)} · {charge.source === "bank" ? "From Your Bank" : "Estimated"}
+          <span className="flex min-w-0 items-center gap-3">
+            <CategoryIcon id={charge.category} />
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium" style={{ color: "var(--ink)" }}>{charge.merchant}</span>
+              <span className="text-xs" style={{ color: "var(--ink-muted)" }}>
+                {label(charge.category)} · {charge.source === "bank" ? "From Your Bank" : "Estimated"}
+              </span>
             </span>
           </span>
           <span className="shrink-0 text-right">
@@ -58,6 +62,7 @@ function TopExpenses({ expenses, label }: { expenses: Transaction[]; label: (id:
                 <li key={t.id} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "var(--surface-inset)" }}>
                   <span className="flex min-w-0 items-center gap-3">
                     <span className="w-5 shrink-0 text-right text-xs font-semibold tabular-nums" style={{ color: "var(--ink-muted)" }}>{c * 5 + i + 1}</span>
+                    <CategoryIcon id={t.subcategory ?? t.category} />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium" style={{ color: "var(--ink)" }}>{t.merchant}</span>
                       <span className="text-xs" style={{ color: "var(--ink-muted)" }}>{label(t.subcategory ?? t.category)} · {t.date}</span>
@@ -107,7 +112,10 @@ export default async function SpendingPage() {
               const isIncrease = row.changeVsPriorMonthCents > 0;
               return (
                 <li key={row.category} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "var(--surface-inset)" }}>
-                  <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{label(row.category)}</span>
+                  <span className="flex items-center gap-3 text-sm font-medium" style={{ color: "var(--ink)" }}>
+                    <CategoryIcon id={row.category} />
+                    {label(row.category)}
+                  </span>
                   <div className="text-right">
                     <span className="block text-sm font-bold tabular-nums" style={{ color: "var(--ink)" }}>{formatUsd(row.spentCents)}</span>
                     <span className="text-xs" style={{ color: isIncrease ? "var(--critical)" : "var(--good)" }}>

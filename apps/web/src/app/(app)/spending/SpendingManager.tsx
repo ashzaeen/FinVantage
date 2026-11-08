@@ -14,6 +14,7 @@ import {
   type SpendingCategory,
   type Transaction,
 } from "@finvantage/contracts";
+import { CategoryIcon } from "@/components/spending/CategoryIcon";
 import { Card } from "@/components/ui/Card";
 import { api } from "@/lib/api";
 
@@ -178,6 +179,7 @@ export function BudgetsPanel({ budgets, categories }: { budgets: Budget[]; categ
             <li key={b.category}>
               <div className="flex items-center justify-between gap-2 text-sm">
                 <span className="flex items-center gap-2 font-medium" style={{ color: "var(--ink)" }}>
+                  <CategoryIcon id={b.category} />
                   {label(b.category)} <Status status={b.status} />
                 </span>
                 <span className="tabular-nums text-xs" style={{ color: "var(--ink-muted)" }}>
@@ -271,7 +273,8 @@ export function CategoryManager({ categories }: { categories: SpendingCategory[]
           >
             {expanded ? "▾" : "▸"}
           </button>
-          <span className="flex-1 text-sm" style={{ color: c.hidden ? "var(--ink-light)" : "var(--ink)" }}>
+          <span className="flex flex-1 items-center gap-2 text-sm" style={{ color: c.hidden ? "var(--ink-light)" : "var(--ink)" }}>
+            <CategoryIcon id={c.id} size={depth === 1 ? 16 : 14} bare />
             {c.label}
             {c.custom && <span className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>Custom</span>}
             {c.hidden && <span className="ml-2 text-[11px]" style={{ color: "var(--ink-muted)" }}>Hidden</span>}
@@ -392,8 +395,9 @@ export function RulesPanel({ rules, categories }: { rules: CategoryRule[]; categ
         {rules.length === 0 && <li className="text-sm" style={{ color: "var(--ink-muted)" }}>No rules yet.</li>}
         {rules.map((r) => (
           <li key={r.id} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm" style={{ background: "var(--surface-inset)" }}>
-            <span style={{ color: "var(--ink)" }}>
-              Merchant contains <strong>{r.merchantContains}</strong> → {label(r.categoryId)}
+            <span className="flex items-center gap-2" style={{ color: "var(--ink)" }}>
+              <CategoryIcon id={r.categoryId} size={14} bare />
+              <span>Merchant contains <strong>{r.merchantContains}</strong> → {label(r.categoryId)}</span>
             </span>
             <button type="button" disabled={busy} onClick={() => remove(r.id)} className={quietCls} style={{ color: "var(--ink-muted)" }}>Remove</button>
           </li>
