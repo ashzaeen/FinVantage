@@ -121,16 +121,19 @@ export function spareCash(snapshot: FinancialSnapshot, goals: Goal[]): number {
 }
 
 /**
- * When paying `cashOutCents` from checking would leave it under the cushion, how much to move
- * from spare savings first (whole dollars), and from which account: the largest spendable one.
- * Null when checking stays at the cushion or there are no spare savings.
+ * How much to move from spare savings into checking first (whole dollars), and from which account:
+ * the largest spendable one. Only what this payment causes: back up to the cushion when it is what
+ * drops checking below it, or just enough to cover it when checking was already under the cushion
+ * (a $13 purchase shouldn't prompt "move $2,413"). Null when checking covers it or no savings are spare.
  */
 export function transferPlan(
   snapshot: FinancialSnapshot,
   goals: Goal[],
   cashOutCents: number,
 ): CopilotMetrics["transfer"] {
-  const gap = snapshot.bufferTargetCents - (checkingBalance(snapshot) - cashOutCents);
+  const before = checkingBalance(snapshot);
+  const target = before >= snapshot.bufferTargetCents ? snapshot.bufferTargetCents : 0;
+  const gap = target - (before - cashOutCents);
   if (gap <= 0) return null;
   const amountCents = Math.min(Math.ceil(gap / 100) * 100, Math.floor(spareSavings(snapshot, goals) / 100) * 100);
   if (amountCents <= 0) return null;
@@ -419,9 +422,14 @@ export function pickVerdict(
   const hurts = HURTS.includes(metrics.headline.kind);
   switch (context.pageType) {
     case "checkout": {
-      // Moving spare savings in first keeps the cushion, so that alone isn't a reason to warn.
-      const afterTransfer = (metrics.liquidBufferAfterCents ?? 0) + (metrics.transfer?.amountCents ?? 0);
-      const underBuffer = metrics.liquidBufferAfterCents !== null && afterTransfer < metrics.bufferTargetCents;
+      // Judge what this purchase changes. Warn when it drops checking below the cushion (it was at or
+      // above before) or below zero, unless moving spare savings in first covers it.
+      const after = metrics.liquidBufferAfterCents;
+      const afterTransfer = (after ?? 0) + (metrics.transfer?.amountCents ?? 0);
+      const before = (after ?? 0) + context.priceCents;
+      const underBuffer =
+        after !== null &&
+        (afterTransfer < 0 || (before >= metrics.bufferTargetCents && afterTransfer < metrics.bufferTargetCents));
       return hurts || underBuffer ? "caution" : "good";
     }
     case "rental": {

@@ -123,11 +123,16 @@ export function cardFigures(context: CopilotContext, metrics: CopilotMetrics): R
   }
   // The cushion only means something next to what checking would be left at. Without that
   // figure, a model would pair the cushion with rent or a car loan, which the math never said.
-  if (f.checkingAfter || f.checkingShort) f.bufferTarget = formatUsd(metrics.bufferTargetCents);
   if (metrics.transfer) f.transferAmount = formatUsd(metrics.transfer.amountCents);
-  // How far under the cushion, computed here so a model never has to subtract.
+  // The cushion is this payment's business only when checking was at or above it beforehand. When
+  // it was already under, the card leaves the cushion out, so no card (and no model, by the number
+  // check) blames a $13 purchase for a gap it didn't cause.
   const leftCents = metrics.debtPayment?.checkingAfterCents ?? metrics.liquidBufferAfterCents;
-  if (f.checkingAfter && leftCents !== null && leftCents < metrics.bufferTargetCents) {
+  const cashOutCents = metrics.debtPayment?.paidCents ?? (leftCents !== null ? context.priceCents : 0);
+  const cushionApplies = leftCents !== null && leftCents + cashOutCents >= metrics.bufferTargetCents;
+  if ((f.checkingAfter || f.checkingShort) && cushionApplies) f.bufferTarget = formatUsd(metrics.bufferTargetCents);
+  // How far under the cushion, computed here so a model never has to subtract.
+  if (f.checkingAfter && cushionApplies && leftCents !== null && leftCents < metrics.bufferTargetCents) {
     f.underCushionBy = formatUsd(metrics.bufferTargetCents - leftCents);
   }
   const invest = metrics.alternatives.find((a) => a.kind === "invest");
@@ -249,8 +254,9 @@ export function templateCard(context: CopilotContext, metrics: CopilotMetrics): 
   }
 
   if (context.pageType === "checkout") {
+    // Only when the cushion is this purchase's business (checking was at or above it before).
     const underBuffer =
-      metrics.liquidBufferAfterCents !== null && metrics.liquidBufferAfterCents < metrics.bufferTargetCents;
+      !!f.bufferTarget && metrics.liquidBufferAfterCents !== null && metrics.liquidBufferAfterCents < metrics.bufferTargetCents;
     if (metrics.verdict === "good") {
       // Affordable: affirm it, show the cushion holds, and steer away from expensive card debt.
       const top = metrics.alternatives.find((a) => a.kind === "debt");
@@ -261,10 +267,14 @@ export function templateCard(context: CopilotContext, metrics: CopilotMetrics): 
         tradeOff: metrics.transfer
           ? f.checkingShort
             ? `Checking alone is ${f.checkingShort} short, but you have savings you aren't using for a goal.`
-            : `It would leave ${f.checkingAfter} in checking, under your ${f.bufferTarget} safety cushion, but you have spare savings.`
-          : `You'd still have ${f.checkingAfter} in checking, more than your ${f.bufferTarget} safety cushion.`,
+            : `It would leave ${f.checkingAfter} in checking, under your ${f.bufferTarget} safety cushion, but you have savings to top it up.`
+          : !f.bufferTarget || f.underCushionBy
+            ? `You'd still have ${f.checkingAfter} in checking to pay for it.`
+            : `You'd still have ${f.checkingAfter} in checking, more than your ${f.bufferTarget} safety cushion.`,
         smartMove: metrics.transfer
-          ? `Move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking first. That keeps your ${f.bufferTarget} safety cushion.`
+          ? f.bufferTarget
+            ? `Move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking first. That keeps your ${f.bufferTarget} safety cushion.`
+            : `Move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking first, so checking covers it.`
           : cardIsCostly
           ? `Pay from checking, not your ${top.label}. That card charges ${f.topDebtRate} interest if you carry a balance.`
           : "If you planned for it, enjoy it.",
@@ -281,7 +291,9 @@ export function templateCard(context: CopilotContext, metrics: CopilotMetrics): 
     if (goalBeyondFinancing(h)) {
       smartMove = `A cheaper option, or waiting a few months, protects your ${h.goalName!}. Splitting the cost wouldn't.`;
     } else if (metrics.transfer) {
-      smartMove = `Move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking first, so you keep your ${f.bufferTarget} safety cushion.`;
+      smartMove = f.bufferTarget
+        ? `Move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking first, so you keep your ${f.bufferTarget} safety cushion.`
+        : `Move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking first, so checking covers it.`;
     } else if (metrics.splitPlan && f.splitOnCard) {
       smartMove = `Pay ${f.splitFromChecking} now and put ${f.splitOnCard} on your ${metrics.splitPlan.promoCardName} (${f.splitMonthly}/month). You keep your safety cushion and pay no interest.`;
     } else if (underBuffer) {
@@ -327,7 +339,7 @@ function debtCard(
   const beats = f.savingsRate
     ? `more than investing (${f.investRate}) or a savings account (${f.savingsRate}) would earn`
     : `more than investing (${f.investRate}) would earn`;
-  const underBuffer = d.checkingAfterCents < metrics.bufferTargetCents;
+  const underBuffer = !!f.bufferTarget && d.checkingAfterCents < metrics.bufferTargetCents;
 
   if (metrics.verdict === "caution") {
     return {
@@ -342,7 +354,7 @@ function debtCard(
       ...base,
       impact: `Paying only the minimum leaves ${f.debtRemaining} on your ${d.accountName}, still charging ${f.debtRate} interest.`,
       tradeOff: `That costs you about ${f.debtRemainingInterest} a year.`,
-      smartMove: d.canPayInFull
+      smartMove: d.canPayInFull && f.bufferTarget
         ? `Paying the full ${f.debtBalance} saves about ${f.debtFullSaved} a year, and you keep your ${f.bufferTarget} safety cushion.`
         : "Anything above the minimum cuts that interest. Even a little helps.",
     };
@@ -358,7 +370,9 @@ function debtCard(
 
   let smartMove: string;
   if (metrics.transfer) {
-    smartMove = `Move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking first, so you keep your ${f.bufferTarget} safety cushion.`;
+    smartMove = f.bufferTarget
+      ? `Move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking first, so you keep your ${f.bufferTarget} safety cushion.`
+      : `Move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking first, so checking covers it.`;
   } else if (f.checkingShort) {
     smartMove = `Checking would be ${f.checkingShort} short. Pay what you can now and the rest on payday.`;
   } else if (underBuffer) {
@@ -368,12 +382,14 @@ function debtCard(
       h.kind === "gain" && h.goalName && f.oddsAfter && !f.goalSooner
         ? `Then put the ${f.debtFreed} you were paying each month toward your goals. Your ${h.goalName} becomes ${cardStatus(h.statusAfter)}.`
         : `Then put the ${f.debtFreed} you were paying each month toward your goals.`;
-  } else if (f.debtRemaining && d.canPayInFull) {
+  } else if (f.debtRemaining && d.canPayInFull && f.bufferTarget) {
     smartMove = `You can afford the full ${f.debtBalance}. That saves about ${f.debtFullSaved} a year and keeps your ${f.bufferTarget} safety cushion.`;
   } else if (f.debtRemaining) {
     smartMove = `Paying off the other ${f.debtRemaining} next stops the interest for good.`;
   } else {
-    smartMove = `You'd still have ${f.checkingAfter} in checking, more than your ${f.bufferTarget} safety cushion.`;
+    smartMove = f.bufferTarget
+      ? `You'd still have ${f.checkingAfter} in checking, more than your ${f.bufferTarget} safety cushion.`
+      : `You'd still have ${f.checkingAfter} in checking.`;
   }
   return {
     ...base,
@@ -405,6 +421,7 @@ const SYSTEM_PROMPT = [
   "smartMove: one sentence with a concrete next step the reader could take. If a split plan is given, describe it. If none is given, never suggest putting the cost on a card or financing it.",
   "If `figures.checkingShort` is given, the reader doesn't have enough in checking: say they'd be that amount short. Never write a negative dollar amount.",
   "If `transferFrom` is given, the reader has savings no goal is using: the next step is moving `figures.transferAmount` from that account to checking first. Prefer it over any card or financing.",
+  "If the verdict is \"good\", don't dwell on the safety cushion: the purchase itself is fine.",
   "Plain words only, like you'd text a friend. Short sentences. Call `bufferTarget` the reader's \"safety cushion\" (money they keep in checking), and mention it only when `figures.checkingAfter` is given. `checkingAfter` is what would be left in checking; the cushion is the amount they like to keep. Never call one by the other's name. If `figures.underCushionBy` is given, that is how far below the cushion they'd be. Say \"bills\" for fixed costs and \"debt payments\" for debt-to-income. Never use: buffer, liquidity, fixed costs, debt-to-income, allocate, financial health, optimize, leverage.",
   "Copy figures exactly as given, including symbols. Never calculate, round, invent, or alter a number. Do not mention any number that is not in `figures`.",
   "Tone: direct and warm, like a friend who is good with money. Make the goal feel real, but never shame or lecture. Suggest, never instruct.",

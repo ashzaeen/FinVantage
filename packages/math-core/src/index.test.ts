@@ -277,8 +277,8 @@ test("savings no goal uses count as spare; an HSA and goal savings don't", () =>
 
 test("checking can't cover it but spare savings can: move money in first, and it's good", () => {
   const m = computeCopilotMetrics(savingsRich, laptop, [], [emergency]);
-  // $100 available - $1,499 = -$1,399; back to the $2,500 cushion takes $3,899.
-  assert.deepEqual(m.transfer, { fromAccountName: "Plaid Money Market", amountCents: 389_900 });
+  // $100 available - $1,499 = -$1,399. Checking was already under the cushion, so just cover it.
+  assert.deepEqual(m.transfer, { fromAccountName: "Plaid Money Market", amountCents: 139_900 });
   assert.equal(m.splitPlan, null, "savings beat borrowing, even at 0%");
   assert.equal(m.verdict, "good");
   assert.deepEqual(purchaseForSimulator(savingsRich, laptop, [emergency]), { amountCents: 0, monthlyCents: 0 });
@@ -295,6 +295,22 @@ test("a card payment bigger than checking suggests moving spare savings in first
   const payment = { pageType: "debt_payment" as const, itemType: "credit_card_payment" as const, priceCents: 41_000, merchant: "x" };
   const m = computeCopilotMetrics(savingsRich, payment, [], [emergency]);
   assert.equal(m.transfer?.fromAccountName, "Plaid Money Market");
-  assert.equal(m.transfer?.amountCents, 281_000, "$100 - $410 = -$310; back to $2,500 takes $2,810");
+  assert.equal(m.transfer?.amountCents, 31_000, "$100 - $410 = -$310: cover the $310");
+});
+
+test("checking already under the cushion: a small purchase it covers is fine, with no transfer", () => {
+  // The $12.99 extension cord on Amazon, 2026-11-08: $100 in checking, $2,500 cushion.
+  const cord = { ...laptop, priceCents: 1_299 };
+  const m = computeCopilotMetrics(savingsRich, cord, [], [emergency]);
+  assert.equal(m.transfer, null, "not 'move $2,413' for a $13 cord");
+  assert.equal(m.verdict, "good");
+});
+
+test("a purchase that drops checking below the cushion still restores it", () => {
+  const flush = { ...savingsRich, accounts: savingsRich.accounts.map((a) => (a.type === "checking" ? { ...a, availableBalanceCents: 300_000 } : a)) };
+  const m = computeCopilotMetrics(flush, laptop, [], [emergency]);
+  // $3,000 - $1,499 = $1,501, which is $999 under the cushion it was above.
+  assert.deepEqual(m.transfer, { fromAccountName: "Plaid Money Market", amountCents: 99_900 });
+  assert.equal(m.verdict, "good", "the transfer keeps the cushion");
 });
 

@@ -161,6 +161,18 @@ test("short in checking but with spare savings: the card says to move money in f
   assert.ok(wordCount(cardText(card)) <= MAX_CARD_WORDS);
 });
 
+test("checking already under the cushion: cards don't mention the cushion or a blank amount", () => {
+  // $100 in checking against a $2,500 cushion, like Plaid Sandbox's user.
+  const under = { ...metrics, verdict: "good" as const, headline: { ...metrics.headline, kind: "none" as const, goalName: null, statusBefore: null, statusAfter: null }, splitPlan: null };
+  const cord = templateCard({ ...context, priceCents: 1_299 }, { ...under, liquidBufferAfterCents: 8_701, transfer: null });
+  const laptopShort = templateCard(context, { ...under, liquidBufferAfterCents: -139_900, transfer: { fromAccountName: "Plaid Money Market", amountCents: 139_900 } });
+  for (const card of [cord, laptopShort]) {
+    const text = cardText(card) + card.keyFigures.map((k) => `${k.label} ${k.value}`).join(" ");
+    assert.doesNotMatch(text, /undefined|cushion|2,500|2,412/, text);
+  }
+  assert.match(laptopShort.smartMove, /Move \$1,399 from your Plaid Money Market to checking first, so checking covers it/);
+});
+
 test("a purchase bigger than checking says how short, never a negative balance", () => {
   const card = templateCard(pricey, outOfReach);
   assert.match(card.tradeOff, /you'd be \$299 short/);
