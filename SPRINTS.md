@@ -32,7 +32,7 @@ Notes:
 - [x] `.github/workflows/deploy.yml`: deploys each changed app to Vercel with the CLI on pushes to `main`, then smoke-tests it
 - [x] Two Vercel projects on the platform owner's account (`finvantage-api`, `finvantage-web`), with their env vars
 - [x] First deploy of both from the laptop: https://finvantage-api.vercel.app and https://finvantage-web-ten.vercel.app
-- [ ] Ashzaeen adds the `VERCEL_TOKEN` repository secret
+- [x] Ashzaeen adds the `VERCEL_TOKEN` repository secret
 - [x] Extension: the build adds the API origin to `host_permissions`. CI builds against the `EXTENSION_API_URL` repository variable
 - [ ] Done when: `/health` returns 200 publicly, and the deployed dashboard loads data from the deployed API
 
@@ -44,27 +44,55 @@ Notes:
 - The first Vercel web build showed the likely cause: `apps/web` didn't declare `typescript` and `@types/node`, so `next build` failed when only the web workspace's deps were installed. Fixed by declaring them.
 - Live updates (SSE) are unreliable on Vercel until Sprint 5. They work locally.
 
-## Sprint 3: Auth with SpacetimeAuth
+## Sprint 3: Auth (email + password)
 
-- [ ] Create a SpacetimeAuth project, with redirect URLs for Vercel and `localhost:3000`
-- [ ] Web: sign-in and callback (authorization code with PKCE). `apps/web/src/lib/api.ts` sends the token as `Authorization: Bearer`
-- [ ] API: the auth middleware in `apps/api/src/app.ts` verifies the JWT against SpacetimeAuth's keys (JWKS) and maps `sub` to `userId`
-- [ ] The first sign-in loads the demo profile for that user
-- [ ] The demo token stays as a fallback for the extension and for tests
-- [ ] Done when: sign-in works on the deployed site, a bad token gets a 401, and the API tests pass
+- [x] Sign-up and sign-in page at `/login` (email + password). The sidebar card shows who is signed in, with Sign in and Sign out
+- [x] API: `POST /auth/signup` and `POST /auth/login` issue RS256 tokens. The `/v1/*` middleware verifies them and maps `sub` to `userId`
+- [x] Accounts live in Spacetime: a private `credential` table, with passwords hashed by scrypt
+- [x] The first sign-in loads the demo profile for that user
+- [x] The demo token stays as a fallback for signed-out visitors, the extension, and tests
+- [ ] Done when: sign-up and sign-in work on the deployed site, a bad token gets a 401, and the API tests pass
 
 Notes:
+- **SpacetimeAuth was tried first and dropped.** It offers only magic link, anonymous, Steam, and social logins (its hosted login script only calls the magic-link endpoints), and the team wanted email + password. The SpacetimeAuth project in the dashboard is unused.
+- **The API is the token issuer.** Tokens are signed with `AUTH_PRIVATE_JWK` (Vercel only, never committed), with issuer `https://finvantage-api.vercel.app`, audience `finvantage`, and a 7-day lifetime. The public key is published at `/.well-known/jwks.json`, with OpenID discovery at `/.well-known/openid-configuration`, so SpacetimeDB can accept the same tokens for Sprint 5 subscriptions.
+- **Credential store.** `SpacetimeCredentialStore` (`apps/api/src/credentials.ts`) writes through the admin-only `register_credential` reducer and reads with owner SQL. Locally, without `SPACETIME_TOKEN`, a memory store is used instead.
+- **Failure messages.** A wrong password and an unknown email return the same 401 and take about the same time.
+- **Web.** The token goes in the `fv_token` cookie (not httpOnly), so server components read it with `next/headers` and the browser reads `document.cookie`. `api` picks the token per request, so no page changed. An expired token falls back to the demo token.
+- **Each signed-in user gets a copy of the demo profile,** with IDs prefixed `<userId>__` (`demoProfileFor` in `packages/data`). While the ledger is in memory, each Vercel instance makes that copy on the user's first request to it. Sprint 6 moves it into Spacetime.
+- **Not done:** password reset, email verification, and rate limiting on login. All out of scope for the hackathon.
 
 ## Sprint 4: Spacetime module and publish pipeline
 
-- [ ] `apps/spacetime/`: a TypeScript module with tables for `user`, `user_identity`, `income_profile`, `account`, `transaction`, `goal`, and `live_event`
-- [ ] Reducers: `save_user`, `replace_accounts`, `add_transaction`, `create_goal`, `load_demo_profile`, `publish_live_event`. Only the API's identity can write
-- [ ] Publish from the platform owner's laptop: `spacetime publish finvantage --server maincloud -p apps/spacetime`. Never use `--delete-data` without warning the team
-- [ ] Put the API's Spacetime token into Vercel without displaying it: `spacetime login show --token | npx vercel env add SPACETIME_TOKEN production`
-- [ ] Generated TS bindings committed in `apps/web/src/spacetime/`
-- [ ] Done when: `spacetime sql` against Maincloud returns seeded rows
+- [x] `apps/spacetime/`: a TypeScript module with tables `app_user`, `user_identity`, `income_profile`, `account`, `ledger_transaction`, `goal`, `live_event`, and `admin`
+- [x] Reducers: `save_user`, `save_income_profile`, `replace_accounts`, `add_transaction`, `create_goal`, `load_profile`, `publish_live_event`, `link_identity`, `add_admin`. Only admins can write
+- [x] Published from the platform owner's laptop: `npm run publish:maincloud -w @finvantage/spacetime`. Never use `--delete-data` without warning the team
+- [x] `SPACETIME_TOKEN`, `SPACETIME_URL`, and `SPACETIME_MODULE` set on the Vercel API project, without displaying the token
+- [ ] Generated TS bindings committed in `apps/web/src/spacetime/`. Moved to Sprint 5
+- [x] Done when: `spacetime sql` against Maincloud returns seeded rows
 
 Notes:
+- Database `finvantage` on Maincloud. Dashboard: https://spacetimedb.com/finvantage. How-to: `apps/spacetime/README.md`.
+- `user` and `transaction` are SQL keywords, so the tables are `app_user` and `ledger_transaction`.
+- The demo profile loads with `npm run seed:maincloud -w @finvantage/spacetime`, which calls `load_profile` with the fixture. The API's `loadDemoProfile` will call the same reducer in Sprint 6.
+- Checked: an anonymous reducer call gets "Only the API can write", and anonymous SQL can't see the private tables.
+- The HTTP wire format uses snake_case field names. Sprint 6's HTTP client must convert.
+- The bindings wait for Sprint 5. They import `spacetimedb`, which `apps/web` doesn't depend on yet, so committing them now would break the web build. They also need the per-user views that Sprint 5 adds.
+- `spacetime login show --token` prints a sentence, not a bare token. Extract the token before piping it anywhere.
+
+## Sprint 4b: Plaid-shaped schema (done 2026-11-07)
+
+- [x] Plaid's objects as Zod schemas (`packages/data/src/plaid/schema.ts`), and one mapper to the app's types (`map.ts`)
+- [x] The demo fixture's bank data rewritten in Plaid's exact format, mapping back to the same accounts and transactions, value for value
+- [x] `Account` and `Transaction` gain Plaid fields, all optional or defaulted: subtype, mask, available balance, credit limit, due date, pending, detailed category, channel, logo
+- [x] Spacetime tables mirror Plaid (`bank_item`, `bank_account`, `bank_transaction`, `liability`, `recurring_stream`, `security`, `holding`), plus `account_detail`, `budget`, and `balance_snapshot` for the PRD. Reducers follow Plaid's endpoints
+- [x] Republished without losing sign-ins, and seeded
+- [ ] Live Plaid Sandbox (Link, token exchange, sync). Not started
+
+Notes:
+- The full model, and where each PRD feature reads from, is in `docs/DATA-MODEL.md`.
+- The old `account` and `ledger_transaction` tables were emptied by a temporary reducer and then removed, because Spacetime refuses to drop tables with rows. `--delete-data` would have wiped `credential` too.
+- The budgets, net-worth history, recurring, bills, and portfolio routes still use built-in estimates. The data to replace them now exists. Switching needs Sprint 6 and the transactions owner.
 
 ## Sprint 5: Live subscriptions with the TS SDK
 

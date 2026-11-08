@@ -39,6 +39,11 @@ const account = (over: Partial<FinancialSnapshot["accounts"][number]>) => ({
   annualRate: null,
   minimumPaymentCents: null,
   promoRateEndsOn: null,
+  subtype: null,
+  mask: null,
+  availableBalanceCents: null,
+  creditLimitCents: null,
+  nextPaymentDueOn: null,
   ...over,
 });
 

@@ -1,0 +1,16 @@
+{
+  "name": "@finvantage/spacetime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "publish:maincloud": "spacetime publish finvantage --server maincloud -p . --yes=remote,migrate,break-clients",
+    "seed:maincloud": "node --import tsx scripts/seed.ts",
+    "generate": "spacetime generate --lang typescript --out-dir ../web/src/spacetime -p ."
+  },
+  "dependencies": {
+    "@finvantage/data": "*",
+    "spacetimedb": "2.14.*"
+  }
+}

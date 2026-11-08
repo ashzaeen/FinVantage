@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Account, NetWorth, NewTransaction, Transaction } from "./account";
+import { Account, CreateTransaction, NetWorth, NewAccount, NewTransaction, Transaction } from "./account";
 import {
   EmailSchedule,
   EmailScheduleLogEntry,
@@ -33,9 +33,9 @@ import {
   SimulationRunSummary,
 } from "./simulation";
 import { Budget, CreditScore, Portfolio, RecurringCharge, SpendingSummary } from "./spending";
-import { ExtensionSettings, User } from "./user";
+import { AuthResponse, ExtensionSettings, LogInRequest, SignUpRequest, User } from "./user";
 
-type Method = "GET" | "POST" | "PATCH";
+type Method = "GET" | "POST" | "PATCH" | "DELETE";
 
 export interface RouteDef<
   P extends string = string,
@@ -65,6 +65,10 @@ function route<
  * Add or change an endpoint here first.
  */
 export const routes = {
+  // Auth. These two need no token; every /v1 route does.
+  signUp: route({ method: "POST", path: "/auth/signup", body: SignUpRequest, response: AuthResponse }),
+  logIn: route({ method: "POST", path: "/auth/login", body: LogInRequest, response: AuthResponse }),
+
   // Profile
   getMe: route({ method: "GET", path: "/v1/me", response: User }),
   updateExtensionSettings: route({
@@ -81,6 +85,8 @@ export const routes = {
 
   // Accounts and ledger
   listAccounts: route({ method: "GET", path: "/v1/accounts", response: z.array(Account) }),
+  createAccount: route({ method: "POST", path: "/v1/accounts", body: NewAccount, response: Account }),
+  updateAccount: route({ method: "PATCH", path: "/v1/accounts/:id", body: NewAccount, response: Account }),
   getNetWorth: route({ method: "GET", path: "/v1/net-worth", response: NetWorth }),
   listTransactions: route({
     method: "GET",
@@ -91,13 +97,21 @@ export const routes = {
   addTransaction: route({
     method: "POST",
     path: "/v1/transactions",
-    body: NewTransaction,
+    body: CreateTransaction,
+    response: Transaction,
+  }),
+  updateTransaction: route({
+    method: "PATCH",
+    path: "/v1/transactions/:id",
+    body: NewTransaction.extend({ category: z.string().nullable(), isRecurring: z.boolean() }),
     response: Transaction,
   }),
 
   // Goals
   listGoals: route({ method: "GET", path: "/v1/goals", response: z.array(Goal) }),
   createGoal: route({ method: "POST", path: "/v1/goals", body: NewGoal, response: Goal }),
+  updateGoal: route({ method: "PATCH", path: "/v1/goals/:id", body: NewGoal, response: Goal }),
+  deleteGoal: route({ method: "DELETE", path: "/v1/goals/:id", response: z.object({ deleted: z.literal(true) }) }),
 
   // Life events
   listLifeEvents: route({ method: "GET", path: "/v1/life-events", response: z.array(LifeEvent) }),

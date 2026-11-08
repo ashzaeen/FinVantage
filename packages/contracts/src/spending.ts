@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { Cents, Id, IsoDate } from "./common";
 
+/** A budget envelope the user set: a monthly limit for one spending category. */
+export const BudgetLimit = z.object({
+  category: z.string().min(1),
+  monthlyLimitCents: Cents.positive(),
+});
+export type BudgetLimit = z.infer<typeof BudgetLimit>;
+
+/** A category's limit next to what was spent this month. */
 export const Budget = z.object({
   category: z.string(),
   limitCents: Cents,

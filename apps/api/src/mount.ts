@@ -7,7 +7,7 @@ export type AppEnv = { Variables: { userId: string } };
 
 export class HttpError extends Error {
   constructor(
-    readonly status: 400 | 404 | 409 | 500 | 501,
+    readonly status: 400 | 401 | 404 | 409 | 500 | 501,
     readonly code: string,
     message: string,
   ) {
@@ -39,7 +39,7 @@ export function mount<R extends RouteDef<string, z.ZodType, any, any>>(
   route: R,
   handler: (ctx: HandlerContext<R>) => Promise<z.input<R["response"]>>,
 ): void {
-  const method = route.method.toLowerCase() as "get" | "post" | "patch";
+  const method = route.method.toLowerCase() as "get" | "post" | "patch" | "delete";
   app[method](route.path, async (c) => {
     const parse = (schema: z.ZodType | undefined, value: unknown) => {
       if (!schema) return undefined;

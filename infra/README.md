@@ -55,6 +55,8 @@ From the repo root, with the Vercel CLI (`npx vercel@65.2.0 ...`):
      - `WEB_ORIGIN` = `https://finvantage-web-ten.vercel.app,http://localhost:3000`
      - `DEMO_API_TOKEN` = `demo-token`
      - `REPORT_OUTPUT_DIR` = `/tmp/finvantage-reports` (Vercel functions can only write under `/tmp`)
+     - `AUTH_PRIVATE_JWK` = a private RSA JWK that signs sign-in tokens. Generate it once and pipe it straight into `vercel env add`, so it never appears on screen. Changing it signs everyone out
+     - `SPACETIME_TOKEN`, `SPACETIME_URL`, `SPACETIME_MODULE` = the Spacetime admin token and database (see `apps/spacetime/README.md`)
    - `finvantage-web`: Root Directory `apps/web`, Framework **Next.js**. Env vars:
      - `NEXT_PUBLIC_API_URL` = `https://finvantage-api.vercel.app`
      - `NEXT_PUBLIC_DEMO_TOKEN` = `demo-token`

@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { AppShell } from "@/components/layout/AppShell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "uifry | Financial Dashboard",
-  description: "Modern financial analytics and money decision dashboard.",
+  title: { default: "FinVantage", template: "%s | FinVantage" },
+  description: "Know what a purchase does to your goals, before you buy.",
 };
 
+/** Shared by the landing page and the dashboard. The dashboard's sidebar lives in `(app)/layout.tsx`. */
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
@@ -19,9 +19,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
         />
       </head>
-      <body suppressHydrationWarning>
-        <AppShell>{children}</AppShell>
-      </body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

@@ -6,8 +6,13 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
 
 | Path | Holds |
 | --- | --- |
-| `src/app/<route>/page.tsx` | One folder per nav item. Server components that fetch data |
-| `src/app/<route>/*Client.tsx` | Interactive parts, with `"use client"` |
+| `src/app/(marketing)/page.tsx` | The public landing page at `/`, with sign-in in the hero |
+| `src/app/(app)/layout.tsx` | Adds the sidebar to every dashboard page and keeps them dynamic |
+| `src/app/(app)/app/page.tsx` | The dashboard overview, at `/app` |
+| `src/app/(app)/<route>/page.tsx` | One folder per nav item. Server components that fetch data. Route groups do not change URLs |
+| `src/app/(app)/<route>/*Client.tsx` | Interactive parts, with `"use client"` |
+| `src/components/landing` | Landing page pieces: header, the live purchase tryout, Airbnb-style feature cards, footer. Photo sources are in `photos.ts`. Planned feature rows are in `docs/landing-page-plan.md` |
+| `src/app/login/LoginForm.tsx` | Email and password sign-in. The landing hero embeds it with `embedded` |
 | `src/components/layout` | `AppShell`: responsive navigation |
 | `src/components/ui` | Generic pieces: `Card`, `Stat`, `PageHeader`, `MockedBadge` |
 | `src/components/finance` | Domain pieces: `ProbabilityRange`, `GoalCard`, `FanChart` |
@@ -25,7 +30,9 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
 - Put `MockedBadge` beside any mocked value.
 - Use token classes such as `bg-raised` and `text-muted`, not raw colors. Add new tokens to both the light and dark blocks in `globals.css`.
 - Layouts must work down to phone width.
-- Pages stay dynamic because the API client uses `no-store`. They need the API running. `src/app/error.tsx` handles it being down.
+- **Title Case for interface labels.** Headings, page titles, buttons, links, tabs, nav items, badges, form labels and card titles use Title Case: "Try the Demo", "Create Your Account", "Life Events". Keep a, an, the, and, but, or, nor, for, so, yet, as, at, by, in, of, on, to and up lowercase unless they come first or last. Body copy, descriptions, helper text and error messages stay as normal sentences. Brand names keep their own casing (FinVantage, GitHub).
+- Dashboard pages are dynamic through `export const dynamic` in `(app)/layout.tsx`, because `no-store` alone no longer keeps them dynamic under `next build --webpack`. They need the API running, and `(app)/error.tsx` handles it being down. The landing page stays static and loads its preview in the browser.
+- The landing hero embeds `LoginForm`, and "Try the demo" opens `/app` signed out, so the API client sends the demo token. After sign-in, `nextPath()` goes to `?next=` or else `/app`.
 
 ## Working on it
 

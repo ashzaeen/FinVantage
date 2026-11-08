@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { NAV_ITEMS } from "@/lib/nav";
+import { AccountCard } from "./AccountCard";
 
 /* ─── Navigation SVG Icons (Clean, Consistent 20x20 Stroke) ─────────────────── */
 function OverviewIcon({ active }: { active: boolean }) {
@@ -44,22 +45,6 @@ function GoalsIcon() {
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="6" />
       <circle cx="12" cy="12" r="2" />
-    </svg>
-  );
-}
-
-function SimulatorIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 21v-7" />
-      <path d="M4 10V3" />
-      <path d="M12 21v-9" />
-      <path d="M12 8V3" />
-      <path d="M20 21v-5" />
-      <path d="M20 12V3" />
-      <circle cx="4" cy="12" r="2" />
-      <circle cx="12" cy="10" r="2" />
-      <circle cx="20" cy="14" r="2" />
     </svg>
   );
 }
@@ -144,15 +129,6 @@ function SettingsIcon() {
   );
 }
 
-function SecurityIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-
 function HelpIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -163,17 +139,9 @@ function HelpIcon() {
   );
 }
 
-function MoonIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
-  );
-}
-
 function getNavIcon(href: string, active: boolean) {
   switch (href) {
-    case "/":
+    case "/app":
       return <OverviewIcon active={active} />;
     case "/accounts":
       return <AccountsIcon />;
@@ -181,8 +149,6 @@ function getNavIcon(href: string, active: boolean) {
       return <TransactionsIcon />;
     case "/goals":
       return <GoalsIcon />;
-    case "/simulator":
-      return <SimulatorIcon />;
     case "/life-events":
       return <LifeEventsIcon />;
     case "/copilot":
@@ -206,7 +172,6 @@ function getNavIcon(href: string, active: boolean) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [darkMode, setDarkMode] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-[#f8f9fe]">
@@ -224,7 +189,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <div className="flex flex-col flex-1 overflow-y-auto no-scrollbar pr-0.5">
           {/* Logo / Brand Header */}
-          <Link href="/" className="flex items-center gap-3 px-3 mb-6">
+          <Link href="/app" className="flex items-center gap-3 px-3 mb-6">
             <span
               className="flex h-10 w-10 items-center justify-center rounded-2xl shadow-sm shrink-0"
               style={{ background: "rgba(255, 255, 255, 0.22)" }}
@@ -244,10 +209,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </Link>
 
-          {/* All 13 Core Navigation Items Restored */}
+          {/* Dashboard navigation */}
           <nav aria-label="Main Navigation" className="flex flex-col gap-1">
             {NAV_ITEMS.map((item) => {
-              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              const active = item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
@@ -276,69 +241,15 @@ export function AppShell({ children }: { children: ReactNode }) {
               type="button"
               className="flex items-center gap-3 px-3.5 py-2 rounded-2xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all text-left"
             >
-              <SecurityIcon />
-              <span>Security</span>
-            </button>
-            <button
-              type="button"
-              className="flex items-center gap-3 px-3.5 py-2 rounded-2xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all text-left"
-            >
               <HelpIcon />
               <span>Help Centre</span>
             </button>
 
-            {/* Dark Mode Switch */}
-            <div className="flex items-center justify-between px-3.5 py-2 text-white/70">
-              <span className="flex items-center gap-3 text-sm">
-                <MoonIcon />
-                <span>Dark Mode</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setDarkMode(!darkMode)}
-                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer"
-                style={{ backgroundColor: darkMode ? "#ffffff" : "rgba(255, 255, 255, 0.3)" }}
-                aria-label="Toggle dark mode"
-              >
-                <span
-                  className="inline-block h-4 w-4 transform rounded-full bg-[#544af7] transition-transform"
-                  style={{ transform: darkMode ? "translateX(24px)" : "translateX(4px)" }}
-                />
-              </button>
-            </div>
           </div>
         </div>
 
-        {/* User Profile Card at Bottom */}
-        <div
-          className="mt-4 flex items-center justify-between rounded-2xl p-2.5 transition-all cursor-pointer hover:bg-white/15 shrink-0"
-          style={{ background: "rgba(255, 255, 255, 0.12)" }}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 shrink-0 rounded-full border-2 border-white/40 bg-white/20 flex items-center justify-center font-poppins font-bold text-white text-base overflow-hidden">
-              🧑‍💻
-            </div>
-            <div className="min-w-0">
-              <p className="font-poppins truncate text-sm font-semibold text-white leading-tight">
-                Ali Raza
-              </p>
-              <p className="font-roboto truncate text-xs text-white/60">
-                Web Developer
-              </p>
-            </div>
-          </div>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            className="text-white/60 mr-1 shrink-0"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </div>
+        {/* User Profile Card at Bottom: who is signed in, with sign-in and sign-out */}
+        <AccountCard />
       </aside>
 
       {/* ── Mobile Header ─────────────────────────────────────────────── */}
@@ -347,12 +258,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         style={{ height: "64px", backgroundColor: "#544af7", color: "white" }}
       >
         <div className="flex items-center justify-between">
-          <Link href="/" className="font-poppins text-lg font-bold text-white">
+          <Link href="/app" className="font-poppins text-lg font-bold text-white">
             FinVantage
           </Link>
           <nav className="flex gap-1.5 overflow-x-auto max-w-[75vw] py-1 font-roboto no-scrollbar">
             {NAV_ITEMS.map((item) => {
-              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              const active = item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}

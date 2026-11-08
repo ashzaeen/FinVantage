@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { formatUsd, type QuarterlyReport } from "@finvantage/contracts";
 import { ProbabilityRange } from "@/components/finance/ProbabilityRange";
 import { Card } from "@/components/ui/Card";
-import { api, API_TOKEN, API_URL } from "@/lib/api";
+import { api, API_TOKEN, API_URL, currentToken } from "@/lib/api";
 import { QuarterlyReportCharts } from "./QuarterlyReportCharts";
 
 function ReportSection({
@@ -35,6 +35,11 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
   const [showCharts, setShowCharts] = useState(true);
   const [chartsLoading, setChartsLoading] = useState(false);
   const [chartsError, setChartsError] = useState<string | null>(null);
+  // The PDF link is a plain download, so it carries the signed-in user's token in the URL.
+  const [pdfToken, setPdfToken] = useState(API_TOKEN);
+  useEffect(() => {
+    void currentToken().then(setPdfToken);
+  }, []);
   const latest = reports.find((report) => report.id === selectedReportId) ?? reports[0] ?? null;
 
   async function generate(quarter?: QuarterlyReport["quarter"]) {
@@ -106,7 +111,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
           {latest.pdf.status === "ready" && (
             <a
               className="rounded-xl bg-accent px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-              href={`${API_URL}/v1/reports/quarterly/${latest.id}/pdf?token=${encodeURIComponent(API_TOKEN)}`}
+              href={`${API_URL}/v1/reports/quarterly/${latest.id}/pdf?token=${encodeURIComponent(pdfToken)}`}
             >
               Download PDF
             </a>

@@ -1,7 +1,7 @@
 import type { Hono } from "hono";
-import { routes } from "@finvantage/contracts";
+import { routes, type NewTransaction, type Transaction } from "@finvantage/contracts";
 import type { AppDeps } from "../deps";
-import { mount, type AppEnv } from "../mount";
+import { HttpError, mount, type AppEnv } from "../mount";
 
 const monthFromToday = (today: string) => today.slice(0, 7);
 
@@ -12,6 +12,30 @@ function addDays(date: string, days: number) {
   return next.toISOString().slice(0, 10);
 }
 
+async function normalizeToUsd(transaction: NewTransaction & Pick<Transaction, "category" | "isRecurring">): Promise<Omit<Transaction, "id">> {
+  const originalAmountCents = transaction.amountCents;
+  if (transaction.currency === "USD") {
+    return { ...transaction, originalAmountCents, exchangeRateToUsd: 1, exchangeRateDate: transaction.date };
+  }
+  let response: Response;
+  try {
+    response = await fetch(`https://api.frankfurter.dev/v2/rate/${transaction.currency.toLowerCase()}/usd?date=${transaction.date}`);
+  } catch {
+    throw new HttpError(500, "exchange_rate_unavailable", "Could not reach the exchange-rate service. Try again later or choose USD.");
+  }
+  if (!response.ok) throw new HttpError(500, "exchange_rate_unavailable", "Could not load an exchange rate for this transaction date. Try again later or choose USD.");
+  const quote = await response.json() as { rate?: number; date?: string };
+  if (typeof quote.rate !== "number" || !Number.isFinite(quote.rate) || !quote.date) throw new HttpError(500, "exchange_rate_unavailable", "The exchange-rate service returned an invalid rate.");
+  const rate = quote.rate;
+  return {
+    ...transaction,
+    amountCents: Math.round(originalAmountCents * rate),
+    originalAmountCents,
+    exchangeRateToUsd: rate,
+    exchangeRateDate: quote.date,
+  };
+}
+
 export function registerTransactionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
   mount(app, deps, routes.listTransactions, ({ userId, query }) =>
     deps.ledger.listTransactions(userId, query.limit),
@@ -19,9 +43,18 @@ export function registerTransactionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
 
   mount(app, deps, routes.addTransaction, async ({ userId, body }) => {
     // STUB(transactions): run rule-based categorization here, then the LLM fallback.
-    const saved = await deps.ledger.addTransaction(body);
+    const normalized = await normalizeToUsd(body);
+    const saved = await deps.ledger.addTransaction(normalized);
     deps.live.publish(userId, { type: "transaction.added", transactionId: saved.id });
     return saved;
+  });
+
+  mount(app, deps, routes.updateTransaction, async ({ userId, params, body }) => {
+    const normalized = await normalizeToUsd(body);
+    const updated = await deps.ledger.updateTransaction(userId, params.id, normalized);
+    if (!updated) throw new HttpError(404, "not_found", "Transaction or account not found.");
+    deps.live.publish(userId, { type: "transaction.added", transactionId: updated.id });
+    return updated;
   });
 
   const getTransactions = (userId: string) => deps.ledger.listTransactions(userId, 2000);

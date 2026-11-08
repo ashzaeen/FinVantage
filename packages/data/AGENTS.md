@@ -10,15 +10,16 @@ Storage and data sources. Read the root `AGENTS.md` first. Briefs: `docs/workstr
 | `src/tiger/` | Tiger Data stub and `schema.sql` |
 | `src/mongo/` | MongoDB Atlas `DocumentStore` implementation |
 | `src/bank.ts` | Bank providers: synthetic demo data |
+| `src/plaid/` | Plaid's objects (`schema.ts`), the mapper to app types (`map.ts`), and Spacetime rows (`spacetime-rows.ts`). See `docs/DATA-MODEL.md` |
 | `fixtures/planner.json` | The demo profile |
 
 ## What goes where
 
-| Tiger Data (`LedgerStore`) | MongoDB Atlas (`DocumentStore`) |
+| SpacetimeDB (`LedgerStore`) | MongoDB Atlas (`DocumentStore`) |
 | --- | --- |
-| Users, income profile, accounts, transactions, goals | Life events, simulation runs, Copilot events, recommendations, reports |
+| Users, income profile, bank data in Plaid's shape (items, accounts, transactions, liabilities, recurring streams, holdings), goals, budgets, balance snapshots | Life events, simulation runs, Copilot events, recommendations, reports |
 
-Do not add a third store. Spacetime is for live push only.
+Tiger Data is no longer used (`docs/DECISIONS.md`). Do not add a third store. The Spacetime ledger store is Sprint 6; until then the ledger is in memory.
 
 ## Rules
 
@@ -30,4 +31,4 @@ Do not add a third store. Spacetime is for live push only.
 
 ## The demo profile
 
-Editing `fixtures/planner.json` changes cards and projections with no code change, which the PRD requires. It must keep all seven account types and validates against `DemoProfile` at startup. Restart the API after editing. The PRD's "starter" persona has no fixture yet: add `fixtures/starter.json`.
+Editing `fixtures/planner.json` changes cards and projections with no code change, which the PRD requires. Its bank data (`bank`) is in Plaid's exact format, with dollars and Plaid's sign (positive `amount` is money out), and goes through `mapItemSnapshot` like real Plaid data. Terms Plaid doesn't provide go in `accountDetails`. It must keep all seven account types and validates against `DemoProfile` at startup. Restart the API after editing. The PRD's "starter" persona has no fixture yet: add `fixtures/starter.json`.

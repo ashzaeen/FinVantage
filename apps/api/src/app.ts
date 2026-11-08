@@ -5,6 +5,7 @@ import type { AppDeps } from "./deps";
 import { HttpError, type AppEnv } from "./mount";
 import { registerAccountRoutes } from "./routes/accounts";
 import { registerAgentRoutes } from "./routes/agents";
+import { ensureProfile, registerAuthRoutes } from "./routes/auth";
 import { registerBankRoutes } from "./routes/bank";
 import { registerCopilotRoutes } from "./routes/copilot";
 import { registerGoalRoutes } from "./routes/goals";
@@ -39,14 +40,24 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   app.use("*", cors({ origin: (origin) => (allowOrigin(origin) ? origin : null) }));
   app.get("/health", (c) => c.json({ ok: true, llm: deps.llm.provider, live: deps.live.transport }));
 
-  // STUB(platform): one shared demo token maps to the demo user. EventSource cannot set headers,
-  // so the SSE stream also accepts ?token=. Replace with real auth if time allows.
+  // Sign-up, log-in, and the public key. No token needed.
+  registerAuthRoutes(app, deps);
+
+  // Two kinds of token. A FinVantage sign-in token maps to its `sub`. The shared demo token maps
+  // to the demo user, and stays for signed-out visitors, the extension, and tests. EventSource
+  // cannot set headers, so the SSE stream also accepts ?token=.
   app.use("/v1/*", async (c, next) => {
-    const header = c.req.header("authorization")?.replace(/^Bearer /, "");
-    if ((header ?? c.req.query("token")) !== demoToken) {
+    const token = c.req.header("authorization")?.replace(/^Bearer /, "") ?? c.req.query("token");
+    if (token && token === demoToken) {
+      c.set("userId", DEMO_USER_ID);
+      return next();
+    }
+    const user = token ? await deps.auth.verify(token) : null;
+    if (!user) {
       return c.json({ error: { code: "unauthorized", message: "Missing or bad token." } }, 401);
     }
-    c.set("userId", DEMO_USER_ID);
+    await ensureProfile(deps, user);
+    c.set("userId", user.userId);
     await next();
   });
 

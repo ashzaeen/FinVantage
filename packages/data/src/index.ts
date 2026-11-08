@@ -6,6 +6,9 @@ import { createTigerLedgerStore } from "./tiger";
 export * from "./stores";
 export * from "./profile";
 export * from "./bank";
+export * from "./plaid/schema";
+export * from "./plaid/map";
+export * from "./plaid/spacetime-rows";
 export { MemoryDocumentStore, MemoryLedgerStore } from "./memory";
 
 const MONGODB_CONFIGURATION_ERROR =

@@ -1,10 +1,18 @@
 import type { Hono } from "hono";
 import { ACCOUNT_CATEGORY, AccountCategory, isLiability, routes } from "@finvantage/contracts";
 import type { AppDeps } from "../deps";
-import { mount, type AppEnv } from "../mount";
+import { HttpError, mount, type AppEnv } from "../mount";
 
 export function registerAccountRoutes(app: Hono<AppEnv>, deps: AppDeps) {
   mount(app, deps, routes.listAccounts, ({ userId }) => deps.ledger.listAccounts(userId));
+
+  mount(app, deps, routes.createAccount, ({ userId, body }) => deps.ledger.createAccount(userId, body));
+
+  mount(app, deps, routes.updateAccount, async ({ userId, params, body }) => {
+    const account = await deps.ledger.updateAccount(userId, params.id, body);
+    if (!account) throw new HttpError(404, "not_found", "Account not found.");
+    return account;
+  });
 
   mount(app, deps, routes.getNetWorth, async ({ userId }) => {
     const accounts = await deps.ledger.listAccounts(userId);
@@ -16,12 +24,19 @@ export function registerAccountRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     const liabilitiesCents = sum((liability) => liability);
     const netWorthCents = assetsCents - liabilitiesCents;
 
-    // STUB(transactions): a flat line ending today. Replace with real history from the ledger.
-    const today = new Date(`${deps.today()}T00:00:00Z`);
+    const transactions = await deps.ledger.listTransactions(userId, 2000);
+    const todayIso = deps.today();
+    const currentMonth = new Date(`${todayIso}T00:00:00Z`);
+    currentMonth.setUTCDate(1);
     const history = Array.from({ length: 12 }, (_, i) => {
-      const date = new Date(today);
-      date.setUTCMonth(date.getUTCMonth() - (11 - i));
-      return { date: date.toISOString().slice(0, 10), netWorthCents };
+      const monthStart = new Date(currentMonth);
+      monthStart.setUTCMonth(monthStart.getUTCMonth() - (11 - i));
+      const monthEnd = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 0));
+      const date = monthEnd.toISOString().slice(0, 10) > todayIso ? todayIso : monthEnd.toISOString().slice(0, 10);
+      const activityAfterDate = transactions
+        .filter((transaction) => transaction.date > date && transaction.date <= todayIso)
+        .reduce((total, transaction) => total + transaction.amountCents, 0);
+      return { date, netWorthCents: netWorthCents - activityAfterDate };
     });
 
     return {
@@ -32,7 +47,7 @@ export function registerAccountRoutes(app: Hono<AppEnv>, deps: AppDeps) {
         category,
         balanceCents: accounts
           .filter((a) => ACCOUNT_CATEGORY[a.type] === category)
-          .reduce((total, a) => total + a.balanceCents, 0),
+          .reduce((total, a) => total + (isLiability(a.type) ? -a.balanceCents : a.balanceCents), 0),
       })),
       history,
     };
