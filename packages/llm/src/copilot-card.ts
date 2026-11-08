@@ -101,6 +101,8 @@ export function cardFigures(context: CopilotContext, metrics: CopilotMetrics): R
   }
   if (metrics.daysUntilPayday !== null) f.daysToPayday = `${metrics.daysUntilPayday} days`;
   if (metrics.safeRentThresholdCents !== null) f.safeRent = formatUsd(metrics.safeRentThresholdCents);
+  if (metrics.rentIncomeShare !== null) f.rentShare = formatPercent(metrics.rentIncomeShare);
+  if (metrics.rentGuidelineCents !== null) f.rentGuideline = formatUsd(metrics.rentGuidelineCents);
   if (metrics.totalCostOfOwnershipCents !== null) f.totalCost = formatUsd(metrics.totalCostOfOwnershipCents);
   if (metrics.opportunityCostCents !== null && metrics.opportunityHorizonYears !== null) {
     f.opportunityCost = formatUsd(metrics.opportunityCostCents);
@@ -243,6 +245,7 @@ function keyFigures(metrics: CopilotMetrics, f: Record<string, string>): Copilot
     figures.push({ label: "Income going to bills", value: `${f.fixedCostsBefore} → ${f.fixedCostsAfter}` });
   }
   if (f.safeRent) figures.push({ label: "Rent you can afford", value: `${f.safeRent}/mo` });
+  if (f.rentShare) figures.push({ label: "Rent as share of income", value: f.rentShare });
   if (f.vehiclePayment) figures.push({ label: "Monthly payment", value: `${f.vehiclePayment}/mo` });
   if (f.debtToIncomeBefore && f.debtToIncomeAfter) {
     figures.push({ label: "Income going to debt", value: `${f.debtToIncomeBefore} → ${f.debtToIncomeAfter}` });
@@ -280,6 +283,16 @@ export function templateCard(context: CopilotContext, metrics: CopilotMetrics): 
 
   if (context.pageType === "rental") {
     const fits = metrics.safeRentThresholdCents !== null && context.priceCents <= metrics.safeRentThresholdCents;
+    const overGuideline = metrics.rentIncomeShare !== null && metrics.rentIncomeShare > 0.3;
+    if (fits && overGuideline) {
+      // Savings could absorb it, but it's over the common 30%-of-income rule.
+      return {
+        ...base,
+        impact: `This rent is ${f.rentShare} of your income, above the common 30% limit.`,
+        tradeOff: `At ${f.price} a month, bills would take ${f.fixedCostsAfter} of your income.`,
+        smartMove: `Rent around ${f.rentGuideline} or less leaves more room for savings and surprises.`,
+      };
+    }
     return {
       ...base,
       impact: headlineSentence(h, f, "This rent"),
@@ -379,9 +392,15 @@ export function templateCard(context: CopilotContext, metrics: CopilotMetrics): 
 
   return {
     ...base,
-    impact: headlineSentence(h, f, "This loan"),
+    impact:
+      h.kind === "none" && metrics.debtToIncomeAfter !== null && metrics.debtToIncomeAfter > 0.36
+        ? `This loan would put ${f.debtToIncomeAfter} of your income toward debt, above the 36% lenders consider safe.`
+        : headlineSentence(h, f, "This loan"),
     tradeOff: `With a typical ${f.vehicleRate} loan over ${f.vehicleTerm}, that's ${f.vehiclePayment} a month and ${f.vehicleInterest} in interest.`,
-    smartMove: `All in, you'd pay ${f.totalCost}. Compare that before you apply for a loan.`,
+    smartMove:
+      metrics.debtToIncomeAfter !== null && metrics.debtToIncomeAfter > 0.36
+        ? `A cheaper car, or a bigger down payment, keeps your debt payments manageable. All in, this costs ${f.totalCost}.`
+        : `All in, you'd pay ${f.totalCost}. Compare that before you apply for a loan.`,
   };
 }
 
@@ -481,7 +500,8 @@ const CARD_SCHEMA = {
 };
 
 const SYSTEM_PROMPT = [
-  "You write a short card that pops up while an everyday American shopper is about to spend or pay money. Most readers are not finance experts.",
+  "You are a reasonable, standard financial advisor writing a short card that pops up while an everyday American is about to spend or pay money. Most readers are not finance experts.",
+  "Advise the way a sensible advisor would, from the reader's whole picture in the input: their goals, cash, savings, debts and their rates, and income. Use common guidelines when the figures show them: high-interest debt comes before wants, rent under about 30% of income, debt payments under about 36% of income, keep a cash cushion. Be honest when something is a stretch; don't cheerlead.",
   "Return JSON with three fields: impact, tradeOff, smartMove. Under 50 words in total.",
   "`verdict` is decided by the math, never by you. If it is \"caution\", the move hurts a goal or the safety cushion: say so plainly and offer a better path. If it is \"good\", say the choice works and why. If \"neutral\", lay out the trade-off evenly.",
   "impact: one short sentence a reader gets at a glance. If headline.kind is delay, odds, out_of_reach, or gain, name that goal and what happens to it. For a good debt payment, lead with the interest saved.",
@@ -495,7 +515,7 @@ const SYSTEM_PROMPT = [
   "For a purchase with verdict \"neutral\": the reader can afford it, but it's big for them. Say so using `figures.incomeShare` or `figures.spareShare`. If `payFirst` is given, suggest paying that debt off first (`figures.payFirstBalance` at `figures.payFirstRate`), because it's a guaranteed return.",
   "Plain words only, like you'd text a friend. Short sentences. Call `bufferTarget` the reader's \"safety cushion\" (money they keep in checking), and mention it only when `figures.checkingAfter` is given. `checkingAfter` is what would be left in checking; the cushion is the amount they like to keep. Never call one by the other's name. If `figures.underCushionBy` is given, that is how far below the cushion they'd be. Say \"bills\" for fixed costs and \"debt payments\" for debt-to-income. Never use: buffer, liquidity, fixed costs, debt-to-income, allocate, financial health, optimize, leverage.",
   "Copy figures exactly as given, including symbols. Never calculate, round, invent, or alter a number. Do not mention any number that is not in `figures`.",
-  "Tone: direct and warm, like a friend who is good with money. Make the goal feel real, but never shame or lecture. Suggest, never instruct.",
+  "Tone: direct, calm, and warm, like a trusted advisor who is good with money. Make the goal feel real, but never shame or lecture. Suggest, never instruct.",
 ].join("\n");
 
 type CardWords = Pick<CopilotCard, "impact" | "tradeOff" | "smartMove">;

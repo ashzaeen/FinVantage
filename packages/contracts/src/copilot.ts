@@ -85,6 +85,9 @@ export const CopilotMetrics = z.object({
     })
     .nullable()
     .default(null),
+  /** Rental: rent as a share of monthly income, and the common 30%-of-income guideline in cents. */
+  rentIncomeShare: z.number().nullable().default(null),
+  rentGuidelineCents: Cents.nullable().default(null),
   /** Checkout: the highest-rate card or personal loan above the assumed investing return, to pay first. */
   payFirst: z
     .object({ accountName: z.string(), balanceCents: Cents, annualRate: z.number() })

@@ -30,6 +30,9 @@ export const BIG_PURCHASE_SPARE_SHARE = 0.25;
  * purchase alone is a full month's income, or half of the person's spare cash.
  */
 export const HEAVY_DEBT_INCOME_YEARS = 1;
+/** Common guidelines a standard advisor uses: rent under 30% of income, debt payments under 36%. */
+export const RENT_INCOME_SHARE_LIMIT = 0.3;
+export const DEBT_TO_INCOME_LIMIT = 0.36;
 export const STRETCH_INCOME_SHARE = 1;
 export const STRETCH_SPARE_SHARE = 0.5;
 
@@ -194,6 +197,17 @@ export function transferPlan(
     (a, b) => (b.availableBalanceCents ?? b.balanceCents) - (a.availableBalanceCents ?? a.balanceCents),
   )[0];
   return from ? { fromAccountName: from.name, amountCents } : null;
+}
+
+/**
+ * Monthly debt payments: the profile's figure, but never less than the minimums the user's
+ * accounts require. A linked bank reports those minimums; the profile may be out of date.
+ */
+export function monthlyDebtPayments(snapshot: FinancialSnapshot): number {
+  const required = snapshot.accounts
+    .filter((a) => isLiability(a.type))
+    .reduce((sum, a) => sum + (a.minimumPaymentCents ?? 0), 0);
+  return Math.max(snapshot.monthlyDebtPaymentsCents, required);
 }
 
 export function totalDebt(snapshot: FinancialSnapshot): number {
@@ -476,6 +490,8 @@ export function pickVerdict(
     | "debtPayment"
     | "transfer"
     | "purchaseSize"
+    | "rentIncomeShare"
+    | "debtToIncomeAfter"
   >,
 ): CopilotMetrics["verdict"] {
   const hurts = HURTS.includes(metrics.headline.kind);
@@ -497,10 +513,15 @@ export function pickVerdict(
     case "rental": {
       const overSafe =
         metrics.safeRentThresholdCents !== null && context.priceCents > metrics.safeRentThresholdCents;
-      return hurts || overSafe ? "caution" : "good";
+      // Over the common 30%-of-income guideline is worth a heads-up even if savings could absorb it.
+      const overGuideline = metrics.rentIncomeShare !== null && metrics.rentIncomeShare > RENT_INCOME_SHARE_LIMIT;
+      return hurts || overSafe || overGuideline ? "caution" : "good";
     }
     case "vehicle_financing":
-      return hurts ? "caution" : "neutral";
+      // Debt payments above 36% of income is where lenders, and a sensible advisor, get wary.
+      return hurts || (metrics.debtToIncomeAfter !== null && metrics.debtToIncomeAfter > DEBT_TO_INCOME_LIMIT)
+        ? "caution"
+        : "neutral";
     case "debt_payment":
       if (!metrics.debtPayment) return "neutral";
       if (hurts) return "caution";
@@ -539,10 +560,15 @@ export function computeCopilotMetrics(
   const partial = {
     fixedCostRatioBefore: isRental || isVehicle ? fixedCostRatio(fixed, income) : null,
     fixedCostRatioAfter: isRental || isVehicle ? fixedCostRatio(fixed + addedMonthly, income) : null,
-    debtToIncomeBefore: vehicle ? debtToIncome(snapshot.monthlyDebtPaymentsCents, income) : null,
+    debtToIncomeBefore: vehicle ? debtToIncome(monthlyDebtPayments(snapshot), income) : null,
     debtToIncomeAfter: vehicle
-      ? debtToIncome(snapshot.monthlyDebtPaymentsCents + vehicle.monthlyPaymentCents, income)
+      ? debtToIncome(monthlyDebtPayments(snapshot) + vehicle.monthlyPaymentCents, income)
       : null,
+    rentIncomeShare: isRental && income > 0 ? context.priceCents / income : null,
+    rentGuidelineCents:
+      isRental && income > 0
+        ? Math.floor((income * RENT_INCOME_SHARE_LIMIT) / SAFE_RENT_ROUNDING_CENTS) * SAFE_RENT_ROUNDING_CENTS
+        : null,
     runwayDaysBefore: liquidRunwayDays(cash, snapshot.monthlySpendingCents),
     runwayDaysAfter: liquidRunwayDays(cash - cashOut, snapshot.monthlySpendingCents + addedMonthly),
     liquidBufferAfterCents: isCheckout ? checkingBalance(snapshot) - context.priceCents : null,

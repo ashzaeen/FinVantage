@@ -21,7 +21,9 @@ import {
   checkingBalance,
   computeCopilotMetrics,
   debtPaymentPlan,
+  DEBT_TO_INCOME_LIMIT,
   loanPayment,
+  monthlyDebtPayments,
   payFirstDebt,
   pickHeadline,
   purchaseForSimulator,
@@ -382,4 +384,35 @@ test("a small purchase is never a stretch, however much debt", () => {
   const m = computeCopilotMetrics(deepInDebt, { ...laptop, priceCents: 24_499 }, [], [emergency]);
   assert.equal(m.purchaseSize?.stretch, false);
   assert.equal(m.verdict, "good");
+});
+
+test("debt payments are never less than what the accounts require", () => {
+  // Plaid Sandbox reports a $3,141.54 mortgage payment; a stale profile said $980 for everything.
+  const withMortgage = {
+    ...savingsRich,
+    monthlyDebtPaymentsCents: 98_000,
+    accounts: [...savingsRich.accounts, account({ id: "mtg", type: "mortgage", name: "Plaid Mortgage", balanceCents: 5_630_206, minimumPaymentCents: 314_154 })],
+  };
+  assert.equal(monthlyDebtPayments(withMortgage), 314_154 + 2_000);
+  assert.equal(monthlyDebtPayments(snapshot), 98_000, "the profile wins when it's higher");
+});
+
+test("a car loan that takes debt payments past 36% of income is a heads-up", () => {
+  const car = { pageType: "vehicle_financing" as const, itemType: "vehicle" as const, priceCents: 2_800_000, merchant: "x" };
+  const stretched = {
+    ...savingsRich,
+    accounts: [...savingsRich.accounts, account({ id: "mtg", type: "mortgage", name: "Plaid Mortgage", balanceCents: 5_630_206, minimumPaymentCents: 314_154 })],
+  };
+  const m = computeCopilotMetrics(stretched, car, [], [emergency]);
+  assert.ok((m.debtToIncomeAfter ?? 0) > DEBT_TO_INCOME_LIMIT);
+  assert.equal(m.verdict, "caution");
+  assert.equal(computeCopilotMetrics(savingsRich, car, [], [emergency]).verdict, "neutral", "under 36%: a trade-off, not a warning");
+});
+
+test("rent above 30% of income is a heads-up, with the guideline amount", () => {
+  const rent = { pageType: "rental" as const, itemType: "rent_monthly" as const, priceCents: 195_000, merchant: "x" };
+  const m = computeCopilotMetrics(savingsRich, rent, [], [emergency]);
+  assert.equal(Math.round((m.rentIncomeShare ?? 0) * 100), 31);
+  assert.equal(m.rentGuidelineCents, 185_000, "30% of $6,200, rounded down to $50");
+  assert.equal(m.verdict, "caution");
 });

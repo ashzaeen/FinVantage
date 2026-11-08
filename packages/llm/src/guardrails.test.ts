@@ -33,6 +33,8 @@ const metrics: CopilotMetrics = {
   transfer: null,
   purchaseSize: null,
   payFirst: null,
+  rentIncomeShare: null,
+  rentGuidelineCents: null,
   splitPlan: {
     fromCheckingCents: 90_000,
     onPromoCardCents: 59_900,
@@ -213,6 +215,42 @@ test("a big purchase while deep in debt reads as a stretch, not an invitation", 
   assert.equal(card.tradeOff, "It's 87% of a month's income, and you owe $93,900 outside your mortgage.");
   assert.match(card.smartMove, /less expensive option, or paying off your Plaid Credit Card \(12\.5%\) first/);
   assert.deepEqual(card.lead, { label: "Big purchase", value: "87% of monthly income" });
+  assert.ok(wordCount(cardText(card)) <= MAX_CARD_WORDS);
+});
+
+test("rent over 30% of income that savings could absorb still gets the guideline", () => {
+  const rental: CopilotContext = { pageType: "rental", itemType: "rent_monthly", priceCents: 195_000, merchant: "x" };
+  const card = templateCard(rental, {
+    ...metrics,
+    verdict: "caution",
+    headline: { ...metrics.headline, kind: "none", goalName: null, statusBefore: null, statusAfter: null },
+    splitPlan: null,
+    liquidBufferAfterCents: null,
+    fixedCostRatioBefore: 0.3,
+    fixedCostRatioAfter: 0.62,
+    safeRentThresholdCents: 380_000,
+    rentIncomeShare: 0.31,
+    rentGuidelineCents: 185_000,
+  });
+  assert.equal(card.impact, "This rent is 31% of your income, above the common 30% limit.");
+  assert.match(card.smartMove, /Rent around \$1,850 or less/);
+});
+
+test("a car loan past 36% of income says so and suggests a cheaper car", () => {
+  const car: CopilotContext = { pageType: "vehicle_financing", itemType: "vehicle", priceCents: 2_800_000, merchant: "x" };
+  const card = templateCard(car, {
+    ...metrics,
+    verdict: "caution",
+    headline: { ...metrics.headline, kind: "none", goalName: null, statusBefore: null, statusAfter: null },
+    splitPlan: null,
+    liquidBufferAfterCents: null,
+    debtToIncomeBefore: 0.51,
+    debtToIncomeAfter: 0.6,
+    totalCostOfOwnershipCents: 3_330_000,
+    vehicle: { termMonths: 60, annualRate: 0.07, monthlyPaymentCents: 55_500, totalInterestCents: 530_000 },
+  });
+  assert.equal(card.impact, "This loan would put 60% of your income toward debt, above the 36% lenders consider safe.");
+  assert.match(card.smartMove, /cheaper car, or a bigger down payment/);
   assert.ok(wordCount(cardText(card)) <= MAX_CARD_WORDS);
 });
 
