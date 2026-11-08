@@ -23,7 +23,8 @@ function inRange(createdAt: string, range?: { start: string; end: string }) {
   return !range || (createdAt >= range.start && createdAt < range.end);
 }
 
-function goalStatusForBalance(goal: Pick<Goal, "currentCents" | "targetCents">): GoalStatus {
+/** A new or edited goal with no status gets one from its balance. Shared by every ledger store. */
+export function goalStatusForBalance(goal: Pick<Goal, "currentCents" | "targetCents">): GoalStatus {
   if (goal.currentCents >= goal.targetCents) return "achieved";
   return goal.currentCents > 0 ? "in_progress" : "not_started";
 }

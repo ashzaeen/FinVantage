@@ -97,6 +97,8 @@ const goal = table(
     /** Flexibility from @finvantage/contracts. */
     flexibility: t.string(),
     linkedAccountId: t.option(t.string()),
+    /** GoalStatus from @finvantage/contracts. Appended later, so it has a default. */
+    status: t.option(t.string()).default(undefined),
   },
 );
 
@@ -135,6 +137,54 @@ const balanceSnapshot = table(
     userId: t.string().index("btree"),
     date: t.string(),
     balanceCents: t.i64(),
+  },
+);
+
+/** Accounts the user entered by hand (not from a bank). App-shaped, like Account in contracts. */
+const appAccount = table(
+  { name: "app_account" },
+  {
+    id: t.string().primaryKey(),
+    userId: t.string().index("btree"),
+    type: t.string(),
+    loanKind: t.option(t.string()),
+    name: t.string(),
+    institution: t.string(),
+    balanceCents: t.i64(),
+    annualRate: t.option(t.f64()),
+    minimumPaymentCents: t.option(t.i64()),
+    promoRateEndsOn: t.option(t.string()),
+    subtype: t.option(t.string()),
+    mask: t.option(t.string()),
+    availableBalanceCents: t.option(t.i64()),
+    creditLimitCents: t.option(t.i64()),
+    nextPaymentDueOn: t.option(t.string()),
+  },
+);
+
+/**
+ * The user's own transactions: entered by hand, or an edited copy of a bank transaction under the
+ * same id (reads prefer it over the bank's version). App-shaped: negative is money out.
+ */
+const appTransaction = table(
+  { name: "app_transaction" },
+  {
+    id: t.string().primaryKey(),
+    userId: t.string().index("btree"),
+    accountId: t.string().index("btree"),
+    date: t.string(),
+    amountCents: t.i64(),
+    currency: t.string(),
+    originalAmountCents: t.option(t.i64()),
+    exchangeRateToUsd: t.option(t.f64()),
+    exchangeRateDate: t.option(t.string()),
+    merchant: t.string(),
+    category: t.option(t.string()),
+    isRecurring: t.bool(),
+    pending: t.bool(),
+    categoryDetailed: t.option(t.string()),
+    paymentChannel: t.option(t.string()),
+    logoUrl: t.option(t.string()),
   },
 );
 
@@ -300,6 +350,8 @@ const spacetimedb = schema({
   accountDetail,
   budget,
   balanceSnapshot,
+  appAccount,
+  appTransaction,
   bankItem,
   bankAccount,
   bankTransaction,
@@ -403,6 +455,7 @@ function deleteItem(ctx: Ctx, itemId: string) {
     for (const row of [...ctx.db.bankTransaction.accountId.filter(accountId)]) {
       ctx.db.bankTransaction.transactionId.delete(row.transactionId);
     }
+    for (const row of [...ctx.db.appTransaction.accountId.filter(accountId)]) ctx.db.appTransaction.id.delete(row.id);
     for (const row of [...ctx.db.recurringStream.accountId.filter(accountId)]) ctx.db.recurringStream.streamId.delete(row.streamId);
     for (const row of [...ctx.db.holding.accountId.filter(accountId)]) ctx.db.holding.id.delete(row.id);
     for (const row of [...ctx.db.balanceSnapshot.accountId.filter(accountId)]) ctx.db.balanceSnapshot.id.delete(row.id);
@@ -488,6 +541,50 @@ export const recordBalanceSnapshots = spacetimedb.reducer(
     for (const row of snapshots) putBalanceSnapshot(ctx, row);
   },
 );
+
+export const saveGoal = spacetimedb.reducer({ goal: goal.rowType }, (ctx, { goal: row }) => {
+  requireAdmin(ctx);
+  const existing = ctx.db.goal.id.find(row.id);
+  if (existing && existing.userId !== row.userId) throw new SenderError(`Goal ${row.id} belongs to another user.`);
+  if (existing) ctx.db.goal.id.update(row);
+  else ctx.db.goal.insert(row);
+});
+
+export const deleteGoal = spacetimedb.reducer({ userId: t.string(), id: t.string() }, (ctx, { userId, id }) => {
+  requireAdmin(ctx);
+  const existing = ctx.db.goal.id.find(id);
+  if (existing && existing.userId === userId) ctx.db.goal.id.delete(id);
+});
+
+export const saveAppAccount = spacetimedb.reducer({ account: appAccount.rowType }, (ctx, { account }) => {
+  requireAdmin(ctx);
+  const existing = ctx.db.appAccount.id.find(account.id);
+  if (existing && existing.userId !== account.userId) throw new SenderError(`Account ${account.id} belongs to another user.`);
+  if (existing) ctx.db.appAccount.id.update(account);
+  else ctx.db.appAccount.insert(account);
+});
+
+/** Replaces all of a user's hand-entered accounts. */
+export const replaceAppAccounts = spacetimedb.reducer(
+  { userId: t.string(), accounts: t.array(appAccount.rowType) },
+  (ctx, { userId, accounts }) => {
+    requireAdmin(ctx);
+    for (const row of [...ctx.db.appAccount.userId.filter(userId)]) ctx.db.appAccount.id.delete(row.id);
+    for (const row of accounts) ctx.db.appAccount.insert({ ...row, userId });
+  },
+);
+
+/** Saves a hand-entered transaction, or the user's edit of a bank one. The owner comes from the account. */
+export const saveAppTransaction = spacetimedb.reducer({ transaction: appTransaction.rowType }, (ctx, { transaction }) => {
+  requireAdmin(ctx);
+  const owner =
+    ctx.db.bankAccount.accountId.find(transaction.accountId)?.userId ??
+    ctx.db.appAccount.id.find(transaction.accountId)?.userId;
+  if (!owner) throw new SenderError(`No account ${transaction.accountId}.`);
+  const row = { ...transaction, userId: owner };
+  if (ctx.db.appTransaction.id.find(row.id)) ctx.db.appTransaction.id.update(row);
+  else ctx.db.appTransaction.insert(row);
+});
 
 // ── Bank sync, one call per Plaid endpoint ───────────────────────────────────
 
@@ -615,6 +712,8 @@ export const loadProfile = spacetimedb.reducer(
     for (const row of [...ctx.db.goal.userId.filter(userId)]) ctx.db.goal.id.delete(row.id);
     for (const row of [...ctx.db.budget.userId.filter(userId)]) ctx.db.budget.id.delete(row.id);
     for (const row of [...ctx.db.accountDetail.userId.filter(userId)]) ctx.db.accountDetail.accountId.delete(row.accountId);
+    for (const row of [...ctx.db.appTransaction.userId.filter(userId)]) ctx.db.appTransaction.id.delete(row.id);
+    for (const row of [...ctx.db.appAccount.userId.filter(userId)]) ctx.db.appAccount.id.delete(row.id);
 
     putUser(ctx, user);
     putIncome(ctx, { ...income, userId });
@@ -640,6 +739,21 @@ export const loadProfile = spacetimedb.reducer(
     for (const row of balanceSnapshots) putBalanceSnapshot(ctx, { ...row, userId });
   },
 );
+
+/** Deletes everything stored for a user except their sign-in. Used by tests and account deletion. */
+export const deleteUserData = spacetimedb.reducer({ userId: t.string() }, (ctx, { userId }) => {
+  requireAdmin(ctx);
+  for (const item of [...ctx.db.bankItem.userId.filter(userId)]) deleteItem(ctx, item.itemId);
+  for (const row of [...ctx.db.goal.userId.filter(userId)]) ctx.db.goal.id.delete(row.id);
+  for (const row of [...ctx.db.budget.userId.filter(userId)]) ctx.db.budget.id.delete(row.id);
+  for (const row of [...ctx.db.accountDetail.userId.filter(userId)]) ctx.db.accountDetail.accountId.delete(row.accountId);
+  for (const row of [...ctx.db.appTransaction.userId.filter(userId)]) ctx.db.appTransaction.id.delete(row.id);
+  for (const row of [...ctx.db.appAccount.userId.filter(userId)]) ctx.db.appAccount.id.delete(row.id);
+  for (const row of [...ctx.db.balanceSnapshot.userId.filter(userId)]) ctx.db.balanceSnapshot.id.delete(row.id);
+  for (const row of [...ctx.db.liveEvent.userId.filter(userId)]) ctx.db.liveEvent.id.delete(row.id);
+  ctx.db.incomeProfile.userId.delete(userId);
+  ctx.db.appUser.id.delete(userId);
+});
 
 // ── Live events ──────────────────────────────────────────────────────────────
 

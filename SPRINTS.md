@@ -105,17 +105,25 @@ Notes:
 
 Notes:
 
-## Sprint 6: SpacetimeLedgerStore and live data
+## Sprint 6: SpacetimeLedgerStore and live data (done 2026-11-08, except the web subscription)
 
-- [ ] `packages/data/src/spacetime/`: an HTTP client (SQL and reducer calls) with SATS-JSON decoding, plus `SpacetimeLedgerStore`
-- [ ] Shared store contract tests in `packages/data/src/stores.test.ts`. They always run against the memory store, and against Spacetime when `SPACETIME_TEST_URL` is set
+- [x] `packages/data/src/spacetime/`: an HTTP client (SQL and reducer calls) with SATS-JSON decoding, plus `SpacetimeLedgerStore`
+- [x] Shared store contract tests in `packages/data/src/stores.test.ts`. They always run against the memory store, and against Spacetime when `SPACETIME_TEST_TOKEN` is set
 - [x] `LEDGER_BACKEND` and `DOCUMENT_BACKEND` switches exist (added with the Mongo store)
-- [ ] Remove `DATA_BACKEND` and `src/tiger/`
-- [ ] Production sets `LEDGER_BACKEND=spacetime`
-- [ ] Reads map the Plaid-shaped bank tables through `mapItemSnapshot`. Writes go through the Plaid-endpoint reducers
+- [x] Remove `DATA_BACKEND` and `src/tiger/`
+- [x] Production sets `LEDGER_BACKEND=spacetime`
+- [x] Reads map the Plaid-shaped bank tables through `mapItemSnapshot`. Writes go through reducers
 - [ ] Store methods for budgets, balance snapshots, and recurring streams, so those routes can stop estimating
 - [ ] The web app subscribes to `bank_account` and `bank_transaction`, and refetches when they change
-- [ ] Done when: the contract tests pass on both backends, and `spacetime call ... add_transaction` updates an open dashboard live
+- [x] Done when: the contract tests pass on both backends (the live-dashboard part moves to Sprint 5)
+
+Notes:
+- The user's own data sits next to the bank tables: `app_account` (hand-entered accounts) and `app_transaction` (hand-entered transactions, or an edit of a bank transaction under the same id, which wins).
+- Editing a bank-linked account only changes its terms (`account_detail`). The bank owns its name, type, and balances. A rate the user enters beats the bank's.
+- `goal.status` was added as an appended option column. `delete_user_data` removes everything but the sign-in, and the tests use it to clean up.
+- The contract tests include an exact match between a demo profile loaded through Spacetime and one in memory.
+- The auth middleware remembers per instance which users already have a profile, so most requests skip that lookup.
+- The signed-out demo user (`user_demo`) is now shared and persistent, so anyone's edits stick for everyone. `POST /v1/profile/load-demo` resets it.
 
 Notes:
 

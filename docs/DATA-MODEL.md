@@ -76,6 +76,8 @@ Plaid's access token is never stored in these tables. When live Plaid arrives, i
 | `account_detail` | Terms Plaid doesn't report: deposit rates (savings, CD), auto and personal loan rate and payment, promo end date | Copilot math |
 | `budget` | Monthly limit per category | Feature 3 |
 | `balance_snapshot` | An account's balance on a date, saved on each sync | Feature 4, net worth over time |
+| `app_account` | Accounts the user entered by hand | Feature 1, manual accounts |
+| `app_transaction` | Hand-entered transactions, or the user's edit of a bank transaction (same id; it wins) | Editing transactions |
 
 ### Platform
 

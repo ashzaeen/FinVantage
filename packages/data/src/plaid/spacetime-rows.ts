@@ -12,7 +12,7 @@ import { toCents } from "./map";
 import type { PlaidItemSnapshot, PlaidLiabilities, PlaidRecurringStream } from "./schema";
 
 type Wire = { [key: string]: unknown };
-const opt = <T>(value: T | null | undefined) => (value === null || value === undefined ? { none: [] } : { some: value });
+export const opt = <T>(value: T | null | undefined) => (value === null || value === undefined ? { none: [] } : { some: value });
 const optCents = (dollars: number | null | undefined) => opt(dollars === null || dollars === undefined ? null : toCents(dollars));
 
 /** camelCase keys to snake_case, recursively. Option wrappers ({ some } / { none }) pass through. */
@@ -194,6 +194,7 @@ export function loadProfileArgs(source: DemoProfileSource): unknown[] {
       priorityRank: g.priorityRank,
       flexibility: g.flexibility,
       linkedAccountId: opt(g.linkedAccountId),
+      status: opt(g.status),
     })),
     source.bank.map((item) => bankItemLoad(item, userId)),
     Object.entries(source.accountDetails).map(([accountId, d]) => ({

@@ -59,12 +59,16 @@ export type DemoProfile = z.infer<typeof DemoProfile>;
 
 export const DEMO_USER_ID = "user_demo";
 
-/** Editing the fixture changes cards and projections with no code change (PRD section 6). */
-export function loadDemoProfileFixture(name = "planner"): DemoProfile {
+/** The raw fixture: bank data still in Plaid's format. */
+export function loadDemoProfileSource(name = "planner"): DemoProfileSource {
   const fixture = FIXTURES[name];
   if (fixture === undefined) throw new Error(`Unknown demo profile fixture: ${name}`);
   // structuredClone so callers can never mutate the shared imported object.
-  const source = DemoProfileSource.parse(structuredClone(fixture));
+  return DemoProfileSource.parse(structuredClone(fixture));
+}
+
+/** A fixture in the app's own types: the Plaid bank data goes through mapItemSnapshot. */
+export function profileFromSource(source: DemoProfileSource): DemoProfile {
   const bank = source.bank.map((item) => mapItemSnapshot(item, source.user.id, source.accountDetails));
   return DemoProfile.parse({
     user: source.user,
@@ -78,36 +82,61 @@ export function loadDemoProfileFixture(name = "planner"): DemoProfile {
   });
 }
 
-/** The raw Plaid-format bank data of a fixture, for loading into Spacetime's bank tables. */
-export function loadDemoProfileSource(name = "planner"): DemoProfileSource {
-  const fixture = FIXTURES[name];
-  if (fixture === undefined) throw new Error(`Unknown demo profile fixture: ${name}`);
-  return DemoProfileSource.parse(structuredClone(fixture));
+/** Editing the fixture changes cards and projections with no code change (PRD section 6). */
+export function loadDemoProfileFixture(name = "planner"): DemoProfile {
+  return profileFromSource(loadDemoProfileSource(name));
 }
 
 /**
- * The demo profile owned by `userId`. A signed-in user gets their own copy, so record IDs are
- * prefixed with the user ID to keep them unique across users. The demo user keeps the fixture IDs.
+ * The raw demo profile owned by `userId`. A signed-in user gets their own copy, so every record
+ * ID (bank items, accounts, transactions, streams, goals) is prefixed with the user ID to stay
+ * unique across users. The demo user keeps the fixture IDs. Securities are shared, so they keep theirs.
  */
-export function demoProfileFor(userId: string, name = "planner"): DemoProfile {
-  const profile = loadDemoProfileFixture(name);
-  if (userId === DEMO_USER_ID) return profile;
+export function demoSourceFor(userId: string, name = "planner"): DemoProfileSource {
+  const source = loadDemoProfileSource(name);
+  if (userId === DEMO_USER_ID) return source;
   const id = (original: string) => `${userId}__${original}`;
+  const idOrNull = (original: string | null | undefined) => (original ? id(original) : (original ?? null));
+  const onAccount = <T extends { account_id: string }>(row: T): T => ({ ...row, account_id: id(row.account_id) });
+  const stream = (s: DemoProfileSource["bank"][number]["recurring"]["inflow_streams"][number]) => ({
+    ...s,
+    stream_id: id(s.stream_id),
+    account_id: id(s.account_id),
+    transaction_ids: s.transaction_ids.map(id),
+  });
   return {
-    user: { ...profile.user, id: userId },
-    income: profile.income,
-    accounts: profile.accounts.map((a) => ({ ...a, id: id(a.id), userId })),
-    goals: profile.goals.map((g) => ({
-      ...g,
-      id: id(g.id),
-      userId,
-      linkedAccountId: g.linkedAccountId === null ? null : id(g.linkedAccountId),
+    ...source,
+    user: { ...source.user, id: userId },
+    goals: source.goals.map((g) => ({ ...g, id: id(g.id), userId, linkedAccountId: idOrNull(g.linkedAccountId) })),
+    lifeEvents: source.lifeEvents.map((e) => ({ ...e, id: id(e.id), userId })),
+    bank: source.bank.map((item) => ({
+      ...item,
+      item: { ...item.item, item_id: id(item.item.item_id) },
+      accounts: item.accounts.map(onAccount),
+      transactions: item.transactions.map((t) => ({
+        ...onAccount(t),
+        transaction_id: id(t.transaction_id),
+        pending_transaction_id: idOrNull(t.pending_transaction_id),
+      })),
+      liabilities: {
+        credit: item.liabilities.credit?.map(onAccount) ?? null,
+        mortgage: item.liabilities.mortgage?.map(onAccount) ?? null,
+        student: item.liabilities.student?.map(onAccount) ?? null,
+      },
+      recurring: {
+        inflow_streams: item.recurring.inflow_streams.map(stream),
+        outflow_streams: item.recurring.outflow_streams.map(stream),
+      },
+      investments: { holdings: item.investments.holdings.map(onAccount), securities: item.investments.securities },
     })),
-    transactions: profile.transactions.map((t) => ({ ...t, id: id(t.id), accountId: id(t.accountId) })),
-    lifeEvents: profile.lifeEvents.map((e) => ({ ...e, id: id(e.id), userId })),
-    budgets: profile.budgets,
-    balanceHistory: profile.balanceHistory.map((b) => ({ ...b, accountId: id(b.accountId) })),
+    accountDetails: Object.fromEntries(Object.entries(source.accountDetails).map(([k, v]) => [id(k), v])),
+    balanceHistory: source.balanceHistory.map((b) => ({ ...b, accountId: id(b.accountId) })),
   };
+}
+
+/** The demo profile owned by `userId`, in the app's types. Same IDs as demoSourceFor. */
+export function demoProfileFor(userId: string, name = "planner"): DemoProfile {
+  return profileFromSource(demoSourceFor(userId, name));
 }
 
 function nextPayday(asOf: string, dayOfMonth: number): string {

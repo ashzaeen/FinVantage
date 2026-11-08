@@ -7,7 +7,7 @@
  *   (non-retirement brokerage, "other") are skipped; their holdings still reach the portfolio.
  * - Rates, minimum payments, and due dates come from /liabilities/get. Plaid has none for CDs,
  *   savings, or auto and personal loans, and no promo end dates, so those come from
- *   user-entered `AccountDetails`.
+ *   user-entered `AccountDetails`. A value the user entered always wins over the bank's.
  */
 import { z } from "zod";
 import { Account, IsoDate, Rate, Transaction, type AccountType } from "@finvantage/contracts";
@@ -152,8 +152,9 @@ function mapAccount(
     institution,
     // Plaid reports what is owed on cards and loans as a positive current balance.
     balanceCents: Math.max(0, toCents(current ?? available ?? 0)),
-    annualRate: terms?.annualRate ?? details?.annualRate ?? null,
-    minimumPaymentCents: terms?.minimumPaymentCents ?? details?.minimumPaymentCents ?? null,
+    // What the user set wins; the bank fills in the rest.
+    annualRate: details?.annualRate ?? terms?.annualRate ?? null,
+    minimumPaymentCents: details?.minimumPaymentCents ?? terms?.minimumPaymentCents ?? null,
     promoRateEndsOn: details?.promoRateEndsOn ?? null,
     subtype: account.subtype,
     mask: account.mask,

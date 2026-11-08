@@ -16,7 +16,7 @@ import type {
 } from "@finvantage/contracts";
 import type { IncomeProfile } from "./profile";
 
-/** Relational data. Backed by Tiger Data Postgres. See tiger/schema.sql. */
+/** Relational data. Memory by default; SpacetimeDB in production (spacetime/ledger.ts). */
 export interface LedgerStore {
   getUser(userId: string): Promise<User | null>;
   saveUser(user: User): Promise<User>;
