@@ -117,6 +117,15 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
               Download PDF
             </a>
           )}
+          {/* Rebuilds this quarter from current data: a linked bank, new simulations, fresh prose. */}
+          <button
+            type="button"
+            className="rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-inset focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50"
+            onClick={() => generate(latest.quarter)}
+            disabled={busy}
+          >
+            {busy ? "Regenerating..." : "Regenerate"}
+          </button>
           <button
             className="rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-inset focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             onClick={() => setShowCharts((visible) => !visible)}

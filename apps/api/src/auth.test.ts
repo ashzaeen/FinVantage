@@ -139,3 +139,17 @@ test("requests with a bad token are rejected", async () => {
   const res = await app.request("/v1/me", { headers: { authorization: "Bearer not-a-jwt" } });
   assert.equal(res.status, 401);
 });
+
+test("reloading the demo profile keeps the user's own name and email", async () => {
+  const { anon, clientFor } = setup();
+  const email = `reload-${Date.now()}@example.com`;
+  const { token } = await anon.signUp({ body: { displayName: "Avery Chen", email, password: "s3cret-pass" } });
+  await clientFor(token).loadDemoProfile();
+
+  const me = await clientFor(token).getMe();
+  assert.equal(me.displayName, "Avery Chen");
+  assert.equal(me.email, email);
+  // The next sign-in's token carries the name too (the sidebar shows it).
+  const login = await anon.logIn({ body: { email, password: "s3cret-pass" } });
+  assert.equal(login.user.displayName, "Avery Chen");
+});
