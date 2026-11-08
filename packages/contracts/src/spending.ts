@@ -8,20 +8,33 @@ export const BudgetLimit = z.object({
 });
 export type BudgetLimit = z.infer<typeof BudgetLimit>;
 
-/** A category's limit next to what was spent this month. */
+/** A category's limit next to what was spent this month, and where the month is heading. */
 export const Budget = z.object({
+  /** A category or subcategory id. */
   category: z.string(),
   limitCents: Cents,
   spentCents: Cents,
+  /** Negative once over the limit. */
+  remainingCents: Cents,
+  /** What the month ends at if spending keeps its pace so far. */
+  projectedCents: Cents,
+  /** Over the limit already, heading over it, or within it. */
+  status: z.enum(["on_track", "at_risk", "over"]),
+  /** The average of the last three full months, as a starting point. Null with no history. */
+  suggestedLimitCents: Cents.nullable(),
 });
 export type Budget = z.infer<typeof Budget>;
 
 export const RecurringCharge = z.object({
   merchant: z.string(),
   amountCents: Cents,
-  cadence: z.enum(["weekly", "monthly", "yearly"]),
+  cadence: z.enum(["weekly", "biweekly", "semi_monthly", "monthly", "yearly", "unknown"]),
   nextDate: IsoDate,
   accountId: Id,
+  /** A category id, when known. */
+  category: z.string().nullable().default(null),
+  /** "bank" when it comes from the bank's recurring streams or bill due dates, "estimate" otherwise. */
+  source: z.enum(["bank", "estimate"]).default("estimate"),
 });
 export type RecurringCharge = z.infer<typeof RecurringCharge>;
 

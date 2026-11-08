@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { DEFAULT_SPENDING_SPLIT, SpendingSplit } from "./categories";
 import { Cents, Id } from "./common";
 
 export const ExtensionSettings = z.object({
@@ -15,8 +14,6 @@ export const User = z.object({
   preferences: z.object({
     /** The "checking buffer target" the Copilot compares against. */
     bufferTargetCents: Cents,
-    /** Shares of income for Needs, Wants and Savings. Editable; defaults to 50/30/20. */
-    spendingSplit: SpendingSplit.default(DEFAULT_SPENDING_SPLIT),
   }),
   extensionSettings: ExtensionSettings,
 });

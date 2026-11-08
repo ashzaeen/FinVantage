@@ -17,10 +17,10 @@ import {
   type NewAccount,
 } from "@finvantage/contracts";
 import type { BankItemUpdate } from "./plaid/client";
-import { mapItemSnapshot, type AccountDetails } from "./plaid/map";
+import { mapItemSnapshot, toCents, type AccountDetails } from "./plaid/map";
 import type { PlaidItemSnapshot } from "./plaid/schema";
-import { DEMO_USER_ID, demoProfileFor, type IncomeProfile } from "./profile";
-import type { BankItemRecord, DocumentStore, LedgerStore } from "./stores";
+import { DEMO_USER_ID, demoProfileFor, demoSourceFor, type IncomeProfile } from "./profile";
+import type { BankItemRecord, DocumentStore, LedgerStore, RecurringStream } from "./stores";
 
 function inRange(createdAt: string, range?: { start: string; end: string }) {
   return !range || (createdAt >= range.start && createdAt < range.end);
@@ -41,6 +41,8 @@ export class MemoryLedgerStore implements LedgerStore {
   private goals: Goal[] = [];
   /** Linked banks, kept in Plaid's shape and mapped on read, like the Spacetime store. */
   private bankItems = new Map<string, { userId: string; snapshot: PlaidItemSnapshot }>();
+  /** Users whose data came from the demo profile, which carries its own bank snapshots. */
+  private demoUsers = new Set<string>();
   /** Terms the user set on bank-linked accounts. */
   private bankDetails = new Map<string, AccountDetails>();
 
@@ -51,6 +53,7 @@ export class MemoryLedgerStore implements LedgerStore {
   /** Replaces only this user's rows with their copy of the demo profile. */
   private seed(userId: string) {
     const profile = demoProfileFor(userId);
+    this.demoUsers.add(userId);
     const accountIds = new Set(this.accounts.filter((a) => a.userId === userId).map((a) => a.id));
     this.users.set(userId, profile.user);
     this.incomes.set(userId, profile.income);
@@ -174,6 +177,22 @@ export class MemoryLedgerStore implements LedgerStore {
 
   async loadDemoProfile(userId: string) {
     this.seed(userId);
+  }
+
+  async listRecurringStreams(userId: string): Promise<RecurringStream[]> {
+    const linked = [...this.bankItems.values()].filter((item) => item.userId === userId).map((item) => item.snapshot);
+    const demo = this.demoUsers.has(userId) ? demoSourceFor(userId).bank : [];
+    return [...demo, ...linked]
+      .flatMap((snapshot) => snapshot.recurring?.outflow_streams ?? [])
+      .filter((stream) => stream.is_active)
+      .map((stream) => ({
+        merchant: stream.merchant_name ?? stream.description,
+        amountCents: Math.abs(toCents(stream.average_amount.amount)),
+        frequency: stream.frequency,
+        predictedNextDate: stream.predicted_next_date ?? null,
+        accountId: stream.account_id,
+        categoryDetailed: stream.personal_finance_category?.detailed ?? null,
+      }));
   }
 
   async listBankItems(userId: string): Promise<BankItemRecord[]> {

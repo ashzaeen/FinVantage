@@ -1,27 +1,59 @@
-import { categoryLabel, formatUsd } from "@finvantage/contracts";
+import { formatUsd, type RecurringCharge, type SpendingCategory } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { api } from "@/lib/api";
 import { BucketSplit } from "./BucketSplit";
+import { BudgetsPanel, CategoryManager, RecentTransactions, RulesPanel } from "./SpendingManager";
 
-function ProgressBar({ value, max, color = "var(--accent)", over = false }: { value: number; max: number; color?: string; over?: boolean }) {
-  const pct = Math.min(100, Math.round((value / max) * 100));
+const CADENCE_LABEL: Record<RecurringCharge["cadence"], string> = {
+  weekly: "Weekly",
+  biweekly: "Every 2 Weeks",
+  semi_monthly: "Twice a Month",
+  monthly: "Monthly",
+  yearly: "Yearly",
+  unknown: "Recurring",
+};
+
+function labeler(categories: SpendingCategory[]) {
+  const byId = new Map(categories.map((c) => [c.id, c.label]));
+  return (id: string | null) => (id ? (byId.get(id) ?? id) : "Uncategorized");
+}
+
+function ChargeList({ charges, label, showCadence }: { charges: RecurringCharge[]; label: (id: string | null) => string; showCadence: boolean }) {
+  if (charges.length === 0) return <p className="text-sm" style={{ color: "var(--ink-muted)" }}>Nothing coming up.</p>;
   return (
-    <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
-      <div className="h-2.5 rounded-full transition-all"
-        style={{ width: `${pct}%`, background: over ? "var(--critical)" : color }} />
-    </div>
+    <ul className="space-y-2">
+      {charges.map((charge) => (
+        <li key={`${charge.accountId}:${charge.merchant}`} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "var(--surface-inset)" }}>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-medium" style={{ color: "var(--ink)" }}>{charge.merchant}</span>
+            <span className="text-xs" style={{ color: "var(--ink-muted)" }}>
+              {label(charge.category)} · {charge.source === "bank" ? "From Your Bank" : "Estimated"}
+            </span>
+          </span>
+          <span className="shrink-0 text-right">
+            <span className="block text-sm font-bold tabular-nums" style={{ color: "var(--ink)" }}>{formatUsd(Math.abs(charge.amountCents))}</span>
+            <span className="text-xs" style={{ color: "var(--ink-muted)" }}>{showCadence ? CADENCE_LABEL[charge.cadence] : charge.nextDate}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
 export default async function SpendingPage() {
-  const [buckets, budgets, bills, recurring, summary] = await Promise.all([
+  const [buckets, budgets, categories, rules, transactions, bills, recurring, summary] = await Promise.all([
     api.getBucketSummary(),
     api.listBudgets(),
+    api.listSpendingCategories(),
+    api.listCategoryRules(),
+    api.listTransactions({ query: { limit: 25 } }),
     api.listUpcomingBills(),
     api.listRecurring(),
     api.getSpendingSummary(),
   ]);
+  const label = labeler(categories);
+  const recentSpending = transactions.filter((t) => t.amountCents < 0).slice(0, 12);
 
   return (
     <>
@@ -30,45 +62,18 @@ export default async function SpendingPage() {
         <div className="md:col-span-2">
           <BucketSplit initial={buckets} />
         </div>
-        {/* Budgets */}
-        <Card title="Budgets" subtitle="Demo limits · spending totals from your ledger">
-          <ul className="space-y-4">
-            {budgets.map((budget) => {
-              const over = budget.spentCents > budget.limitCents;
-              const pct = Math.min(100, Math.round((budget.spentCents / budget.limitCents) * 100));
-              return (
-                <li key={budget.category}>
-                  <div className="flex items-center justify-between gap-2 text-sm">
-                    <span className="font-medium" style={{ color: "var(--ink)" }}>{categoryLabel(budget.category)}</span>
-                    <span className="tabular-nums text-xs" style={{ color: over ? "var(--critical)" : "var(--ink-muted)" }}>
-                      {formatUsd(budget.spentCents)} / {formatUsd(budget.limitCents)}
-                      {over && <span className="ml-1 font-semibold">Over</span>}
-                    </span>
-                  </div>
-                  <ProgressBar value={budget.spentCents} max={budget.limitCents} over={over} />
-                  <p className="mt-1 text-right text-xs" style={{ color: over ? "var(--critical)" : "var(--ink-muted)" }}>
-                    {pct}%
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
 
-        {/* Summary */}
-        <Card title={`Summary`} subtitle={summary.month}>
+        <BudgetsPanel budgets={budgets} categories={categories} />
+
+        <Card title="Summary" subtitle={`${summary.month} · change against last month`}>
           <ul className="space-y-2">
             {summary.categories.map((row) => {
               const isIncrease = row.changeVsPriorMonthCents > 0;
               return (
-                <li key={row.category}
-                  className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5"
-                  style={{ background: "var(--surface-inset)" }}>
-                  <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{categoryLabel(row.category)}</span>
+                <li key={row.category} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "var(--surface-inset)" }}>
+                  <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{label(row.category)}</span>
                   <div className="text-right">
-                    <span className="block text-sm font-bold tabular-nums" style={{ color: "var(--ink)" }}>
-                      {formatUsd(row.spentCents)}
-                    </span>
+                    <span className="block text-sm font-bold tabular-nums" style={{ color: "var(--ink)" }}>{formatUsd(row.spentCents)}</span>
                     <span className="text-xs" style={{ color: isIncrease ? "var(--critical)" : "var(--good)" }}>
                       {isIncrease ? "▲" : "▼"} {formatUsd(Math.abs(row.changeVsPriorMonthCents))}
                     </span>
@@ -79,49 +84,18 @@ export default async function SpendingPage() {
           </ul>
         </Card>
 
-        {/* Upcoming bills */}
-        <Card title="Upcoming Bills">
-          <ul className="space-y-2">
-            {bills.map((bill) => (
-              <li key={bill.merchant}
-                className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5"
-                style={{ background: "var(--surface-inset)" }}>
-                <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full text-sm"
-                    style={{ background: "var(--critical-bg)", color: "var(--critical)" }}>
-                    📅
-                  </span>
-                  <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{bill.merchant}</span>
-                </div>
-                <span className="text-xs font-medium" style={{ color: "var(--ink-muted)" }}>{bill.nextDate}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
+        <RecentTransactions transactions={recentSpending} categories={categories} />
+        <RulesPanel rules={rules} categories={categories} />
 
-        {/* Recurring */}
+        <div className="md:col-span-2">
+          <CategoryManager categories={categories} />
+        </div>
+
+        <Card title="Upcoming Bills" subtitle="Due in the next 14 days">
+          <ChargeList charges={bills} label={label} showCadence={false} />
+        </Card>
         <Card title="Recurring Charges">
-          <ul className="space-y-2">
-            {recurring.map((charge) => (
-              <li key={charge.merchant}
-                className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5"
-                style={{ background: "var(--surface-inset)" }}>
-                <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full text-sm"
-                    style={{ background: "var(--accent-soft, #eceeff)", color: "var(--accent)" }}>
-                    🔄
-                  </span>
-                  <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{charge.merchant}</span>
-                </div>
-                <div className="text-right">
-                  <span className="block text-sm font-bold tabular-nums" style={{ color: "var(--ink)" }}>
-                    {formatUsd(charge.amountCents)}
-                  </span>
-                  <span className="text-xs capitalize" style={{ color: "var(--ink-muted)" }}>{charge.cadence}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <ChargeList charges={recurring} label={label} showCadence />
         </Card>
       </div>
     </>

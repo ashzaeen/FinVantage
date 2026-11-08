@@ -462,11 +462,75 @@ export const BucketSummary = z.object({
 });
 export type BucketSummary = z.infer<typeof BucketSummary>;
 
-/** A category as the API returns it. Custom categories arrive with the build-order step 3. */
+/** Category, subcategory, and one level of custom subcategory under that. */
+export const MAX_CATEGORY_DEPTH = 3;
+
+/** 1 for a top-level category, 2 for a subcategory, 3 for a custom one under a subcategory. */
+export function categoryDepth(id: string): number {
+  return id.split(".").length;
+}
+
+/** The parent of a category id, or null for a top-level one. */
+export function parentCategoryId(id: string): string | null {
+  const cut = id.lastIndexOf(".");
+  return cut < 0 ? null : id.slice(0, cut);
+}
+
+/** Splits any category id into the transaction's `category` and `subcategory` fields. */
+export function assignCategory(id: string | null): { category: string | null; subcategory: string | null } {
+  if (!id) return { category: null, subcategory: null };
+  return { category: topCategoryId(id), subcategory: id.includes(".") ? id : null };
+}
+
+/**
+ * A category as the API returns it: the defaults with the user's renames, hides and bucket
+ * changes, plus the user's own subcategories. Custom ids start with their parent's id, so
+ * `shopping.superstores.c4f9a1` sits under Superstores.
+ */
 export const SpendingCategory = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
   bucket: SpendingBucket,
   parentId: z.string().nullable(),
+  custom: z.boolean().default(false),
+  hidden: z.boolean().default(false),
 });
 export type SpendingCategory = z.infer<typeof SpendingCategory>;
+
+const CategoryName = z.string().trim().min(1).max(40);
+
+/** A new subcategory, under a category or a subcategory, up to three levels deep. */
+export const NewSpendingCategory = z.object({
+  parentId: z.string().min(1),
+  label: CategoryName,
+  /** Defaults to the parent's bucket. */
+  bucket: BudgetedBucket.optional(),
+});
+export type NewSpendingCategory = z.infer<typeof NewSpendingCategory>;
+
+/** Rename, hide or move any category between buckets. At least one field. */
+export const UpdateSpendingCategory = z
+  .object({ label: CategoryName.optional(), hidden: z.boolean().optional(), bucket: BudgetedBucket.optional() })
+  .refine((u) => u.label !== undefined || u.hidden !== undefined || u.bucket !== undefined, {
+    message: "Change the name, the visibility or the bucket.",
+  });
+export type UpdateSpendingCategory = z.infer<typeof UpdateSpendingCategory>;
+
+/** "Always put Starbucks in Coffee." Matches merchant names case-insensitively. */
+export const CategoryRule = z.object({
+  id: z.string().min(1),
+  merchantContains: z.string().trim().min(2).max(60),
+  categoryId: z.string().min(1),
+  createdAt: z.iso.datetime(),
+});
+export type CategoryRule = z.infer<typeof CategoryRule>;
+
+export const NewCategoryRule = CategoryRule.pick({ merchantContains: true, categoryId: true }).extend({
+  /** Also re-categorise past transactions from matching merchants. */
+  applyToPast: z.boolean().default(true),
+});
+export type NewCategoryRule = z.infer<typeof NewCategoryRule>;
+
+/** Moves a transaction to any category or subcategory, or clears it with null. */
+export const RecategorizeTransaction = z.object({ categoryId: z.string().min(1).nullable() });
+export type RecategorizeTransaction = z.infer<typeof RecategorizeTransaction>;
