@@ -42,7 +42,13 @@ GEMINI_MODEL_FLASH=...
 
 The key travels in the `x-goog-api-key` header, never the URL. Pass `jsonSchema` for structured output (ordinary JSON Schema; the client converts it to Gemini's format) and `timeoutMs` when you need an answer fast. Gemini 3 models think by default, which can take more than 15 seconds, so a fast call also needs `thinking: "minimal"`. Every failure (HTTP error, block, empty reply, timeout) throws, so callers fall back. Copilot cards use the configured Flash model with a 2-second timeout and minimal thinking. A card that falls back logs `Copilot card: template used (<reason>)`, and an accepted card is reused for identical inputs.
 
-Tests inject a fake `LlmClient`. See `src/guardrails.test.ts`.
+`chat()` is the multi-turn form with function calling. It takes `messages` and `tools` (JSON Schema parameters), and returns the model's turn with any `functionCalls`. Replay a model turn unchanged: its `raw` parts carry Gemini 3's thought signatures. `chat` is optional on `LlmClient`, so callers must handle a client without it.
+
+`webSearch()` runs Google Search grounding in its own call and returns a summary with sources. It is optional too. Only the query is sent; the Advisor's `web_search` tool checks it for personal details first.
+
+The Advisor (`src/advisory.ts`, `runAdvisorTurn`) runs the tool loop: at most four tool rounds and a 25-second turn budget. `validateGrounded` checks the answer's dollar amounts only (rounding within 3% passes; plain numbers and percentages are not checked). A failure gets one retry; a second failure keeps the answer minus the sentences holding the bad amount (`withoutSentences`), or else `safeAdvisorAnswer`. Tool inputs are checked exactly with `isGroundedNumber`.
+
+Tests inject a fake `LlmClient`. See `src/guardrails.test.ts` and `src/advisory.test.ts`.
 
 ```bash
 npm test -w @finvantage/llm

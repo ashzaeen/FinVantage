@@ -564,3 +564,411 @@ test("Copilot events can be deleted one at a time or cleared, only the user's ow
   assert.deepEqual(await client.clearCopilotEvents(), { deleted: 1 });
   assert.deepEqual(await client.listCopilotEvents(), []);
 });
+
+/** A fake model that calls the named tools on its first turn, then gives `answer`. */
+function toolCallingLlm(toolCalls: Array<{ name: string; args?: Record<string, unknown> }>, answer: (toolResults: unknown) => string) {
+  const requests: Array<{ system: string; tools?: unknown[] }> = [];
+  return {
+    requests,
+    llm: {
+      provider: "test",
+      generate: async () => { throw new Error("unused"); },
+      chat: async (request: { system: string; tools?: unknown[]; messages: Array<{ role: string; results?: unknown }> }) => {
+        requests.push({ system: request.system, tools: request.tools });
+        const last = request.messages.at(-1);
+        if (last?.role === "tool") {
+          return { message: { role: "model" as const, text: answer(last.results), functionCalls: [] } };
+        }
+        return { message: { role: "model" as const, text: null, functionCalls: toolCalls.map((c) => ({ name: c.name, args: c.args ?? {} })) } };
+      },
+    },
+  };
+}
+
+test("the Advisor saves conversations and grounds answers in tool results", async () => {
+  const { client, deps } = setup();
+  const fake = toolCallingLlm([{ name: "get_budgets" }], (results) => {
+    const [budget] = (results as Array<{ response: { result: Array<{ category: string; spent: string }> } }>)[0]!.response.result;
+    return `Your ${budget!.category} budget shows ${budget!.spent} spent.`;
+  });
+  deps.llm = fake.llm;
+
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "How are my budgets?" } });
+  assert.equal(turn.reply.source, "gemini");
+  assert.match(turn.reply.content, /budget shows \$/);
+  assert.deepEqual(turn.reply.citations.map((c) => c.label), ["Budgets"]);
+
+  const brief = fake.requests[0]!.system;
+  for (const section of ["netWorth", "income", "budgets", "goals", "upcomingBills"]) {
+    assert.match(brief, new RegExp(`"${section}"`), `the brief includes ${section}`);
+  }
+  assert.ok((fake.requests[0]!.tools?.length ?? 0) >= 10, "the model gets the whole tool set");
+
+  const reloaded = await client.getAdvisorConversation({ params: { id: conversation.id } });
+  assert.deepEqual(reloaded.messages.map((m) => m.role), ["user", "assistant"]);
+  assert.equal(reloaded.title, "How are my budgets?");
+  assert.equal((await client.listAdvisorConversations())[0]?.id, conversation.id);
+
+  await client.deleteAdvisorConversation({ params: { id: conversation.id } });
+  assert.equal((await client.listAdvisorConversations()).length, 0);
+});
+
+test("an Advisor answer with an invented figure falls back to a safe answer from code", async () => {
+  const { client, deps } = setup();
+  deps.llm = toolCallingLlm([{ name: "get_budgets" }], () => "Cut $9,876 a month.").llm;
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "Help" } });
+  assert.equal(turn.reply.source, "fallback");
+  assert.doesNotMatch(turn.reply.content, /9,876/);
+});
+
+test("with no model, the Advisor still answers from the user's data", async () => {
+  const { client } = setup();
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "How am I doing?" } });
+  assert.equal(turn.reply.source, "fallback");
+  assert.match(turn.reply.content, /Net worth: -?\$/);
+  const legacy = await client.advisorChat({ body: { messages: [{ role: "user", content: "Hi" }] } });
+  assert.equal(legacy.source, "fallback");
+});
+
+test("the Advisor can see Copilot scans and reports", async () => {
+  const { client, deps } = setup();
+  const scan = await client.evaluateCopilot({ body: rental });
+  assert.equal(scan.status, "ok");
+  deps.llm = toolCallingLlm([{ name: "list_copilot_scans" }, { name: "get_quarterly_report" }], (results) => {
+    const [scans] = results as Array<{ response: { result: { scans: Array<{ merchant: string; price: string }> } } }>;
+    const first = scans!.response.result.scans[0]!;
+    return `The Copilot checked ${first.merchant} at ${first.price}.`;
+  }).llm;
+  const conversation = await client.createAdvisorConversation({
+    body: { situation: scan.status === "ok" ? { kind: "copilot_event", eventId: scan.eventId } : null },
+  });
+  assert.equal(conversation.title, "About a Copilot scan");
+  const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "What did it find?" } });
+  assert.equal(turn.reply.source, "gemini");
+  assert.match(turn.reply.content, /Demo Rentals at \$1,950/);
+});
+
+test("a drafted life event is attached but never saved", async () => {
+  const { client, deps } = setup();
+  const before = (await client.listLifeEvents()).length;
+  deps.llm = toolCallingLlm(
+    [{ name: "draft_life_event", args: { type: "child", date: "2027-03-01", recurrence: "recurring", amount: 1200 } }],
+    () => "Here is a draft. Review it and press Confirm if it looks right.",
+  ).llm;
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const turn = await client.sendAdvisorMessage({
+    params: { id: conversation.id },
+    body: { content: "We're having a baby in March, about $1,200 a month" },
+  });
+  const [attachment] = turn.reply.attachments;
+  assert.equal(attachment?.kind, "life_event_draft");
+  assert.equal(attachment?.kind === "life_event_draft" && attachment.draft.dollarImpactCents, -120_000);
+  assert.equal((await client.listLifeEvents()).length, before, "drafting must not save");
+});
+
+test("a life event draft needs an amount the user actually stated", async () => {
+  const { client, deps } = setup();
+  deps.llm = toolCallingLlm(
+    [{ name: "draft_life_event", args: { type: "child", date: "2027-03-01", recurrence: "recurring", amount: 1500 } }],
+    () => "How much do you expect it to cost each month?",
+  ).llm;
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "We're having a baby in March" } });
+  assert.equal(turn.reply.attachments.length, 0);
+});
+
+type ToolResults = Array<{ name: string; response: { result?: Record<string, unknown>; error?: string } }>;
+
+test("plan_goal works out the monthly amount in code, with its working attached", async () => {
+  const { client, deps } = setup();
+  deps.llm = toolCallingLlm([{ name: "plan_goal", args: { goal: "japan" } }], (results) => {
+    const plan = (results as ToolResults)[0]!.response.result!;
+    return `Save ${plan.monthlyNeeded} a month to reach ${plan.target} by ${plan.targetDate}.`;
+  }).llm;
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "How do I hit my Japan trip?" } });
+  assert.equal(turn.reply.source, "gemini", turn.reply.content);
+  const [working] = turn.reply.attachments;
+  assert.equal(working?.kind, "calculation");
+  assert.match(working?.kind === "calculation" ? working.expression : "", /\$4,500 target - \$1,500 saved/);
+});
+
+test("find_savings sizes cuts from flexible spending and simulates them", async () => {
+  const { client, deps } = setup();
+  let seen: Record<string, unknown> = {};
+  deps.llm = toolCallingLlm([{ name: "find_savings", args: { goal: "japan" } }], (results) => {
+    seen = (results as ToolResults)[0]!.response.result!;
+    return "Here are some places you could trim.";
+  }).llm;
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "Where can I cut back?" } });
+  assert.ok(Array.isArray(seen.suggestedCuts), JSON.stringify(seen));
+  assert.ok(Array.isArray(seen.flexibleCategories));
+});
+
+test("the calculator only takes figures the Advisor was given", async () => {
+  const { client, deps } = setup();
+  let results: ToolResults = [];
+  deps.llm = toolCallingLlm(
+    [
+      { name: "calculate", args: { expression: "(4500 - 1500) / 6", label: "Monthly for Japan" } },
+      { name: "calculate", args: { expression: "777 * 3", label: "Made up" } },
+    ],
+    (r) => { results = r as ToolResults; return "Done."; },
+  ).llm;
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "Work it out" } });
+  assert.equal(results[0]!.response.result!.result, "500");
+  assert.match(results[1]!.response.error ?? "", /777/);
+  assert.deepEqual(turn.reply.attachments.map((a) => a.kind), ["calculation"]);
+});
+
+test("web search sends only a generic query and refuses personal ones", async () => {
+  const { client, deps } = setup();
+  const queries: string[] = [];
+  let results: ToolResults = [];
+  const fake = toolCallingLlm(
+    [
+      { name: "web_search", args: { query: "Chase Freedom Unlimited APR and annual fee" } },
+      { name: "web_search", args: { query: `should ${"Alex Rivera"} get a card with $12,000 saved` } },
+    ],
+    (r) => { results = r as ToolResults; return "It has no annual fee, per the issuer."; },
+  ).llm;
+  deps.llm = {
+    ...fake,
+    webSearch: async ({ query }: { query: string }) => {
+      queries.push(query);
+      return { answer: "No annual fee. 20.49%-29.24% variable APR.", sources: [{ title: "chase.com", url: "https://chase.com" }] };
+    },
+  };
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "Should I get the Chase Freedom Unlimited?" } });
+  assert.deepEqual(queries, ["Chase Freedom Unlimited APR and annual fee"], "the personal query never leaves");
+  assert.match(results[1]!.response.error ?? "", /refused/);
+  assert.equal(turn.reply.source, "gemini");
+  assert.ok(turn.reply.attachments.some((a) => a.kind === "web_sources"));
+});
+
+async function askWithTools(
+  calls: Array<{ name: string; args?: Record<string, unknown> }>,
+  question: string,
+  answer: (results: ToolResults) => string = () => "Here is what I found.",
+) {
+  const { client, deps } = setup();
+  let results: ToolResults = [];
+  deps.llm = toolCallingLlm(calls, (r) => { results = r as ToolResults; return answer(results); }).llm;
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: question } });
+  return { turn, results, client };
+}
+
+test("car financing at the user's own rate, price, and down payment", async () => {
+  const { turn, results } = await askWithTools(
+    [{ name: "simulate_scenario", args: { changes: [{ kind: "loan", label: "Car loan", price: 28000, downPayment: 3000, aprPercent: 13 }] } }],
+    "Can I afford a car financing with 13% interest and 28,000 total car price and 3000 down payment?",
+    (r) => {
+      const loan = (r[0]!.response.result!.loans as Array<{ monthlyPayment: string }>)[0]!;
+      return `The payment would be ${loan.monthlyPayment} a month over 60 months.`;
+    },
+  );
+  const data = results[0]!.response.result!;
+  assert.equal((data.loans as Array<{ monthlyPayment: string }>)[0]!.monthlyPayment, "$568.83");
+  assert.match(String((data.assumptions as string[])[0]), /60 months/, "the assumed term is stated");
+  assert.ok((data.cash as Record<string, unknown>).debtToIncomeAfter);
+  assert.equal(turn.reply.source, "gemini", turn.reply.content);
+  assert.equal(turn.reply.attachments[0]?.kind, "calculation");
+});
+
+test("a scenario refuses amounts nobody gave", async () => {
+  const { results } = await askWithTools(
+    [{ name: "simulate_scenario", args: { changes: [{ kind: "one_time", label: "Trip", amount: 1234, date: "2027-03-15" }] } }],
+    "I want to go on a spring trip to Arkansas",
+  );
+  assert.match(results[0]!.response.error ?? "", /1234/);
+});
+
+test("a spring trip: a new goal from a stated budget, its odds, and a draft to save", async () => {
+  const { turn, results, client } = await askWithTools(
+    [
+      { name: "simulate_scenario", args: { changes: [{ kind: "new_goal", label: "Arkansas spring trip", amount: 1200, date: "2027-03-15" }] } },
+      { name: "draft_goal", args: { name: "Arkansas spring trip", target: 1200, date: "2027-03-15" } },
+    ],
+    "If I wanna go on a spring trip to Arkansas with about $1,200 in the next few months, what do I need to do?",
+    (r) => {
+      const goal = (r[0]!.response.result!.newGoals as Array<{ monthlyNeeded: string; by: string }>)[0]!;
+      return `Save about ${goal.monthlyNeeded} a month to have it by March 15, 2027.`;
+    },
+  );
+  const newGoal = (results[0]!.response.result!.newGoals as Array<{ likelihood: string }>)[0]!;
+  assert.match(newGoal.likelihood, /%/);
+  assert.equal(turn.reply.source, "gemini", turn.reply.content);
+  const plans = turn.reply.attachments.filter((a) => a.kind === "visual" && a.visual.kind === "goal_plan");
+  assert.equal(plans.length, 1, "one planner per answer, even when two tools make one");
+  const plan = plans[0]!;
+  assert.equal(plan.kind === "visual" && plan.visual.kind === "goal_plan" && plan.visual.inputs.targetCents, 120_000);
+  const before = (await client.listGoals()).length;
+  assert.equal(before, (await client.listGoals()).length, "drafting saves nothing");
+  assert.ok(!(await client.listGoals()).some((g) => g.name === "Arkansas spring trip"));
+});
+
+type GrowthResult = { label: string; source: string; ratePercent: number; value: string };
+
+test("IRA versus index fund with no rate given: fallback rates, labeled as assumed", async () => {
+  const { turn, results } = await askWithTools(
+    [{ name: "finance_calc", args: { formula: "growth", amount: 500, years: 10 } }],
+    "Which is a better investment decision, investing $500 in an IRA or investing $500 in S&P 500?",
+    (r) => {
+      const g = r[0]!.response.result!.results as GrowthResult[];
+      return `Over 10 years, $500 could grow to between ${g[0]!.value} and ${g[2]!.value} at assumed rates. An IRA can hold an S&P 500 fund.`;
+    },
+  );
+  const data = results[0]!.response.result!;
+  assert.equal(data.contributed, "$500");
+  assert.ok((data.results as GrowthResult[]).every((r) => r.source === "assumed"));
+  assert.match(String(data.note), /assumptions/);
+  assert.equal(turn.reply.source, "gemini", turn.reply.content);
+});
+
+test("growth at the user's own rate, and a refused rate nobody gave", async () => {
+  const { turn, results } = await askWithTools(
+    [
+      { name: "finance_calc", args: { formula: "growth", amount: 500, years: 10, rates: [{ label: "Your 9%", percent: 9, source: "user" }] } },
+      { name: "finance_calc", args: { formula: "growth", amount: 500, years: 10, rates: [{ label: "Made up", percent: 23.5, source: "user" }] } },
+    ],
+    "If I get 9% a year, what does $500 become in 10 years?",
+  );
+  const [mine] = results[0]!.response.result!.results as GrowthResult[];
+  assert.equal(mine!.ratePercent, 9);
+  assert.match(results[1]!.response.error ?? "", /23.5/);
+  const visual = turn.reply.attachments.find((a) => a.kind === "visual");
+  assert.ok(visual?.kind === "visual" && visual.visual.kind === "growth_compare");
+  assert.deepEqual(visual.visual.inputs.rates, [{ label: "Your 9%", annualReturnPercent: 9, source: "user" }]);
+});
+
+test("Nasdaq versus S&P 500 with searched historical returns and their sources", async () => {
+  const { client, deps } = setup();
+  let round = 0;
+  deps.llm = {
+    provider: "test",
+    generate: async () => { throw new Error("unused"); },
+    webSearch: async () => ({
+      answer: "Over the last 30 years the S&P 500 returned about 10.5% a year and the Nasdaq-100 about 13.4% a year, with dividends reinvested.",
+      sources: [{ title: "example.com", url: "https://example.com/returns" }],
+    }),
+    chat: async () => {
+      round++;
+      if (round === 1) return { message: { role: "model", text: null, functionCalls: [{ name: "web_search", args: { query: "S&P 500 vs Nasdaq-100 average annual return 30 years" } }] } };
+      if (round === 2) {
+        return {
+          message: {
+            role: "model",
+            text: null,
+            functionCalls: [{
+              name: "finance_calc",
+              args: { formula: "growth", amount: 500, years: 10, rates: [{ label: "S&P 500", percent: 10.5, source: "web" }, { label: "Nasdaq-100", percent: 13.4, source: "web" }] },
+            }],
+          },
+        };
+      }
+      return { message: { role: "model", text: "Historically the Nasdaq-100 grew faster, with bigger swings. Past returns don't predict future ones.", functionCalls: [] } };
+    },
+  };
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "Should I invest $500 in the Nasdaq or the S&P 500 for 10 years?" } });
+  assert.equal(turn.reply.source, "gemini", turn.reply.content);
+  const visual = turn.reply.attachments.find((a) => a.kind === "visual");
+  assert.ok(visual?.kind === "visual" && visual.visual.kind === "growth_compare");
+  assert.deepEqual(visual.visual.inputs.rates.map((r) => [r.label, r.source]), [["S&P 500", "web"], ["Nasdaq-100", "web"]]);
+  assert.deepEqual(visual.visual.inputs.sources, [{ title: "example.com", url: "https://example.com/returns" }]);
+  const [sp, nasdaq] = visual.visual.series.at(-1)!.valuesCents as [number, number];
+  assert.ok(nasdaq > sp);
+});
+
+test("finance_calc payoff, save_for, and time_to", async () => {
+  const { results } = await askWithTools(
+    [
+      { name: "finance_calc", args: { formula: "save_for", amount: 1200, months: 4 } },
+      { name: "finance_calc", args: { formula: "time_to", amount: 1200, monthly: 300 } },
+      { name: "finance_calc", args: { formula: "payoff", amount: 1200, aprPercent: 13, monthly: 300 } },
+    ],
+    "I need $1,200 and can put away $300 a month; my card is 13%",
+  );
+  assert.equal(results[0]!.response.result!.monthlyNeeded, "$300");
+  assert.equal(results[1]!.response.result!.months, 4);
+  assert.equal(results[2]!.response.result!.paysOff, true);
+});
+
+test("a car loan answer carries an interactive loan explorer", async () => {
+  const { turn } = await askWithTools(
+    [{ name: "simulate_scenario", args: { changes: [{ kind: "loan", label: "Car loan", price: 28000, downPayment: 3000, aprPercent: 13 }] } }],
+    "Can I afford a $28,000 car at 13% with $3,000 down?",
+  );
+  const attachment = turn.reply.attachments.find((a) => a.kind === "visual");
+  assert.ok(attachment?.kind === "visual" && attachment.visual.kind === "loan_explorer");
+  const v = attachment.visual;
+  assert.equal(v.monthlyPaymentCents, 56_883);
+  assert.deepEqual(v.terms.map((t) => t.termMonths), [36, 48, 60, 72]);
+  assert.ok(v.typical.interestDifferenceCents > 0, "13% costs more than the typical 7%");
+  assert.equal(v.amortization.at(-1)?.balanceCents, 0);
+  assert.equal(v.interestToDate.at(-1)?.cents, v.amortization.reduce((s, y) => s + y.interestCents, 0));
+  assert.ok(v.interestToDate.at(-1)!.cents > v.typical.interestToDate.at(-1)!.cents);
+  assert.ok(v.interestShare > 0 && v.interestShare < 1);
+});
+
+test("visuals recompute through the API when the user moves a slider", async () => {
+  const { client } = setup();
+  const loan = await client.renderAdvisorVisual({
+    body: { kind: "loan_explorer", inputs: { label: "Car", priceCents: 2_800_000, downPaymentCents: 800_000, aprPercent: 13, termMonths: 48 } },
+  });
+  assert.ok(loan.kind === "loan_explorer" && loan.financedCents === 2_000_000);
+
+  const growth = await client.renderAdvisorVisual({
+    body: { kind: "growth_compare", inputs: { initialCents: 50_000, monthlyCents: 0, years: 20, rates: [{ label: "Mine", annualReturnPercent: 9, source: "user" }] } },
+  });
+  assert.ok(growth.kind === "growth_compare" && growth.series.length === 21);
+  assert.equal(growth.series[0]!.valuesCents.length, 1);
+
+  const plan = await client.renderAdvisorVisual({
+    body: { kind: "goal_plan", inputs: { name: "Trip", targetCents: 120_000, savedCents: 0, targetDate: "2027-03-15", selectedCuts: [] } },
+  });
+  assert.ok(plan.kind === "goal_plan");
+  assert.equal(plan.coverage.coveredCents, 0, "no cuts chosen covers nothing");
+  assert.ok(plan.fan.length > 1, "the new goal's simulated fan");
+  assert.ok(plan.probabilityLow !== null);
+
+  const card = await client.renderAdvisorVisual({
+    body: { kind: "card_evaluator", inputs: { cardName: "Test Card", rewardsPercent: 1.5, annualFeeCents: 0, aprPercent: 29.24, monthlySpendCents: 100_000, paysInFull: true } },
+  });
+  assert.ok(card.kind === "card_evaluator" && card.figures.annualRewardsCents === 18_000);
+  assert.ok(card.checks.length >= 3);
+  assert.equal(card.creditScore?.mocked, true);
+});
+
+test("evaluate_card uses searched terms and links the search's sources", async () => {
+  const { client, deps } = setup();
+  const fake = toolCallingLlm(
+    [{ name: "web_search", args: { query: "Chase Freedom Unlimited terms" } }],
+    () => "unused",
+  ).llm;
+  let round = 0;
+  deps.llm = {
+    ...fake,
+    webSearch: async () => ({ answer: "1.5% cash back, $0 annual fee, 20.49%-29.24% variable APR.", sources: [{ title: "chase.com", url: "https://chase.com" }] }),
+    chat: async (request) => {
+      round++;
+      if (round === 1) return { message: { role: "model", text: null, functionCalls: [{ name: "web_search", args: { query: "Chase Freedom Unlimited terms" } }] } };
+      if (round === 2) return { message: { role: "model", text: null, functionCalls: [{ name: "evaluate_card", args: { cardName: "Chase Freedom Unlimited", rewardsPercent: 1.5, annualFee: 0, aprPercent: 29.24 } }] } };
+      void request;
+      return { message: { role: "model", text: "It has no annual fee and earns 1.5% back. See the card below.", functionCalls: [] } };
+    },
+  };
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "Should I take the Chase Freedom Unlimited?" } });
+  assert.equal(turn.reply.source, "gemini", turn.reply.content);
+  const card = turn.reply.attachments.find((a) => a.kind === "visual");
+  assert.ok(card?.kind === "visual" && card.visual.kind === "card_evaluator");
+  assert.deepEqual(card.visual.inputs.sources, [{ title: "chase.com", url: "https://chase.com" }]);
+});

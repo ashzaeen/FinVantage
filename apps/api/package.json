@@ -8,7 +8,8 @@
     "start": "tsx --env-file-if-exists=../../.env src/server.ts",
     "build": "node scripts/build-vercel.mjs",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "node --import tsx --test \"src/**/*.test.ts\""
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "eval:advisor": "tsx --env-file-if-exists=../../.env src/advisor/eval.ts"
   },
   "dependencies": {
     "@finvantage/contracts": "*",

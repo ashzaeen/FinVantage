@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { CopilotContext, CopilotMetrics } from "@finvantage/contracts";
 import { CARD_JARGON, generateCopilotCard, templateCard } from "./copilot-card";
-import { cardText, validateCard, wordCount, MAX_CARD_WORDS } from "./guardrails";
+import { cardText, isGroundedNumber, moneyIn, withoutSentences, groundedFigures, validateCard, validateGrounded, wordCount, MAX_CARD_WORDS, MAX_CHAT_WORDS } from "./guardrails";
 import type { LlmClient } from "./client";
 
 const context: CopilotContext = {
@@ -448,3 +448,63 @@ test("a real-looking Gemini reply flows through to an LLM card", async () => {
   assert.equal(card.source, "llm");
   assert.equal(card.impact, "This laptop puts your Japan trip at risk.");
 });
+
+test("grounded figures cover cents as dollars, fractions as percents, and numbers in strings", () => {
+  const allowed = groundedFigures({ balanceCents: 123450, probabilityLow: 0.62, label: "$2,500 target by 2027-03-01" });
+  for (const ok of ["1234.5", "1234.50", "1234", "1235", "62", "2500", "2027"]) {
+    assert.ok(allowed.has(String(Number(ok))), `${ok} should be allowed`);
+  }
+});
+
+test("chat answers check dollar amounts only", () => {
+  const allowed = groundedFigures({ spentCents: 45000, limitCents: 40000 });
+  assert.deepEqual(validateGrounded("You spent $450 against a $400 limit, over 2 weeks.", allowed), { ok: true });
+  const bad = validateGrounded("Cutting $175 a month would fix it.", allowed);
+  assert.equal(bad.ok, false);
+  assert.deepEqual(!bad.ok && bad.invented, ["$175"]);
+  assert.equal(validateGrounded("word ".repeat(MAX_CHAT_WORDS + 1), allowed).ok, false);
+});
+
+test("general advice with plain numbers and percentages reads freely", () => {
+  const allowed = groundedFigures({});
+  const advice = "Keep your credit utilization under 30%. Payment history is about 35% of a FICO score, and a late payment can stay on your report for 7 years. Aim for 3 to 6 months of expenses in savings. The S&P 500 is one index; a 401(k) can hold it.";
+  assert.deepEqual(validateGrounded(advice, allowed), { ok: true });
+  assert.deepEqual(validateGrounded("Book by March 15, 2027, or you'd wait until 2150.", allowed), { ok: true });
+});
+
+test("rounded amounts pass; amounts nobody gave do not", () => {
+  const allowed = groundedFigures({ monthlyPaymentCents: 56_883, totalInterestCents: 912_980, savingsCents: 1_250_000 });
+  for (const ok of ["about $570 a month", "roughly $9.1k in interest", "$12,500 saved", "$12.5K saved", "around 569 dollars"]) {
+    assert.deepEqual(validateGrounded(ok, allowed), { ok: true }, ok);
+  }
+  for (const bad of ["$600 a month", "$2027 on it", "2,027.50 dollars", "$1.2 million"]) {
+    assert.equal(validateGrounded(bad, allowed).ok, false, bad);
+  }
+});
+
+test("dollar amounts are read in every common form", () => {
+  assert.deepEqual(moneyIn("$570, $9.1k, $1.2 million and 300 dollars").map((m) => m.dollars), [570, 9100, 1_200_000, 300]);
+});
+
+test("tool inputs stay exact: only numbers the model was given", () => {
+  const allowed = groundedFigures({ priceCents: 2_800_000 });
+  assert.equal(isGroundedNumber(28_000, allowed), true);
+  assert.equal(isGroundedNumber(12, allowed), true, "small counts");
+  assert.equal(isGroundedNumber(100, allowed), true);
+  assert.equal(isGroundedNumber(27_500, allowed), false, "no rounding for inputs");
+});
+
+test("an answer can lose the sentences holding an unchecked amount and keep the rest", () => {
+  const text = "A Roth IRA is taxed now and can be tax-free later. You could put $9,999 in this year. Either account can hold an index fund, and both reward starting early with steady contributions.";
+  const kept = withoutSentences(text, ["$9,999"]);
+  assert.ok(kept && !kept.includes("9,999") && kept.includes("Roth IRA") && kept.includes("index fund"));
+  assert.equal(withoutSentences("Cut $180 a month.", ["$180"]), null, "too little left to show");
+});
+
+test("numbers inside well-known financial names are names, not figures", () => {
+  const allowed = groundedFigures({ amountCents: 50_000 });
+  assert.deepEqual(validateGrounded("The S&P 500 and the Nasdaq-100 both beat the Russell 2000; a 401(k) or a 529 plan can hold them.", allowed), { ok: true });
+  assert.equal(validateGrounded("The S&P 500 returned $777.", allowed).ok, false, "a real figure beside a name is still checked");
+  assert.equal(validateGrounded("Your payment is $56,883.", groundedFigures({ paymentCents: 56_883 })).ok, false, "cents never pass as dollars");
+});
+

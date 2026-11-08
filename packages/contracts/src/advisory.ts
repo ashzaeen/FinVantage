@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { Cents, Id, IsoDate, IsoDateTime, Probability } from "./common";
+import { AdvisorVisual } from "./advisor-visuals";
+import { NewGoal } from "./goal";
+import { LifeEventDraft } from "./life-event";
+import { GoalImpact } from "./simulation";
 
 export const Situation = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("copilot_event"), eventId: Id }),
@@ -36,6 +40,83 @@ export const AdvisorChatRequestBody = z.object({
 });
 export type AdvisorChatRequest = z.infer<typeof AdvisorChatRequestBody>;
 export const AdvisorChatResponse = z.object({ answer: z.string().min(1), source: z.enum(["gemini", "fallback"]) });
+
+/** A record the Advisor looked at to write an answer, named from the tool that fetched it. */
+export const AdvisorCitation = z.object({ tool: z.string(), label: z.string() });
+export type AdvisorCitation = z.infer<typeof AdvisorCitation>;
+
+/**
+ * Something the Advisor proposes alongside its words. A life-event draft is never saved by the
+ * Advisor: the user confirms it through `POST /v1/life-events`.
+ */
+export const AdvisorAttachment = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("life_event_draft"),
+    draft: LifeEventDraft,
+    /** Projected change on each goal if the draft were saved. From a run that was not stored. */
+    goalChanges: z.array(GoalImpact),
+  }),
+  z.object({ kind: z.literal("recommendation"), recommendation: Recommendation }),
+  /** A goal the Advisor proposes. Never saved by the Advisor: the user confirms it through `POST /v1/goals`. */
+  z.object({
+    kind: z.literal("goal_draft"),
+    goal: NewGoal,
+    /** The new goal's own estimated odds, from a run that was not stored. */
+    probabilityLow: Probability.nullable(),
+    probabilityHigh: Probability.nullable(),
+    /** What adding it would do to the user's other goals. */
+    goalChanges: z.array(GoalImpact),
+  }),
+  /** How a figure in the answer was worked out, so every number links back to its inputs. */
+  z.object({
+    kind: z.literal("calculation"),
+    label: z.string(),
+    /** The working, with the figures it used, such as "($4,500 - $1,500) / 7 months". */
+    expression: z.string(),
+    result: z.string(),
+  }),
+  /** An interactive result: a loan explorer, goal planner, growth comparison, or card evaluator. */
+  z.object({ kind: z.literal("visual"), visual: AdvisorVisual }),
+  /** Web pages a search drew on. Figures from them are the publisher's, not FinVantage's. */
+  z.object({
+    kind: z.literal("web_sources"),
+    query: z.string(),
+    sources: z.array(z.object({ title: z.string(), url: z.string() })),
+  }),
+]);
+export type AdvisorAttachment = z.infer<typeof AdvisorAttachment>;
+
+export const AdvisorMessage = z.object({
+  id: Id,
+  conversationId: Id,
+  role: z.enum(["user", "assistant"]),
+  content: z.string().min(1),
+  /** `fallback` means the model was unavailable or its answer failed the number check. Null on user messages. */
+  source: z.enum(["gemini", "fallback"]).nullable(),
+  citations: z.array(AdvisorCitation),
+  attachments: z.array(AdvisorAttachment),
+  createdAt: IsoDateTime,
+});
+export type AdvisorMessage = z.infer<typeof AdvisorMessage>;
+
+export const AdvisorConversation = z.object({
+  id: Id,
+  userId: Id,
+  title: z.string(),
+  /** What the conversation was opened about, such as a Copilot event. */
+  situation: Situation.nullable(),
+  createdAt: IsoDateTime,
+  updatedAt: IsoDateTime,
+});
+export type AdvisorConversation = z.infer<typeof AdvisorConversation>;
+
+export const AdvisorConversationDetail = AdvisorConversation.extend({ messages: z.array(AdvisorMessage) });
+export type AdvisorConversationDetail = z.infer<typeof AdvisorConversationDetail>;
+
+export const CreateAdvisorConversation = z.object({ situation: Situation.nullable().optional() });
+export const SendAdvisorMessage = z.object({ content: z.string().trim().min(1).max(4000) });
+export const AdvisorTurn = z.object({ userMessage: AdvisorMessage, reply: AdvisorMessage });
+export type AdvisorTurn = z.infer<typeof AdvisorTurn>;
 
 export const Quarter = z.string().regex(/^\d{4}-Q[1-4]$/, "Expected a quarter such as 2026-Q3");
 export type Quarter = z.infer<typeof Quarter>;

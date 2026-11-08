@@ -4,6 +4,7 @@ import { DEMO_USER_ID, NotImplementedError } from "@finvantage/data";
 import type { AppDeps } from "./deps";
 import { HttpError, type AppEnv } from "./mount";
 import { registerAccountRoutes } from "./routes/accounts";
+import { registerAdvisorRoutes } from "./routes/advisor";
 import { registerAgentRoutes } from "./routes/agents";
 import { ensureProfile, registerAuthRoutes } from "./routes/auth";
 import { registerBankRoutes } from "./routes/bank";
@@ -79,6 +80,7 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   registerSimulationRoutes(app, deps);
   registerCopilotRoutes(app, deps);
   registerAgentRoutes(app, deps);
+  registerAdvisorRoutes(app, deps);
   registerMockedRoutes(app, deps);
   registerBankRoutes(app, deps);
   registerLiveRoutes(app, deps);

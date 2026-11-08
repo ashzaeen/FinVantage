@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AdvisorVisual, AdvisorVisualRequest } from "./advisor-visuals";
 import { Account, BankItemSummary, CreateTransaction, NetWorth, NewAccount, NewTransaction, Transaction } from "./account";
 import {
   EmailSchedule,
@@ -6,6 +7,11 @@ import {
   AdvisorChatRequest,
   AdvisorChatRequestBody,
   AdvisorChatResponse,
+  AdvisorConversation,
+  AdvisorConversationDetail,
+  AdvisorTurn,
+  CreateAdvisorConversation,
+  SendAdvisorMessage,
   Quarter,
   QuarterlyReport,
   Recommendation,
@@ -200,6 +206,46 @@ export const routes = {
     response: Recommendation,
   }),
   advisorChat: route({ method: "POST", path: "/v1/advisory/chat", body: AdvisorChatRequestBody, response: AdvisorChatResponse }),
+  /** Recomputes an interactive visual after the user changes an input. Saves nothing. */
+  renderAdvisorVisual: route({
+    method: "POST",
+    path: "/v1/advisory/visuals",
+    body: AdvisorVisualRequest,
+    response: AdvisorVisual,
+  }),
+  listRecommendations: route({
+    method: "GET",
+    path: "/v1/advisory/recommendations",
+    response: z.array(Recommendation),
+  }),
+  listAdvisorConversations: route({
+    method: "GET",
+    path: "/v1/advisory/conversations",
+    response: z.array(AdvisorConversation),
+  }),
+  createAdvisorConversation: route({
+    method: "POST",
+    path: "/v1/advisory/conversations",
+    body: CreateAdvisorConversation,
+    response: AdvisorConversation,
+  }),
+  getAdvisorConversation: route({
+    method: "GET",
+    path: "/v1/advisory/conversations/:id",
+    response: AdvisorConversationDetail,
+  }),
+  deleteAdvisorConversation: route({
+    method: "DELETE",
+    path: "/v1/advisory/conversations/:id",
+    response: z.object({ deleted: z.literal(true) }),
+  }),
+  /** Saves the user's message, answers it, and saves the reply. Never changes financial data. */
+  sendAdvisorMessage: route({
+    method: "POST",
+    path: "/v1/advisory/conversations/:id/messages",
+    body: SendAdvisorMessage,
+    response: AdvisorTurn,
+  }),
   listReports: route({
     method: "GET",
     path: "/v1/reports/quarterly",

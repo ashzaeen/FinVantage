@@ -6,6 +6,7 @@ export * from "./life-event";
 export * from "./simulation";
 export * from "./copilot";
 export * from "./advisory";
+export * from "./advisor-visuals";
 export * from "./spending";
 export * from "./categories";
 export * from "./live";

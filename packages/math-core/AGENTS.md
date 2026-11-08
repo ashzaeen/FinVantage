@@ -8,6 +8,8 @@ Every figure on a Copilot card comes from here. Read the root `AGENTS.md` first.
 
 Assumptions are named constants at the top of `src/index.ts`. The reasoning behind each scenario (rent replaces housing, safe rent, vehicle terms, the split plan, headline choice) is in `docs/DECISIONS.md`.
 
+`src/advisor.ts` holds the Advisor's figures: goal plans, spending cuts, the calculator's parser, loan, growth, and payoff formulas, and `applyScenario`, which turns a what-if scenario into simulator inputs. Its assumptions are named constants at its top.
+
 Known limits:
 
 - Current housing is the mortgage payment. Someone who rents today has no rent field in the snapshot, so it counts as 0.

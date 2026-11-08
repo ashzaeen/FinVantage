@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import {
   EmailSchedule,
+  type AdvisorConversation,
+  type AdvisorMessage,
   type CopilotAction,
   type CopilotEvent,
   type EmailScheduleLogEntry,
@@ -248,6 +250,8 @@ export class MemoryDocumentStore implements DocumentStore {
   private copilotEvents: CopilotEvent[] = [];
   private recommendations: Recommendation[] = [];
   private reports: QuarterlyReport[] = [];
+  private conversations: AdvisorConversation[] = [];
+  private advisorMessages: Array<AdvisorMessage & { userId: string }> = [];
 
   async listLifeEvents(userId: string) {
     return this.lifeEvents.filter((e) => e.userId === userId);
@@ -312,6 +316,42 @@ export class MemoryDocumentStore implements DocumentStore {
       (recommendation) =>
         recommendation.userId === userId && inRange(recommendation.createdAt, range),
     );
+  }
+
+  async saveAdvisorConversation(conversation: AdvisorConversation) {
+    this.conversations = [
+      conversation,
+      ...this.conversations.filter((c) => !(c.userId === conversation.userId && c.id === conversation.id)),
+    ];
+    return conversation;
+  }
+
+  async getAdvisorConversation(userId: string, id: string) {
+    return this.conversations.find((c) => c.userId === userId && c.id === id) ?? null;
+  }
+
+  async listAdvisorConversations(userId: string) {
+    return this.conversations
+      .filter((c) => c.userId === userId)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  async deleteAdvisorConversation(userId: string, id: string) {
+    const before = this.conversations.length;
+    this.conversations = this.conversations.filter((c) => !(c.userId === userId && c.id === id));
+    this.advisorMessages = this.advisorMessages.filter((m) => !(m.userId === userId && m.conversationId === id));
+    return this.conversations.length < before;
+  }
+
+  async appendAdvisorMessage(userId: string, message: AdvisorMessage) {
+    this.advisorMessages.push({ ...message, userId });
+    return message;
+  }
+
+  async listAdvisorMessages(userId: string, conversationId: string) {
+    return this.advisorMessages
+      .filter((m) => m.userId === userId && m.conversationId === conversationId)
+      .map(({ userId: _owner, ...message }) => message);
   }
 
   private reportPdfs = new Map<string, Buffer>();

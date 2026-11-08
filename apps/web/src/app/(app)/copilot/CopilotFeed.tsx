@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import { formatUsd, type CopilotEvent } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
 import { api } from "@/lib/api";
@@ -140,6 +142,12 @@ export function CopilotFeed({ initial }: { initial: CopilotEvent[] }) {
             <p className="font-roboto text-sm font-medium text-[#16192c]">{event.card.impact}</p>
             <p className="font-roboto text-xs text-[#544af7] font-semibold mt-2">{event.card.smartMove}</p>
           </div>
+          <Link
+            href={`/advisor?copilotEvent=${encodeURIComponent(event.id)}`}
+            className="mt-3 inline-flex items-center gap-1.5 font-roboto text-xs font-semibold text-accent hover:underline"
+          >
+            <Sparkles size={13} aria-hidden /> Ask the Advisor About This
+          </Link>
         </Card>
       ))}
     </div>

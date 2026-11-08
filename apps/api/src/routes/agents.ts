@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Hono } from "hono";
 import { routes, type QuarterlyReport } from "@finvantage/contracts";
-import { answerAdvisorChat, generateOptions, generateQuarterlyReport } from "@finvantage/llm";
+import { generateQuarterlyReport } from "@finvantage/llm";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
 import {
@@ -158,44 +158,6 @@ async function emailReport(
 }
 
 export function registerAgentRoutes(app: Hono<AppEnv>, deps: AppDeps) {
-  mount(app, deps, routes.advisorChat, async ({ userId, body }) => {
-    const [accounts, goals, transactions, lifeEvents, runs] = await Promise.all([
-      deps.ledger.listAccounts(userId),
-      deps.ledger.listGoals(userId),
-      deps.ledger.listTransactions(userId, 30),
-      deps.docs.listLifeEvents(userId),
-      deps.docs.listSimulationRuns(userId),
-    ]);
-    const context = JSON.stringify({
-      accounts: accounts.map(({ type, name, balanceCents, annualRate, minimumPaymentCents }) => ({ type, name, balanceCents, annualRate, minimumPaymentCents })),
-      goals: goals.map(({ name, targetCents, currentCents, targetDate, flexibility }) => ({ name, targetCents, currentCents, targetDate, flexibility })),
-      recentTransactions: transactions.slice(0, 20).map(({ date, amountCents, merchant, category }) => ({ date, amountCents, merchant, category })),
-      lifeEvents: lifeEvents.slice(0, 10).map(({ type, date, dollarImpactCents, recurrence }) => ({ type, date, dollarImpactCents, recurrence })),
-      latestSimulation: runs[0] ? { createdAt: runs[0].createdAt, goalOutcomes: runs[0].goalOutcomes } : null,
-      note: "All currency values ending in Cents are integer cents.",
-    });
-    return answerAdvisorChat(deps.llm, body.messages, context);
-  });
-
-  mount(app, deps, routes.getAdvice, async ({ userId, body }) => {
-    const [goals, runs] = await Promise.all([
-      deps.ledger.listGoals(userId),
-      deps.docs.listSimulationRuns(userId),
-    ]);
-    const options = await generateOptions(deps.llm, {
-      situation: body.situation,
-      goals,
-      latestRunId: runs[0]?.id ?? null,
-    });
-    return deps.docs.saveRecommendation({
-      id: randomUUID(),
-      userId,
-      situation: body.situation,
-      options,
-      createdAt: deps.now(),
-    });
-  });
-
   mount(app, deps, routes.listReports, ({ userId }) => deps.docs.listReports(userId));
 
   mount(app, deps, routes.getLatestReport, async ({ userId }) => {

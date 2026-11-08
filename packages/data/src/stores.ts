@@ -1,5 +1,7 @@
 import type {
   Account,
+  AdvisorConversation,
+  AdvisorMessage,
   CopilotAction,
   CopilotEvent,
   EmailSchedule,
@@ -89,6 +91,16 @@ export interface DocumentStore {
   saveRecommendation(recommendation: Recommendation): Promise<Recommendation>;
   /** Newest first. */
   listRecommendations(userId: string, range?: TimeRange): Promise<Recommendation[]>;
+  /** Insert or replace. The Advisor's conversations are its memory. */
+  saveAdvisorConversation(conversation: AdvisorConversation): Promise<AdvisorConversation>;
+  getAdvisorConversation(userId: string, id: string): Promise<AdvisorConversation | null>;
+  /** Most recently updated first. */
+  listAdvisorConversations(userId: string): Promise<AdvisorConversation[]>;
+  /** Removes the conversation and its messages. False when the user has no such conversation. */
+  deleteAdvisorConversation(userId: string, id: string): Promise<boolean>;
+  appendAdvisorMessage(userId: string, message: AdvisorMessage): Promise<AdvisorMessage>;
+  /** Oldest first. */
+  listAdvisorMessages(userId: string, conversationId: string): Promise<AdvisorMessage[]>;
   saveReport(report: QuarterlyReport): Promise<QuarterlyReport>;
   /** A report's rendered PDF. Kept with the documents so any server instance can serve it. */
   saveReportPdf(userId: string, reportId: string, pdf: Buffer): Promise<void>;

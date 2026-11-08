@@ -106,3 +106,72 @@ test("schema conversion drops keywords Gemini rejects, but keeps fields that sha
     },
   );
 });
+
+test("chat sends history, tools, and function responses; returns calls and raw parts", async () => {
+  const calls: Call[] = [];
+  const reply = {
+    candidates: [{
+      content: {
+        parts: [
+          { text: "thinking", thought: true },
+          { functionCall: { name: "get_budgets", args: { month: "2026-11" } }, thoughtSignature: "sig" },
+        ],
+      },
+    }],
+  };
+  const client = new GeminiClient("k", models, fakeFetch(200, reply, calls));
+  const tools = [{ name: "get_budgets", description: "Budgets", parameters: { type: "object", additionalProperties: false, properties: { month: { type: "string" } } } }];
+  const { message } = await client.chat({
+    tier: "flash",
+    system: "sys",
+    tools,
+    messages: [
+      { role: "user", text: "hi" },
+      { role: "model", text: null, functionCalls: [{ name: "get_goals", args: {} }], raw: [{ functionCall: { name: "get_goals", args: {} }, thoughtSignature: "old" }] },
+      { role: "tool", results: [{ name: "get_goals", response: { goals: [] } }] },
+    ],
+  });
+  assert.equal(message.text, null, "thought parts are not answer text");
+  assert.deepEqual(message.functionCalls, [{ name: "get_budgets", args: { month: "2026-11" } }]);
+  assert.equal((message.raw as Array<{ thoughtSignature?: string }>)[1]!.thoughtSignature, "sig");
+
+  const body = JSON.parse(String(calls[0]!.init.body));
+  assert.equal(body.tools[0].functionDeclarations[0].parameters.type, "OBJECT");
+  assert.equal(body.tools[0].functionDeclarations[0].parameters.additionalProperties, undefined);
+  assert.equal(body.contents[1].parts[0].thoughtSignature, "old", "model turns replay their raw parts");
+  assert.deepEqual(body.contents[2].parts[0], { functionResponse: { name: "get_goals", response: { goals: [] } } });
+});
+
+test("chat returns text when the model answers, and throws on an empty reply", async () => {
+  const client = new GeminiClient("k", models, fakeFetch(200, { candidates: [{ content: { parts: [{ text: "Hello" }] } }] }));
+  const { message } = await client.chat({ tier: "flash", system: "s", messages: [{ role: "user", text: "hi" }] });
+  assert.equal(message.text, "Hello");
+  assert.deepEqual(message.functionCalls, []);
+  await assert.rejects(new GeminiClient("k", models, fakeFetch(200, { candidates: [] })).chat({ tier: "flash", system: "s", messages: [{ role: "user", text: "hi" }] }), /empty/);
+  await assert.rejects(createLlmClient({}).chat!({ tier: "flash", system: "s", messages: [] }));
+});
+
+test("schema conversion turns exclusive bounds inclusive and drops formats Gemini lacks", () => {
+  assert.deepEqual(
+    toGeminiSchema({ type: "object", properties: { n: { type: "number", exclusiveMinimum: 0 }, d: { type: "string", format: "date" }, t: { type: "string", format: "date-time" } } }),
+    { type: "OBJECT", properties: { n: { type: "NUMBER", minimum: 0 }, d: { type: "STRING" }, t: { type: "STRING", format: "date-time" } } },
+  );
+});
+
+test("web search sends only the query with Google Search grounding, and returns sources", async () => {
+  const calls: Call[] = [];
+  const reply = {
+    candidates: [{
+      content: { parts: [{ text: "No annual fee; 1.5% cash back on most purchases." }] },
+      groundingMetadata: { groundingChunks: [{ web: { uri: "https://a.example", title: "a.example" } }, { web: { uri: "https://a.example", title: "dup" } }] },
+    }],
+  };
+  const result = await new GeminiClient("k", models, fakeFetch(200, reply, calls)).webSearch({ query: "Chase Freedom Unlimited terms" });
+  assert.match(result.answer, /annual fee/);
+  assert.deepEqual(result.sources, [{ title: "a.example", url: "https://a.example" }]);
+  const body = JSON.parse(String(calls[0]!.init.body));
+  assert.deepEqual(body.tools, [{ google_search: {} }]);
+  assert.equal(body.contents.length, 1);
+  assert.equal(body.contents[0].parts[0].text, "Chase Freedom Unlimited terms");
+  await assert.rejects(createLlmClient({}).webSearch!({ query: "x" }));
+});

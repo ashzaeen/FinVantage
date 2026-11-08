@@ -1,4 +1,6 @@
 import {
+  AdvisorConversation,
+  AdvisorMessage,
   CopilotEvent,
   EmailSchedule,
   EmailScheduleLogEntry,
@@ -35,6 +37,8 @@ class MongoDocumentStore implements DocumentStore {
         this.db.collection("simulation_runs").createIndex({ userId: 1, createdAt: -1 }),
         this.db.collection("copilot_events").createIndex({ userId: 1, createdAt: -1 }),
         this.db.collection("recommendations").createIndex({ userId: 1, createdAt: -1 }),
+        this.db.collection("advisor_conversations").createIndex({ userId: 1, updatedAt: -1 }),
+        this.db.collection("advisor_messages").createIndex({ userId: 1, conversationId: 1, createdAt: 1 }),
         this.db
           .collection("quarterly_reports")
           .createIndex({ userId: 1, quarter: 1 }, { unique: true }),
@@ -132,6 +136,50 @@ class MongoDocumentStore implements DocumentStore {
 
   async listRecommendations(userId: string, range?: TimeRange) {
     return Recommendation.array().parse(await this.list("recommendations", userId, range));
+  }
+
+  async saveAdvisorConversation(conversation: AdvisorConversation) {
+    await this.save("advisor_conversations", conversation);
+    return conversation;
+  }
+
+  async getAdvisorConversation(userId: string, id: string) {
+    await this.ready();
+    const value = await this.db.collection("advisor_conversations").findOne({ userId, id });
+    return value ? AdvisorConversation.parse(value) : null;
+  }
+
+  async listAdvisorConversations(userId: string) {
+    await this.ready();
+    const values = await this.db
+      .collection("advisor_conversations")
+      .find({ userId })
+      .sort({ updatedAt: -1 })
+      .toArray();
+    return AdvisorConversation.array().parse(values);
+  }
+
+  async deleteAdvisorConversation(userId: string, id: string) {
+    await this.ready();
+    const result = await this.db.collection("advisor_conversations").deleteOne({ userId, id });
+    await this.db.collection("advisor_messages").deleteMany({ userId, conversationId: id });
+    return result.deletedCount > 0;
+  }
+
+  async appendAdvisorMessage(userId: string, message: AdvisorMessage) {
+    await this.ready();
+    await this.db.collection("advisor_messages").insertOne({ ...message, userId });
+    return message;
+  }
+
+  async listAdvisorMessages(userId: string, conversationId: string) {
+    await this.ready();
+    const values = await this.db
+      .collection("advisor_messages")
+      .find({ userId, conversationId })
+      .sort({ createdAt: 1 })
+      .toArray();
+    return AdvisorMessage.array().parse(values);
   }
 
   async saveReportPdf(userId: string, reportId: string, pdf: Buffer) {

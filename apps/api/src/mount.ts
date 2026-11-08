@@ -27,6 +27,8 @@ export interface HandlerContext<R extends RouteDef> {
   params: Record<string, string>;
   body: Parsed<R["body"]>;
   query: Parsed<R["query"]>;
+  /** The request's Authorization header, so a handler can call other routes as the same user. */
+  authorization: string;
 }
 
 /**
@@ -56,6 +58,7 @@ export function mount<R extends RouteDef<string, z.ZodType, any, any>>(
       params: c.req.param() as Record<string, string>,
       body: body as HandlerContext<R>["body"],
       query: query as HandlerContext<R>["query"],
+      authorization: c.req.header("authorization") ?? "",
     });
 
     const checked = route.response.safeParse(result);

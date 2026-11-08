@@ -13,7 +13,8 @@
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "check": "npm run typecheck && npm run test"
+    "check": "npm run typecheck && npm run test",
+    "eval:advisor": "npm run eval:advisor -w @finvantage/api --"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

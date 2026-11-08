@@ -12,6 +12,7 @@ Hono on Node. Read the root `AGENTS.md` first. Brief: `docs/workstreams/platform
 | `src/mount.ts` | Registers a contract route with validation on both sides |
 | `src/services.ts` | Shared logic: `loadInputs`, `runSimulation` |
 | `src/routes/*.ts` | One file per area, so teams rarely collide |
+| `src/advisor/` | The Advisor's brief, its tools, the in-process read client they use, and `eval.ts` (`npm run eval:advisor`) |
 | `src/app.test.ts` | End-to-end tests through the real typed client |
 
 ## Rules

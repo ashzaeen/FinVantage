@@ -594,3 +594,4 @@ export function computeCopilotMetrics(
   };
   return { ...partial, verdict: pickVerdict(context, partial) };
 }
+export * from "./advisor";

@@ -17,6 +17,7 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
 | `src/components/ui` | Generic pieces: `Card`, `Stat`, `PageHeader`, `MockedBadge` |
 | `src/components/spending` | `CategoryIcon`: one Lucide icon per spending category, inherited by custom ones. Use it wherever a category is shown |
 | `src/components/finance` | Domain pieces: `ProbabilityRange`, `GoalCard`, `FanChart` |
+| `src/app/(app)/advisor/visuals` | The Advisor's interactive visuals and their shared pieces (`shared.tsx`: chips, sliders, the fan chart, the recompute hook). They never compute figures; they ask `POST /v1/advisory/visuals` |
 | `src/lib/api.ts` | The typed API client |
 | `src/lib/useLiveEvents.ts` | Subscribes to pushed updates: SpacetimeDB when signed in, SSE otherwise |
 | `src/spacetime/` | Generated SpacetimeDB client bindings. Do not edit: run `npm run generate -w @finvantage/spacetime` |
