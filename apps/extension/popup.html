@@ -7,11 +7,16 @@
       body { width: 240px; margin: 0; padding: 12px; font: 14px system-ui, sans-serif; }
       label { display: flex; gap: 8px; align-items: center; }
       p { margin: 8px 0 0; color: #66645d; font-size: 12px; }
+      button { margin-top: 12px; width: 100%; padding: 7px; border: 1px solid #e4e1d8; border-radius: 8px; background: #fff; font: inherit; cursor: pointer; }
+      button:hover { border-color: #2563a8; }
+      button:focus-visible { outline: 2px solid #2563a8; outline-offset: 2px; }
     </style>
   </head>
   <body>
     <label><input id="enabled" type="checkbox" /> Show Copilot cards</label>
     <p>Sends only price, item type, and merchant. Suggestions only.</p>
+    <button id="reset" type="button">Reset dismissed cards</button>
+    <p id="reset-status" role="status"></p>
     <script src="popup.js"></script>
   </body>
 </html>

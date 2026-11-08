@@ -47,3 +47,51 @@ Append here when you make a call others need to know about. Do not rewrite histo
 | Gemini model names, free-tier limits, track rules | Copilot backend | Confirm at the Google Cloud sponsor table |
 | Sponsor rules generally | Team | The PRD read these from slides only. Confirm each before relying on it |
 | Final P1/P2 line | Team | Revisit after the first build hours |
+
+## Simulator and Copilot (browser agent)
+
+Answers to the open questions above. These replace those rows.
+
+| Decision | Why |
+| --- | --- |
+| **Probability range = assumption terciles.** Each path draws an assumption level that shifts its average market return and raise rate. Low end: success rate in the most pessimistic third of paths. High end: the most optimistic third | A confidence interval at 5,000 paths is about ±1%, which is false precision. This range says "if returns and raises come in below average, X%; above average, Y%", which is honest and explainable |
+| Monthly steps, seeded mulberry32, fixed draws per month | Same seed means same output, and a baseline and a what-if share their randomness, so the difference is caused by the purchase alone |
+| One-time purchases create a cash shortfall that monthly savings rebuild before goals get new money | A laptop is paid from cash, not from a goal. The delay shows up as goals waiting while cash recovers |
+| Goals are funded "on pace" in priority order: each gets what it needs to land on its date, then leftovers speed up goals in order | Matches the PRD's joint simulation. A purchase often shows as lower odds rather than a later date, so cards can lead with either |
+| **A rental replaces current housing.** The simulator applies rent minus the current mortgage payment | The demo profile owns a condo and goes apartment hunting. Adding rent on top of a mortgage makes every goal impossible and is not what a mover does |
+| **Safe rent** = current housing payment + monthly savings not needed by non-negotiable goals, rounded down to $50 | Ties the threshold to the user's must-hit goals, which is what the card says it protects |
+| **Vehicle**: assume 60 months at 7% APR, whole-dollar payment, total cost includes interest | The privacy rule limits the payload to price, so terms are assumed and named on the card ("at an assumed 7% over 60 months") |
+| **Checkout Smart Move**: pay from checking down to the buffer target, put the rest on the 0% promo card, pay off in equal whole-dollar amounts before the promo ends | The PRD's example card. No plan when checking covers it or no usable promo card exists |
+| **The headline is chosen in code** (`pickHeadline` in math-core): one month of delay scores like a 10-point drop in odds; tiny changes are ignored; a goal that becomes unreachable wins; a goal that was already unreachable only leads when nothing else moved | Keeps "math first": the model words the headline but never picks it. The LLM card is rejected if it does not name the headline goal |
+| `GoalImpact` gains `probabilityLowAfter` and `probabilityHighAfter`; `CopilotMetrics` gains `currentHousingCents`, `monthlyChangeCents`, `vehicle`, `splitPlan`, `headline` | Additive. Cards say "from 93–94% to 76%", which needs the after values |
+| Demo profile gains a "Japan trip" goal (priority 2, $4,500 by June 2027) | Gives the checkout demo a concrete, relatable goal to lead with |
+| Extension rejects dollar prices tagged with another currency ("$1,499 CAD", "CA$1,499") | PRD: skip non-USD and never guess |
+
+## Good-move cards
+
+| Decision | Why |
+| --- | --- |
+| Every card has a **verdict**, chosen in code: `caution` (hurts a goal or the cash cushion), `good` (fits the plan or beats the alternatives), `neutral` | The Copilot advises in both directions. The model words the stance but never picks it. The overlay colors the card by verdict (red, green, blue) |
+| New page type `debt_payment` (item `credit_card_payment`) | Paying off debt is the clearest good move. The payload stays price, item type, and merchant only |
+| A card payment is matched to the **highest-rate card with a balance**, paid from checking | The page cannot send which card (privacy rule), and the highest-rate card is the one a payment helps most |
+| Interest saved = amount paid × the card's rate, for a year, in whole dollars. Paying in full frees the minimum payment, which the simulator returns to savings each month | Honest, explainable figures. A partial payment frees only the interest |
+| **Alternatives** rank where a dollar earns the most: each debt at its rate, investing at the assumed 7%, the best savings account at its rate | Lets a card say why a choice beats the others ("a 23% guaranteed return, better than investing or savings") |
+| An affordable checkout (no goal hit, cushion intact) is `good`: the card affirms it and steers payment away from high-rate card debt | Reinforces good habits instead of staying silent |
+| Headline gains a `gain` kind (a goal gets sooner or more likely), used only when nothing got worse | Positive changes deserve a mention, but a loss always outranks a gain |
+| `CopilotCard` gains `lead`, the one figure shown large and on the badge | Works for both directions: a goal's odds, interest saved, or "on track" |
+| Goal likelihood is shown as **plain status words**, chosen in code (`GOAL_STATUS` in math-core): on track (90%+), likely (80-90%), at risk (50-80%), unlikely (10-50%), out of reach (under 10%). Cards never say "odds". The percentage range stays in a small "Chance" row near the disclaimer | "Odds" read like gambling. Words land faster for a bank audience, and keeping the range on the card honors rule 7 |
+
+## Demo store
+
+| Decision | Why |
+| --- | --- |
+| The demo runs on a believable store (Circuit & Co.: 12 products from $15 to $3,299) plus the rental, car, and bank sites, opened from a plain browser start page with no scenario hints | Judges see the Copilot reach different verdicts live from the same data, instead of a scripted outcome per page |
+| The Copilot appears on product pages (when you look at an item) and again at checkout | Advice at the moment of decision. Both pages send only the price |
+| On localhost, dismiss and snooze are keyed by path and query, so each product counts separately | Products share one page and differ only by `?id=` |
+| When a purchase makes a goal unlikely or out of reach, the Smart Move points to a cheaper option or waiting, never to financing | A split payment protects the cash cushion, not the goal. Suggesting financing there would be bad advice |
+| The demo server also serves `.js` files from `mock-pages/` | The store's catalog lives in one shared script (`store.js`) |
+| The Copilot **re-evaluates when the page's price changes** (a MutationObserver, debounced 600 ms; it still reads only the rule's price element). An open card updates in place; a price that disappears removes the card; stale replies are dropped | Picking a different payment amount or quantity should change the advice live. That is the "actively guiding" moment of the demo |
+| A card payment of no more than the minimum is `neutral`: the card shows the interest still charged on the rest and, when checking can cover the full balance above the cushion, suggests paying it all. A partial payment above the minimum stays `good` but makes the same suggestion | Calling a minimum payment a "great move" would be bad advice |
+| `GeminiClient` uses the REST API through `fetch`, not the SDK | No new dependency, and every request and failure is visible in one file. Structured output sends `responseMimeType: application/json` with the schema's types upper-cased |
+| Copilot cards wait at most 2 seconds for Gemini, then show the template card | The PRD requires a card within 3 seconds |
+| Demo-site submit buttons (place order, schedule payment, credit application) say "Demo site: nothing was sent" instead of doing nothing | No dead buttons during judging, and nothing pretends to be a real transaction |

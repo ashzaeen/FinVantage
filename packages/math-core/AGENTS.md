@@ -2,14 +2,16 @@
 
 Every figure on a Copilot card comes from here. Read the root `AGENTS.md` first. Brief: `docs/workstreams/copilot-backend.md`.
 
-`computeCopilotMetrics(snapshot, context, goalImpacts)` is the entry point. It takes the snapshot, the extension's context, and the simulator's output, and returns `CopilotMetrics`.
+`computeCopilotMetrics(snapshot, context, goalImpacts, goals)` is the entry point. It takes the snapshot, the extension's context, the simulator's output, and the goals, and returns `CopilotMetrics`.
 
-The current formulas are naive stubs, not reviewed finance. Known problems:
+`purchaseForSimulator(snapshot, context)` says how a page's price enters the simulator. The route passes its result to `evaluatePurchase`, so the simulator and the card always describe the same purchase.
 
-- `safeRentThreshold` is called with 0 for current housing, so all fixed costs count against the new rent. The threshold comes out too low.
-- A rental adds to fixed costs. It should usually replace current housing.
-- `totalCostOfOwnershipCents` is just the price, with no interest, insurance, or running costs.
-- The vehicle scenario assumes a 60-month term with no interest.
+Assumptions are named constants at the top of `src/index.ts`. The reasoning behind each scenario (rent replaces housing, safe rent, vehicle terms, the split plan, headline choice) is in `docs/DECISIONS.md`.
+
+Known limits:
+
+- Current housing is the mortgage payment. Someone who rents today has no rent field in the snapshot, so it counts as 0.
+- Vehicle total cost includes interest, not insurance or running costs.
 
 ## Rules
 

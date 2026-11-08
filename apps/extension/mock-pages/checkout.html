@@ -2,15 +2,173 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Checkout - Demo Electronics</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Checkout - Circuit &amp; Co.</title>
+    <script src="/store.js"></script>
+    <style>
+      :root {
+        --ink: #15171c;
+        --muted: #646a76;
+        --line: #e6e8ec;
+        --soft: #f5f6f8;
+        --brand: #3432c7;
+        --brand-ink: #ffffff;
+        --ok: #1d7a4e;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+        color: var(--ink);
+        background: #fff;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: inherit; }
+
+      .bar { border-bottom: 1px solid var(--line); }
+      .bar-inner {
+        max-width: 1120px; margin: 0 auto; padding: 18px 24px;
+        display: flex; align-items: center; justify-content: space-between; gap: 24px;
+      }
+      .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; letter-spacing: -0.02em; text-decoration: none; }
+      .logo-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--brand); display: grid; place-items: center; }
+      .secure { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+
+      .steps { display: flex; gap: 28px; font-size: 14px; color: var(--muted); }
+      .steps span { display: flex; align-items: center; gap: 8px; }
+      .steps b {
+        width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line);
+        display: grid; place-items: center; font-size: 12px; font-weight: 600;
+      }
+      .steps .done b { background: var(--ink); border-color: var(--ink); color: #fff; }
+      .steps .now { color: var(--ink); font-weight: 600; }
+      .steps .now b { border-color: var(--ink); }
+
+      main {
+        max-width: 1120px; margin: 0 auto; padding: 40px 24px 80px;
+        display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 56px; align-items: start;
+      }
+      h1 { font-size: 30px; letter-spacing: -0.025em; margin: 0 0 6px; }
+      .lede { color: var(--muted); margin: 0 0 28px; }
+
+      .item { display: grid; grid-template-columns: 148px 1fr auto; gap: 22px; padding: 24px 0; border-top: 1px solid var(--line); align-items: center; }
+      .item:last-of-type { border-bottom: 1px solid var(--line); }
+      .art { width: 148px; height: 112px; border-radius: 12px; background: var(--soft); display: grid; place-items: center; }
+      .art { overflow: hidden; }
+      .name { font-weight: 600; font-size: 17px; }
+      .spec { color: var(--muted); font-size: 14px; margin-top: 4px; }
+      .meta { margin-top: 12px; display: flex; gap: 16px; font-size: 14px; }
+      .meta .ship { color: var(--ok); }
+      .qty { color: var(--muted); }
+      .price { font-weight: 600; font-size: 17px; font-variant-numeric: tabular-nums; }
+
+      .addons { margin-top: 44px; }
+      .addons h2 { font-size: 17px; margin: 0 0 14px; }
+      .addon-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+      .addon { border: 1px solid var(--line); border-radius: 12px; padding: 14px; font-size: 14px; display: grid; gap: 10px; }
+      .addon .mini { aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; }
+      .addon b { font-variant-numeric: tabular-nums; }
+      .addon button {
+        justify-self: start; border: 1px solid var(--line); background: #fff; border-radius: 8px;
+        padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer;
+      }
+
+      aside {
+        position: sticky; top: 24px; border: 1px solid var(--line); border-radius: 16px; padding: 24px;
+        background: #fff; box-shadow: 0 1px 0 rgb(0 0 0 / 0.02);
+      }
+      aside h2 { font-size: 18px; margin: 0 0 18px; }
+      .line { display: flex; justify-content: space-between; margin: 10px 0; font-size: 15px; font-variant-numeric: tabular-nums; }
+      .line .muted { color: var(--muted); }
+      .promo { display: flex; gap: 8px; margin: 18px 0; }
+      .promo input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 14px; }
+      .promo button { border: 1px solid var(--line); background: var(--soft); border-radius: 10px; padding: 0 14px; font: inherit; font-size: 14px; cursor: pointer; }
+      .total { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 18px; display: flex; justify-content: space-between; align-items: baseline; }
+      .total span { font-weight: 600; }
+      .total strong { font-size: 28px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+      .place {
+        margin-top: 20px; width: 100%; border: 0; border-radius: 12px; padding: 15px;
+        background: var(--brand); color: var(--brand-ink); font: inherit; font-weight: 600; font-size: 16px; cursor: pointer;
+      }
+      .place:hover { filter: brightness(1.08); }
+      .pay { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+      .pay span { border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 11px; color: var(--muted); font-weight: 600; }
+      .fine { color: var(--muted); font-size: 12px; text-align: center; margin: 14px 0 0; line-height: 1.5; }
+
+      @media (max-width: 900px) {
+        main { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+        aside { position: static; }
+        .steps { display: none; }
+      }
+      @media (max-width: 560px) {
+        main { padding: 24px 16px 60px; }
+        .bar-inner { padding: 16px; }
+        .item { grid-template-columns: 88px 1fr; }
+        .art { width: 88px; height: 72px; }
+        .item .price { grid-column: 2; }
+        .addon-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .addon { padding: 8px; font-size: 12px; gap: 6px; }
+      }
+    </style>
   </head>
   <body>
-    <h1>Your cart</h1>
-    <ul>
-      <li>Laptop Pro 14: <span>$1,399.00</span></li>
-      <li>Protection plan: <span>$100.00</span></li>
-    </ul>
-    <p>Order total: <strong data-testid="cart-total">$1,499.00</strong></p>
-    <button type="button">Place order</button>
+    <header class="bar">
+      <div class="bar-inner">
+        <a class="logo" href="/shop.html">
+          <span class="logo-mark" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M10.5 3.5A5 5 0 1 0 10.5 10.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </span>
+          Circuit &amp; Co.
+        </a>
+        <nav class="steps" aria-label="Checkout progress">
+          <span class="done"><b>✓</b>Cart</span>
+          <span class="now"><b>2</b>Review</span>
+          <span><b>3</b>Payment</span>
+        </nav>
+        <div class="secure">
+          <svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><rect x="1" y="7" width="12" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+          Secure checkout
+        </div>
+      </div>
+    </header>
+
+    <main id="main"></main>
+
+    <script>
+      // The cart holds whatever "Buy now" was pressed on. Default: the Arc 14 laptop.
+      const product = findProduct(new URLSearchParams(location.search).get("id") || "") || findProduct("arc-14");
+      const addons = CATALOG.filter((p) => p.category === "Accessories" || p.id === "pulse-buds").filter((p) => p.id !== product.id).slice(0, 3);
+      document.title = "Checkout - Circuit & Co.";
+      document.getElementById("main").innerHTML = `
+      <section>
+        <h1>Review your order</h1>
+        <p class="lede">1 item, arriving Tuesday, November 10.</p>
+        <div class="item">
+          <div class="art">${productArt(product)}</div>
+          <div>
+            <div class="name">${product.name}</div>
+            <div class="spec">${product.specs.join(", ")}</div>
+            <div class="meta"><span class="ship">Free delivery Tue, Nov 10</span><span class="qty">Qty 1</span></div>
+          </div>
+          <div class="price">${formatPrice(product.price)}</div>
+        </div>
+        <div class="addons">
+          <h2>Add before you go</h2>
+          <div class="addon-row">${addons.map((a) => `
+            <div class="addon"><a class="mini" href="/product.html?id=${a.id}">${productArt(a)}</a><span>${a.name}</span><b>${formatPrice(a.price)}</b><button type="button">Add</button></div>`).join("")}
+          </div>
+        </div>
+      </section>
+      <aside aria-label="Order summary">
+        <h2>Order summary</h2>
+        <div class="line"><span>Subtotal (1 item)</span><span>${formatPrice(product.price)}</span></div>
+        <div class="line"><span class="muted">Delivery</span><span>Free</span></div>
+        <div class="line"><span class="muted">Estimated tax</span><span class="muted">At payment</span></div>
+        <div class="promo"><input aria-label="Promo code" placeholder="Promo code" /><button type="button">Apply</button></div>
+        <div class="total"><span>Order total</span><strong data-testid="cart-total">${formatPrice(product.price)}</strong></div>
+        <button class="place" type="button">Continue to payment</button>
+        <div class="pay" aria-label="Accepted payment methods"><span>VISA</span><span>MC</span><span>AMEX</span><span>DEBIT</span></div>
+        <p class="fine">30-day returns. Price match within 14 days of purchase.</p>
+      </aside>`;
+    </script>
   </body>
 </html>

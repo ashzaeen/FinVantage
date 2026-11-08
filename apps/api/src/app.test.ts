@@ -91,7 +91,7 @@ test("runs can be diffed and link to the previous run", async () => {
   const second = await client.runSimulation({ body: {} });
   assert.equal(second.previousRunId, first.id);
   const diff = await client.diffSimulations({ params: { id: first.id, otherId: second.id } });
-  assert.equal(diff.goals.length, 3);
+  assert.equal(diff.goals.length, first.goalOutcomes.length);
 });
 
 test("the Copilot returns a card and records the event", async () => {

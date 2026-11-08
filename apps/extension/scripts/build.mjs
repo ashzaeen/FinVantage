@@ -40,11 +40,13 @@ function serveMockPages() {
   createServer((req, res) => {
     const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
     const file = normalize(join(pages, pathname === "/" ? "index.html" : pathname));
-    if (!file.startsWith(pages) || extname(file) !== ".html" || !existsSync(file)) {
+    const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
+    const type = types[extname(file)];
+    if (!file.startsWith(pages) || !type || !existsSync(file)) {
       res.writeHead(404).end("Not found");
       return;
     }
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.writeHead(200, { "content-type": type });
     createReadStream(file).pipe(res);
   }).listen(MOCK_PORT, () => console.log(`Mock pages on http://localhost:${MOCK_PORT}`));
 }
