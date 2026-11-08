@@ -19,6 +19,12 @@ export function registerProfileRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     return deps.ledger.saveUser({ ...user, extensionSettings: body });
   });
 
+  mount(app, deps, routes.updateSpendingSplit, async ({ userId, body }) => {
+    const user = await deps.ledger.getUser(userId);
+    if (!user) throw new HttpError(404, "not_found", "User not found.");
+    return deps.ledger.saveUser({ ...user, preferences: { ...user.preferences, spendingSplit: body } });
+  });
+
   mount(app, deps, routes.loadDemoProfile, async ({ userId }) => {
     await deps.ledger.loadDemoProfile(userId);
     if ((await deps.docs.listSimulationRuns(userId)).length === 0) {

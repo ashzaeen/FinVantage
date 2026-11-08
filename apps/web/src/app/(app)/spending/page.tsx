@@ -1,7 +1,8 @@
-import { formatUsd } from "@finvantage/contracts";
+import { categoryLabel, formatUsd } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { api } from "@/lib/api";
+import { BucketSplit } from "./BucketSplit";
 
 function ProgressBar({ value, max, color = "var(--accent)", over = false }: { value: number; max: number; color?: string; over?: boolean }) {
   const pct = Math.min(100, Math.round((value / max) * 100));
@@ -14,7 +15,8 @@ function ProgressBar({ value, max, color = "var(--accent)", over = false }: { va
 }
 
 export default async function SpendingPage() {
-  const [budgets, bills, recurring, summary] = await Promise.all([
+  const [buckets, budgets, bills, recurring, summary] = await Promise.all([
+    api.getBucketSummary(),
     api.listBudgets(),
     api.listUpcomingBills(),
     api.listRecurring(),
@@ -25,6 +27,9 @@ export default async function SpendingPage() {
     <>
       <PageHeader title="Spending" />
       <div className="grid gap-5 md:grid-cols-2">
+        <div className="md:col-span-2">
+          <BucketSplit initial={buckets} />
+        </div>
         {/* Budgets */}
         <Card title="Budgets" subtitle="Demo limits · spending totals from your ledger">
           <ul className="space-y-4">
@@ -34,7 +39,7 @@ export default async function SpendingPage() {
               return (
                 <li key={budget.category}>
                   <div className="flex items-center justify-between gap-2 text-sm">
-                    <span className="font-medium" style={{ color: "var(--ink)" }}>{budget.category}</span>
+                    <span className="font-medium" style={{ color: "var(--ink)" }}>{categoryLabel(budget.category)}</span>
                     <span className="tabular-nums text-xs" style={{ color: over ? "var(--critical)" : "var(--ink-muted)" }}>
                       {formatUsd(budget.spentCents)} / {formatUsd(budget.limitCents)}
                       {over && <span className="ml-1 font-semibold">Over</span>}
@@ -59,7 +64,7 @@ export default async function SpendingPage() {
                 <li key={row.category}
                   className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5"
                   style={{ background: "var(--surface-inset)" }}>
-                  <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{row.category}</span>
+                  <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{categoryLabel(row.category)}</span>
                   <div className="text-right">
                     <span className="block text-sm font-bold tabular-nums" style={{ color: "var(--ink)" }}>
                       {formatUsd(row.spentCents)}

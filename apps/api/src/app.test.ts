@@ -276,3 +276,51 @@ test("CORS allows listed origins and wildcard previews, and nothing else", async
   );
   assert.equal((await preflight("https://evil.example")).headers.get("access-control-allow-origin"), null);
 });
+
+test("the bucket summary splits this month's spending into Needs, Wants and Savings", async () => {
+  const { client, deps } = setup();
+  const before = await client.getBucketSummary();
+  assert.deepEqual(before.split, { needs: 0.5, wants: 0.3, savings: 0.2 });
+  assert.deepEqual(before.buckets.map((b) => b.bucket), ["needs", "wants", "savings"]);
+  const needs = before.buckets[0]!;
+  assert.equal(needs.targetCents, Math.round(before.incomeCents * 0.5));
+
+  const [account] = await client.listAccounts();
+  const add = (category: string, subcategory: string | null, amountCents: number) =>
+    client.addTransaction({
+      body: { accountId: account!.id, date: deps.today(), amountCents, merchant: "Test", category, subcategory },
+    });
+  const coffee = await add("dining_out", "dining_out.coffee", -1_250);
+  assert.equal(coffee.subcategory, "dining_out.coffee");
+  await add("transfers", "transfers.credit_card_payment", -50_000);
+  // A subcategory from another category is dropped rather than saved.
+  const mismatched = await add("groceries", "dining_out.coffee", -500);
+  assert.equal(mismatched.subcategory, null);
+
+  const after = await client.getBucketSummary();
+  const wants = (s: typeof after) => s.buckets.find((b) => b.bucket === "wants")!.spentCents;
+  const total = (s: typeof after) => s.buckets.reduce((sum, b) => sum + b.spentCents, 0);
+  assert.equal(wants(after) - wants(before), 1_250);
+  // The credit card payment is a transfer, so only the coffee and the groceries count.
+  assert.equal(total(after) - total(before), 1_750);
+});
+
+test("each user can change their split, and it must add up to 100%", async () => {
+  const { app, client } = setup();
+  const user = await client.updateSpendingSplit({ body: { needs: 0.6, wants: 0.2, savings: 0.2 } });
+  assert.deepEqual(user.preferences.spendingSplit, { needs: 0.6, wants: 0.2, savings: 0.2 });
+  assert.deepEqual((await client.getBucketSummary()).split, { needs: 0.6, wants: 0.2, savings: 0.2 });
+  const res = await app.request("/v1/me/spending-split", {
+    method: "PATCH",
+    headers: { authorization: "Bearer demo-token", "content-type": "application/json" },
+    body: JSON.stringify({ needs: 0.5, wants: 0.5, savings: 0.5 }),
+  });
+  assert.equal(res.status, 400);
+});
+
+test("the category list includes every default, with buckets", async () => {
+  const { client } = setup();
+  const categories = await client.listSpendingCategories();
+  assert.ok(categories.some((c) => c.id === "dining_out" && c.bucket === "wants" && c.parentId === null));
+  assert.ok(categories.some((c) => c.id === "dining_out.coffee" && c.parentId === "dining_out"));
+});

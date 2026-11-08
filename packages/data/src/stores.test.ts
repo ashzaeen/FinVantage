@@ -104,7 +104,7 @@ for (const backend of backends) {
 
       const tx = await store.addTransaction({
         accountId: account.id, date: "2026-11-07", amountCents: -2_500, currency: "USD", originalAmountCents: null,
-        exchangeRateToUsd: null, exchangeRateDate: null, merchant: "Corner Cafe", category: "dining", isRecurring: false,
+        exchangeRateToUsd: null, exchangeRateDate: null, merchant: "Corner Cafe", category: "dining", subcategory: null, isRecurring: false,
         pending: false, categoryDetailed: null, paymentChannel: null, logoUrl: null,
       });
       const list = await store.listTransactions(userId, 1000);

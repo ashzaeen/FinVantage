@@ -130,3 +130,16 @@ Answers to the open questions above. These replace those rows.
 | Copilot cards ask Gemini for `thinking: "minimal"` (`LlmRequest.thinking`, sent as `thinkingConfig.thinkingLevel`). Other calls keep the model default | Tested live on 2026-11-07: with default thinking, `gemini-3-flash-preview` took over 15 s on the card prompt, so every card fell back. With minimal thinking it answers in about 1.1 s and passes the guardrail. The figures are fixed, so there is nothing to reason out |
 | The demo key uses `gemini-3-flash-preview` for both tiers | It is an AI Studio free-tier key (5 requests a minute per model). 3.5-flash was close to that limit and slower. 3.6, 3.7, and 3.8 flash returned 503s or hung, and 2.5-flash is closed to new users |
 | Demo-site submit buttons (place order, schedule payment, credit application) say "Demo site: nothing was sent" instead of doing nothing | No dead buttons during judging, and nothing pretends to be a real transaction |
+
+## Spending categories, decided 2026-11-08
+
+| Decision | Why |
+| --- | --- |
+| Spending categories have three layers: Plaid's 127 detailed categories (hidden), about 20 FinVantage categories, and subcategories. `packages/contracts/src/categories.ts` holds the defaults and the Plaid map | Plaid's list is too fine to budget against. A test proves every Plaid category, v2 and v1, maps to a category that exists |
+| A transaction stores its top-level category in `category` and its most specific subcategory in `subcategory`. The API drops a subcategory that is not under the category | Code that groups by `category` keeps working, and edits cannot leave a mismatched pair |
+| Every category has a default bucket: Needs, Wants, Savings, or excluded. Income and Transfers, including credit card payments, are excluded from spending totals and budgets | Counting a card payment would double the purchases already on the card. The 50/30/20 split needs every dollar of spending in a bucket |
+| Debt Payments is one Needs category, not split into minimum and extra | Owner's call (Ashzaeen) |
+| The split defaults to 50/30/20, and each user can change it (`User.preferences.spendingSplit`) | It defaults through the schema, so stores without the field still parse. The Spacetime store must save it to keep edits |
+| Users can add subcategories up to three levels (Shopping → Superstores → Walmart) | Planned as step 3 in `docs/workstreams/spending.md` |
+| Old category ids (`dining`, `transport`, `debt`, `subscriptions`, `fees`, `transfer`, `home`, `services`) are read as the new ones through `canonicalCategoryId` | Stored data from before the change keeps working without a migration. Spending totals group by the current id |
+| **Open, for the Spacetime store:** `transaction.subcategory` and `User.preferences.spendingSplit` have no columns yet, so they are not saved in production | Until then, subcategories read as null and the split stays at 50/30/20 there. The memory store keeps both |

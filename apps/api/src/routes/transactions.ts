@@ -1,11 +1,31 @@
 import type { Hono } from "hono";
-import { routes, type NewTransaction, type Transaction } from "@finvantage/contracts";
+import {
+  DEFAULT_SPENDING_CATEGORIES,
+  canonicalCategoryId,
+  categoryBucket,
+  routes,
+  topCategoryId,
+  type BudgetedBucket,
+  type NewTransaction,
+  type Transaction,
+} from "@finvantage/contracts";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
 
 const monthFromToday = (today: string) => today.slice(0, 7);
 
 function monthKey(date: string) { return date.slice(0, 7); }
+
+/** Income and transfers are not spending, so totals and budgets skip them. */
+function isSpending(transaction: Transaction): boolean {
+  return transaction.amountCents < 0 && categoryBucket(transaction.category) !== "excluded";
+}
+
+/** Drops a subcategory that does not sit under the transaction's category. */
+function withValidSubcategory<T extends Pick<Transaction, "category" | "subcategory">>(transaction: T): T {
+  const fits = transaction.subcategory && transaction.category && topCategoryId(transaction.subcategory) === transaction.category;
+  return fits ? transaction : { ...transaction, subcategory: null };
+}
 function addDays(date: string, days: number) {
   const next = new Date(`${date}T00:00:00.000Z`);
   next.setUTCDate(next.getUTCDate() + days);
@@ -43,14 +63,14 @@ export function registerTransactionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
 
   mount(app, deps, routes.addTransaction, async ({ userId, body }) => {
     // STUB(transactions): run rule-based categorization here, then the LLM fallback.
-    const normalized = await normalizeToUsd(body);
+    const normalized = withValidSubcategory(await normalizeToUsd(body));
     const saved = await deps.ledger.addTransaction(normalized);
     deps.live.publish(userId, { type: "transaction.added", transactionId: saved.id });
     return saved;
   });
 
   mount(app, deps, routes.updateTransaction, async ({ userId, params, body }) => {
-    const normalized = await normalizeToUsd(body);
+    const normalized = withValidSubcategory(await normalizeToUsd(body));
     const updated = await deps.ledger.updateTransaction(userId, params.id, normalized);
     if (!updated) throw new HttpError(404, "not_found", "Transaction or account not found.");
     deps.live.publish(userId, { type: "transaction.added", transactionId: updated.id });
@@ -64,12 +84,13 @@ export function registerTransactionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     const month = monthFromToday(deps.today());
     const spent = new Map<string, number>();
     for (const transaction of transactions) {
-      if (monthKey(transaction.date) === month && transaction.amountCents < 0 && transaction.category) {
-        spent.set(transaction.category, (spent.get(transaction.category) ?? 0) + Math.abs(transaction.amountCents));
+      if (monthKey(transaction.date) === month && isSpending(transaction) && transaction.category) {
+        const category = canonicalCategoryId(transaction.category);
+        spent.set(category, (spent.get(category) ?? 0) + Math.abs(transaction.amountCents));
       }
     }
     // Limits are demo defaults; actual spend always comes from the user's ledger.
-    const demoLimits: Record<string, number> = { groceries: 50_000, dining: 25_000, subscriptions: 10_000, housing: 200_000, utilities: 30_000, transport: 25_000, debt: 100_000 };
+    const demoLimits: Record<string, number> = { groceries: 50_000, dining_out: 25_000, entertainment: 10_000, housing: 200_000, utilities: 30_000, transportation: 25_000, debt_payments: 100_000 };
     return [...spent].map(([category, spentCents]) => ({ category, spentCents, limitCents: demoLimits[category] ?? Math.max(spentCents, 1) }));
   });
 
@@ -113,10 +134,11 @@ export function registerTransactionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
         if (transaction.amountCents > 0) trend.incomeCents += transaction.amountCents;
         else trend.spendingCents += Math.abs(transaction.amountCents);
       }
-      if (transaction.amountCents >= 0 || !transaction.category) continue;
+      if (!isSpending(transaction) || !transaction.category) continue;
       const key = monthKey(transaction.date);
       const target = key === month ? current : key === previousMonth ? prior : null;
-      if (target) target.set(transaction.category, (target.get(transaction.category) ?? 0) + Math.abs(transaction.amountCents));
+      const category = canonicalCategoryId(transaction.category);
+      if (target) target.set(category, (target.get(category) ?? 0) + Math.abs(transaction.amountCents));
     }
     const categories = new Set([...current.keys(), ...prior.keys()]);
     return {
@@ -126,6 +148,41 @@ export function registerTransactionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
         const spentCents = current.get(category) ?? 0;
         return { category, spentCents, changeVsPriorMonthCents: spentCents - (prior.get(category) ?? 0) };
       }).sort((a, b) => b.spentCents - a.spentCents),
+    };
+  });
+
+  // STUB(spending): only the defaults until custom categories (build-order step 3).
+  mount(app, deps, routes.listSpendingCategories, async () => [...DEFAULT_SPENDING_CATEGORIES]);
+
+  mount(app, deps, routes.getBucketSummary, async ({ userId }) => {
+    const [user, income, transactions] = await Promise.all([
+      deps.ledger.getUser(userId),
+      deps.ledger.getIncomeProfile(userId),
+      getTransactions(userId),
+    ]);
+    if (!user) throw new HttpError(404, "not_found", "User not found.");
+    const month = monthFromToday(deps.today());
+    const spent: Record<BudgetedBucket, number> = { needs: 0, wants: 0, savings: 0 };
+    let uncategorizedCents = 0;
+    for (const transaction of transactions) {
+      if (monthKey(transaction.date) !== month || !isSpending(transaction)) continue;
+      const bucket = categoryBucket(transaction.category);
+      if (bucket && bucket !== "excluded") spent[bucket] += Math.abs(transaction.amountCents);
+      else uncategorizedCents += Math.abs(transaction.amountCents);
+    }
+    const incomeCents = income?.monthlyIncomeCents ?? 0;
+    const split = user.preferences.spendingSplit;
+    return {
+      month,
+      incomeCents,
+      split,
+      buckets: (["needs", "wants", "savings"] as const).map((bucket) => ({
+        bucket,
+        spentCents: spent[bucket],
+        targetCents: Math.round(incomeCents * split[bucket]),
+        shareOfIncome: incomeCents > 0 ? spent[bucket] / incomeCents : 0,
+      })),
+      uncategorizedCents,
     };
   });
 }

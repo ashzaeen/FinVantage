@@ -32,6 +32,7 @@ import {
   SimulationRun,
   SimulationRunSummary,
 } from "./simulation";
+import { BucketSummary, SpendingCategory, SpendingSplit } from "./categories";
 import { Budget, CreditScore, Portfolio, RecurringCharge, SpendingSummary } from "./spending";
 import { AuthResponse, ExtensionSettings, LogInRequest, SignUpRequest, User } from "./user";
 
@@ -244,6 +245,22 @@ export const routes = {
     method: "GET",
     path: "/v1/spending/summary",
     response: SpendingSummary,
+  }),
+  listSpendingCategories: route({
+    method: "GET",
+    path: "/v1/spending/categories",
+    response: z.array(SpendingCategory),
+  }),
+  getBucketSummary: route({
+    method: "GET",
+    path: "/v1/spending/buckets",
+    response: BucketSummary,
+  }),
+  updateSpendingSplit: route({
+    method: "PATCH",
+    path: "/v1/me/spending-split",
+    body: SpendingSplit,
+    response: User,
   }),
 
   // Mocked views (P2)
