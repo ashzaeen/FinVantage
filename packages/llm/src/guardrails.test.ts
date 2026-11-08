@@ -127,6 +127,25 @@ const outOfReach: CopilotMetrics = {
   headline: { ...metrics.headline, kind: "out_of_reach", statusAfter: "out of reach", oddsAfterLow: 0.04, oddsAfterHigh: 0.05 },
 };
 
+test("how far under the cushion is a math figure, so a model never has to subtract it", async () => {
+  // $3,400 - $1,499 = $1,901 left, $599 under the $2,500 cushion.
+  const underBy: LlmClient = {
+    provider: "test",
+    generate: async () =>
+      JSON.stringify({
+        impact: "This laptop puts your Japan trip at risk.",
+        tradeOff: "You'd have $1,901 in checking, $599 under your $2,500 safety cushion.",
+        smartMove: "Waiting until payday keeps your safety cushion whole.",
+      }),
+  };
+  // No split plan, so $599 can only be allowed by the under-cushion figure.
+  const noSplit = { ...metrics, liquidBufferAfterCents: 190_100, splitPlan: null };
+  assert.equal((await generateCopilotCard(underBy, context, noSplit)).source, "llm");
+  // Any other subtraction is still rejected.
+  const wrong: LlmClient = { ...underBy, generate: async () => (await underBy.generate()).replace("$599 under", "$600 under") };
+  assert.equal((await generateCopilotCard(wrong, context, noSplit)).source, "template");
+});
+
 test("a purchase bigger than checking says how short, never a negative balance", () => {
   const card = templateCard(pricey, outOfReach);
   assert.match(card.tradeOff, /you'd be \$299 short/);

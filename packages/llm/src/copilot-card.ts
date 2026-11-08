@@ -124,6 +124,11 @@ export function cardFigures(context: CopilotContext, metrics: CopilotMetrics): R
   // The cushion only means something next to what checking would be left at. Without that
   // figure, a model would pair the cushion with rent or a car loan, which the math never said.
   if (f.checkingAfter || f.checkingShort) f.bufferTarget = formatUsd(metrics.bufferTargetCents);
+  // How far under the cushion, computed here so a model never has to subtract.
+  const leftCents = metrics.debtPayment?.checkingAfterCents ?? metrics.liquidBufferAfterCents;
+  if (f.checkingAfter && leftCents !== null && leftCents < metrics.bufferTargetCents) {
+    f.underCushionBy = formatUsd(metrics.bufferTargetCents - leftCents);
+  }
   const invest = metrics.alternatives.find((a) => a.kind === "invest");
   const savings = metrics.alternatives.find((a) => a.kind === "savings");
   const topDebt = metrics.alternatives.find((a) => a.kind === "debt");
@@ -385,7 +390,7 @@ const SYSTEM_PROMPT = [
   "tradeOff: one sentence on the cost, using the given figures.",
   "smartMove: one sentence with a concrete next step the reader could take. If a split plan is given, describe it. If none is given, never suggest putting the cost on a card or financing it.",
   "If `figures.checkingShort` is given, the reader doesn't have enough in checking: say they'd be that amount short. Never write a negative dollar amount.",
-  "Plain words only, like you'd text a friend. Short sentences. Call `bufferTarget` the reader's \"safety cushion\" (money they keep in checking), and mention it only when `figures.checkingAfter` is given. `checkingAfter` is what would be left in checking; the cushion is the amount they like to keep. Never call one by the other's name. Say \"bills\" for fixed costs and \"debt payments\" for debt-to-income. Never use: buffer, liquidity, fixed costs, debt-to-income, allocate, financial health, optimize, leverage.",
+  "Plain words only, like you'd text a friend. Short sentences. Call `bufferTarget` the reader's \"safety cushion\" (money they keep in checking), and mention it only when `figures.checkingAfter` is given. `checkingAfter` is what would be left in checking; the cushion is the amount they like to keep. Never call one by the other's name. If `figures.underCushionBy` is given, that is how far below the cushion they'd be. Say \"bills\" for fixed costs and \"debt payments\" for debt-to-income. Never use: buffer, liquidity, fixed costs, debt-to-income, allocate, financial health, optimize, leverage.",
   "Copy figures exactly as given, including symbols. Never calculate, round, invent, or alter a number. Do not mention any number that is not in `figures`.",
   "Tone: direct and warm, like a friend who is good with money. Make the goal feel real, but never shame or lecture. Suggest, never instruct.",
 ].join("\n");
