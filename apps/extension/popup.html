@@ -10,6 +10,9 @@
       button { margin-top: 12px; width: 100%; padding: 7px; border: 1px solid #e4e1d8; border-radius: 8px; background: #fff; font: inherit; cursor: pointer; }
       button:hover { border-color: #2563a8; }
       button:focus-visible { outline: 2px solid #2563a8; outline-offset: 2px; }
+      section { margin-top: 14px; padding-top: 12px; border-top: 1px solid #e4e1d8; }
+      h2 { margin: 0; font-size: 13px; font-weight: 650; }
+      .who { color: #1d1d1b; font-size: 13px; }
     </style>
   </head>
   <body>
@@ -17,6 +20,13 @@
     <p>Sends only price, item type, and merchant. Suggestions only.</p>
     <button id="reset" type="button">Reset dismissed cards</button>
     <p id="reset-status" role="status"></p>
+    <section aria-labelledby="account-title">
+      <h2 id="account-title">Your account</h2>
+      <p id="who" class="who">Checking…</p>
+      <button id="sign-in" type="button" hidden>Sign in on FinVantage</button>
+      <button id="sign-out" type="button" hidden>Sign out</button>
+      <p id="account-status" role="status"></p>
+    </section>
     <script src="popup.js"></script>
   </body>
 </html>

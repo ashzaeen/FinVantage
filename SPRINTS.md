@@ -68,7 +68,7 @@ Notes:
 - [x] Reducers: `save_user`, `save_income_profile`, `replace_accounts`, `add_transaction`, `create_goal`, `load_profile`, `publish_live_event`, `link_identity`, `add_admin`. Only admins can write
 - [x] Published from the platform owner's laptop: `npm run publish:maincloud -w @finvantage/spacetime`. Never use `--delete-data` without warning the team
 - [x] `SPACETIME_TOKEN`, `SPACETIME_URL`, and `SPACETIME_MODULE` set on the Vercel API project, without displaying the token
-- [ ] Generated TS bindings committed in `apps/web/src/spacetime/`. Moved to Sprint 5
+- [x] Generated TS bindings committed in `apps/web/src/spacetime/` (done in Sprint 5)
 - [x] Done when: `spacetime sql` against Maincloud returns seeded rows
 
 Notes:
@@ -94,14 +94,27 @@ Notes:
 - The old `account` and `ledger_transaction` tables were emptied by a temporary reducer and then removed, because Spacetime refuses to drop tables with rows. `--delete-data` would have wiped `credential` too.
 - The budgets, net-worth history, recurring, bills, and portfolio routes still use built-in estimates. The data to replace them now exists. Switching needs Sprint 6 and the transactions owner.
 
-## Sprint 5: Live subscriptions with the TS SDK
+## Sprint 5: Live subscriptions with the TS SDK (live 2026-11-08)
 
-- [ ] `SpacetimeBus.publish` calls `publish_live_event` over HTTP, fire-and-forget. Production sets `LIVE_TRANSPORT=spacetime`
-- [ ] Each signed-in user sees only their own `live_event` rows
-- [ ] `useLiveEvents` keeps its signature. It subscribes through the `spacetimedb` SDK and validates each payload with `LiveEvent`. When signed out, or locally, it falls back to SSE
-- [ ] Subscriptions only trigger a refetch through `api`. Figures always come from the API
-- [ ] Update `apps/web/AGENTS.md` and `docs/DECISIONS.md` for the new web imports (heads-up to Ashzaeen)
-- [ ] Done when: the demo checkout updates the deployed Copilot feed live in two tabs, and not for a second user
+- [x] `SpacetimeBus.publish` calls `publish_live_event` over HTTP in the background. The API waits for it (`live.flush()`) before each response returns. It still fans out in process for the SSE fallback
+- [x] Production sets `LIVE_TRANSPORT=spacetime`
+- [x] Each signed-in user sees only their own `live_event` rows: the `my_live_event` view, keyed by the identity that `onConnect` links to the token's `sub`
+- [x] `useLiveEvents` keeps its signature. It subscribes through the `spacetimedb` SDK and validates each payload with `LiveEvent`. When signed out, or locally, it falls back to SSE
+- [x] Subscriptions only trigger a refetch through `api`. Figures always come from the API
+- [x] Update `apps/web/AGENTS.md` and `docs/DECISIONS.md` for the new web imports (heads-up to Ashzaeen)
+- [x] Done when: the demo checkout updates the deployed Copilot feed live in two tabs, and not for a second user. Verified on production with two SDK subscribers as different users: each got only its own Copilot event, about 3 s after a cold request
+
+Notes:
+- No SpacetimeAuth: the browser connects with the FinVantage sign-in token itself. SpacetimeDB checks its signature against `https://finvantage-api.vercel.app/.well-known/jwks.json`, then `onConnect` links the identity to the token's `sub`, but only when the issuer is in `trusted_issuer`.
+- Verified against a local Spacetime server (`spacetime start --listen-addr 127.0.0.1:3100 --in-memory`). The API on `LIVE_TRANSPORT=spacetime` published a Copilot event, and the signed-in subscriber got it in about 1 second; another user's event didn't reach them. A token signed by the wrong key gets `401 InvalidSignature`.
+- SpacetimeDB caches an issuer's keys and doesn't refetch for an unknown key id. Rotating `AUTH_PRIVATE_JWK` therefore breaks live updates (browsers fall back to SSE) until that cache expires. Key ids are now the key's thumbprint.
+- Bindings: `npm run generate -w @finvantage/spacetime` writes `apps/web/src/spacetime/`. Rerun it after changing a public view or reducer.
+
+Went live with these steps:
+1. `npm run publish:maincloud -w @finvantage/spacetime`
+2. Trust the API's issuer once: `spacetime call finvantage trust_issuer '"https://finvantage-api.vercel.app"' --server maincloud`
+3. Vercel API: `LIVE_TRANSPORT=spacetime`. Vercel web: `NEXT_PUBLIC_SPACETIME_URL=wss://maincloud.spacetimedb.com`, `NEXT_PUBLIC_SPACETIME_MODULE=finvantage`
+4. Push. Then sign in in two tabs, run a Copilot check, and see the feed update in both
 
 Notes:
 
@@ -142,6 +155,11 @@ Notes:
 - Sandbox login in Plaid Link: `user_good` / `pass_good`.
 - The demo profile's built-in banks have status `demo` and are left out of the linked list.
 - Plaid omits `iso_currency_code` in places, so it is optional in every schema. APR type and security type are plain strings, so a new Plaid value can't break a sync.
+
+## Report PDFs in MongoDB
+
+- [x] `DocumentStore.saveReportPdf` / `getReportPdf` (memory, and a `report_pdfs` collection in Mongo). A PDF still renders to a local file, and its bytes are then saved, so any instance can serve the download
+- [x] Test: the PDF downloads after the local file is deleted. Round trip checked against Atlas
 
 ## Sprint 7: MongoDB wiring (handoff to the quarterly-agent teammate)
 

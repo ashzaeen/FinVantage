@@ -1,4 +1,5 @@
 import { MemoryDocumentStore, MemoryLedgerStore } from "./memory";
+import { preferLinkedBanks } from "./linked-banks";
 import { createMongoDocumentStore } from "./mongo";
 import { createMongoSpendingStore } from "./mongo/spending";
 import { MemorySpendingStore, type SpendingStore } from "./spending";
@@ -11,6 +12,7 @@ export * from "./profile";
 export * from "./bank";
 export * from "./plaid/schema";
 export * from "./plaid/map";
+export { preferLinkedBanks } from "./linked-banks";
 export * from "./plaid/spacetime-rows";
 export * from "./plaid/client";
 export * from "./bank-tokens";
@@ -64,7 +66,8 @@ export function createStores(env: NodeJS.ProcessEnv = process.env): {
 } {
   const spacetime = spacetimeConfig(env);
   return {
-    ledger: spacetime ? new SpacetimeLedgerStore(spacetime) : new MemoryLedgerStore(),
+    // Once a user links a bank, it replaces their demo copy's accounts. See linked-banks.ts.
+    ledger: preferLinkedBanks(spacetime ? new SpacetimeLedgerStore(spacetime) : new MemoryLedgerStore()),
     docs: createDocumentStore(env, env.DOCUMENT_BACKEND ?? "memory"),
     // Bank tokens live next to the ledger. In Spacetime they are encrypted with PLAID_TOKEN_KEY.
     bankTokens: spacetime ? spacetimeTokenStore(env, spacetime) : new MemoryBankTokenStore(),

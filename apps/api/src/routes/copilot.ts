@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Hono } from "hono";
 import { routes } from "@finvantage/contracts";
-import { generateCopilotCard } from "@finvantage/llm";
+import { generateCopilotCard, templateCard } from "@finvantage/llm";
 import { computeCopilotMetrics, purchaseForSimulator } from "@finvantage/math-core";
 import { evaluatePurchase } from "@finvantage/simulator";
 import type { AppDeps } from "../deps";
@@ -14,9 +14,12 @@ export function registerCopilotRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     if (!inputs) return { status: "no_data" as const };
 
     // Order matters: simulator, then math core, then LLM. Words come last.
-    const goalImpacts = evaluatePurchase(inputs, purchaseForSimulator(inputs.snapshot, body));
+    const goalImpacts = evaluatePurchase(inputs, purchaseForSimulator(inputs.snapshot, body, inputs.goals));
     const metrics = computeCopilotMetrics(inputs.snapshot, body, goalImpacts, inputs.goals);
-    const card = await generateCopilotCard(deps.llm, body, metrics);
+    // Gemini writes cards only for the listed merchants (COPILOT_GEMINI_MERCHANTS), so the
+    // free-tier quota goes to live sites. The rest get the template card with no model call.
+    const useLlm = !deps.copilotLlmMerchants || deps.copilotLlmMerchants.has(body.merchant.toLowerCase());
+    const card = useLlm ? await generateCopilotCard(deps.llm, body, metrics) : templateCard(body, metrics);
 
     const event = await deps.docs.saveCopilotEvent({
       id: randomUUID(),

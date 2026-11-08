@@ -81,10 +81,66 @@ export function liquidCash(snapshot: FinancialSnapshot): number {
     .reduce((sum, a) => sum + a.balanceCents, 0);
 }
 
+/**
+ * Spendable checking: the bank's available balance (which excludes pending charges) when it
+ * reports one, otherwise the current balance. "Can I pay for this now" is about what's spendable.
+ */
 export function checkingBalance(snapshot: FinancialSnapshot): number {
   return snapshot.accounts
     .filter((a) => a.type === "checking")
-    .reduce((sum, a) => sum + a.balanceCents, 0);
+    .reduce((sum, a) => sum + (a.availableBalanceCents ?? a.balanceCents), 0);
+}
+
+/**
+ * Checking above the safety cushion: money that is not set aside for anything. A purchase spends
+ * this first, so only the part beyond it cuts into the savings that fund goals.
+ */
+export function spareChecking(snapshot: FinancialSnapshot): number {
+  return Math.max(0, checkingBalance(snapshot) - snapshot.bufferTargetCents);
+}
+
+/** Savings accounts that can be spent: not an HSA, which is for medical costs. CDs are their own type. */
+function spendableSavings(snapshot: FinancialSnapshot) {
+  return snapshot.accounts.filter((a) => a.type === "savings" && a.subtype?.toLowerCase() !== "hsa");
+}
+
+/**
+ * Savings that no goal is using: what's in spendable savings minus what goals have saved so far.
+ * Goals' saved amounts are assumed to sit in savings. A bank-linked user with large savings and
+ * small goals has plenty; the demo profile's goals use all of its savings, so it has none.
+ */
+export function spareSavings(snapshot: FinancialSnapshot, goals: Goal[]): number {
+  const held = spendableSavings(snapshot).reduce((sum, a) => sum + (a.availableBalanceCents ?? a.balanceCents), 0);
+  const earmarked = goals.reduce((sum, g) => sum + g.currentCents, 0);
+  return Math.max(0, held - earmarked);
+}
+
+/** Money not set aside for anything: checking above the cushion, plus savings no goal uses. */
+export function spareCash(snapshot: FinancialSnapshot, goals: Goal[]): number {
+  return spareChecking(snapshot) + spareSavings(snapshot, goals);
+}
+
+/**
+ * How much to move from spare savings into checking first (whole dollars), and from which account:
+ * the largest spendable one. Only what this payment causes: back up to the cushion when it is what
+ * drops checking below it, or just enough to cover it when checking was already under the cushion
+ * (a $13 purchase shouldn't prompt "move $2,413"). Null when checking covers it or no savings are spare.
+ */
+export function transferPlan(
+  snapshot: FinancialSnapshot,
+  goals: Goal[],
+  cashOutCents: number,
+): CopilotMetrics["transfer"] {
+  const before = checkingBalance(snapshot);
+  const target = before >= snapshot.bufferTargetCents ? snapshot.bufferTargetCents : 0;
+  const gap = target - (before - cashOutCents);
+  if (gap <= 0) return null;
+  const amountCents = Math.min(Math.ceil(gap / 100) * 100, Math.floor(spareSavings(snapshot, goals) / 100) * 100);
+  if (amountCents <= 0) return null;
+  const from = spendableSavings(snapshot).sort(
+    (a, b) => (b.availableBalanceCents ?? b.balanceCents) - (a.availableBalanceCents ?? a.balanceCents),
+  )[0];
+  return from ? { fromAccountName: from.name, amountCents } : null;
 }
 
 export function totalDebt(snapshot: FinancialSnapshot): number {
@@ -154,10 +210,13 @@ export function vehicleFinancing(priceCents: number) {
 export function purchaseForSimulator(
   snapshot: FinancialSnapshot,
   context: CopilotContext,
+  goals: Goal[],
 ): { amountCents: number; monthlyCents: number } {
   switch (context.pageType) {
     case "checkout":
-      return { amountCents: context.priceCents, monthlyCents: 0 };
+      // Spare cash (checking above the cushion, savings no goal uses) covers the purchase first;
+      // only the rest has to be rebuilt from savings before goals see new money.
+      return { amountCents: Math.max(0, context.priceCents - spareCash(snapshot, goals)), monthlyCents: 0 };
     case "rental":
       return { amountCents: 0, monthlyCents: context.priceCents - currentHousingPayment(snapshot) };
     case "vehicle_financing":
@@ -170,7 +229,7 @@ export function purchaseForSimulator(
       const monthlyBack = plan.paysOffInFull
         ? plan.freedMonthlyCents
         : Math.round(plan.annualInterestSavedCents / 12);
-      return { amountCents: plan.paidCents, monthlyCents: -monthlyBack };
+      return { amountCents: Math.max(0, plan.paidCents - spareCash(snapshot, goals)), monthlyCents: -monthlyBack };
     }
   }
 }
@@ -229,14 +288,25 @@ export function rankAlternatives(snapshot: FinancialSnapshot): CopilotMetrics["a
 /**
  * Checkout Smart Move: pay from checking down to the buffer target, put the rest on a 0% promo
  * card, and pay it off in equal monthly amounts before the promo ends. Null when checking
- * covers it without dipping under the buffer, or when no usable promo card exists.
+ * covers it without dipping under the buffer, or when no promo card works: one whose 0% rate
+ * runs at least 2 more months, whose remaining credit (when the bank reports it) fits the
+ * amount, and whose monthly payment fits within what the user saves each month.
  */
 export function splitPlan(
   snapshot: FinancialSnapshot,
   priceCents: number,
+  goals: Goal[],
 ): CopilotMetrics["splitPlan"] {
-  const spare = Math.max(0, checkingBalance(snapshot) - snapshot.bufferTargetCents);
+  const spare = spareChecking(snapshot);
   if (spare >= priceCents) return null;
+  // Spare savings beat borrowing, even at 0%: no split when savings can cover the rest.
+  if (spare + spareSavings(snapshot, goals) >= priceCents) return null;
+
+  // Round the checking share down to whole dollars, so the card shows clean figures.
+  const fromCheckingCents = Math.floor(spare / 100) * 100;
+  const onPromoCardCents = priceCents - fromCheckingCents;
+  // Whole-dollar payment, rounded up so the balance clears before the promo ends.
+  const paymentFor = (months: number) => Math.ceil(onPromoCardCents / months / 100) * 100;
 
   const promo = snapshot.accounts
     .filter(
@@ -244,17 +314,15 @@ export function splitPlan(
         a.type === "credit_card" &&
         a.annualRate === 0 &&
         a.promoRateEndsOn !== null &&
-        monthsBetween(snapshot.asOf, a.promoRateEndsOn) >= 2,
+        monthsBetween(snapshot.asOf, a.promoRateEndsOn) >= 2 &&
+        (a.availableBalanceCents === null || a.availableBalanceCents >= onPromoCardCents) &&
+        paymentFor(monthsBetween(snapshot.asOf, a.promoRateEndsOn)) <= snapshot.monthlySavingsCents,
     )
     .sort((a, b) => (b.promoRateEndsOn ?? "").localeCompare(a.promoRateEndsOn ?? ""))[0];
   if (!promo || !promo.promoRateEndsOn) return null;
 
-  // Round the checking share down to whole dollars, so the card shows clean figures.
-  const fromCheckingCents = Math.floor(spare / 100) * 100;
-  const onPromoCardCents = priceCents - fromCheckingCents;
   const months = monthsBetween(snapshot.asOf, promo.promoRateEndsOn);
-  // Whole-dollar payment, rounded up so the balance clears before the promo ends.
-  const monthlyPaymentCents = Math.ceil(onPromoCardCents / months / 100) * 100;
+  const monthlyPaymentCents = paymentFor(months);
   return {
     fromCheckingCents,
     onPromoCardCents,
@@ -348,14 +416,20 @@ export function pickVerdict(
   context: CopilotContext,
   metrics: Pick<
     CopilotMetrics,
-    "headline" | "liquidBufferAfterCents" | "bufferTargetCents" | "safeRentThresholdCents" | "debtPayment"
+    "headline" | "liquidBufferAfterCents" | "bufferTargetCents" | "safeRentThresholdCents" | "debtPayment" | "transfer"
   >,
 ): CopilotMetrics["verdict"] {
   const hurts = HURTS.includes(metrics.headline.kind);
   switch (context.pageType) {
     case "checkout": {
+      // Judge what this purchase changes. Warn when it drops checking below the cushion (it was at or
+      // above before) or below zero, unless moving spare savings in first covers it.
+      const after = metrics.liquidBufferAfterCents;
+      const afterTransfer = (after ?? 0) + (metrics.transfer?.amountCents ?? 0);
+      const before = (after ?? 0) + context.priceCents;
       const underBuffer =
-        metrics.liquidBufferAfterCents !== null && metrics.liquidBufferAfterCents < metrics.bufferTargetCents;
+        after !== null &&
+        (afterTransfer < 0 || (before >= metrics.bufferTargetCents && afterTransfer < metrics.bufferTargetCents));
       return hurts || underBuffer ? "caution" : "good";
     }
     case "rental": {
@@ -382,7 +456,8 @@ export function computeCopilotMetrics(
   snapshot: FinancialSnapshot,
   context: CopilotContext,
   goalImpacts: GoalImpact[],
-  goals: Goal[] = [],
+  /** Required: goals' savings aren't spare cash, so leaving them out would overstate what's spare. */
+  goals: Goal[],
 ): CopilotMetrics {
   const income = snapshot.monthlyIncomeCents;
   const fixed = snapshot.monthlyFixedCostsCents;
@@ -394,7 +469,7 @@ export function computeCopilotMetrics(
 
   const vehicle = isVehicle ? vehicleFinancing(context.priceCents) : null;
   const debtPayment = isDebt ? debtPaymentPlan(snapshot, context.priceCents) : null;
-  const { monthlyCents } = purchaseForSimulator(snapshot, context);
+  const { monthlyCents } = purchaseForSimulator(snapshot, context, goals);
   // Rent and car payments add to monthly costs; a checkout or a debt payment does not.
   const addedMonthly = isRental || isVehicle ? monthlyCents : 0;
   const cashOut = isCheckout ? context.priceCents : (debtPayment?.paidCents ?? 0);
@@ -421,7 +496,8 @@ export function computeCopilotMetrics(
     currentHousingCents: isRental ? currentHousingPayment(snapshot) : null,
     monthlyChangeCents: isRental || isVehicle ? addedMonthly : null,
     vehicle,
-    splitPlan: isCheckout ? splitPlan(snapshot, context.priceCents) : null,
+    transfer: isCheckout || (isDebt && debtPayment) ? transferPlan(snapshot, goals, cashOut) : null,
+    splitPlan: isCheckout ? splitPlan(snapshot, context.priceCents, goals) : null,
     headline: pickHeadline(goalImpacts),
     debtPayment,
     alternatives: rankAlternatives(snapshot),

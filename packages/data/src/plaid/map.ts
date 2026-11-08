@@ -73,6 +73,8 @@ export function categoryFor(pfc: PlaidPersonalFinanceCategory | null): string | 
 
 interface LiabilityTerms {
   annualRate: number | null;
+  /** A card's "special" (promotional) APR, used only when the promo's end date is known. */
+  promoRate: number | null;
   minimumPaymentCents: number | null;
   nextPaymentDueOn: string | null;
 }
@@ -80,13 +82,15 @@ interface LiabilityTerms {
 function liabilityTerms(liabilities: PlaidLiabilities): Map<string, LiabilityTerms> {
   const terms = new Map<string, LiabilityTerms>();
   for (const card of liabilities.credit ?? []) {
-    // A "special" APR is a promotional rate in effect now (0% intro offers), so it wins.
-    const apr =
-      card.aprs.find((a) => a.apr_type === "special") ??
-      card.aprs.find((a) => a.apr_type === "purchase_apr") ??
-      card.aprs[0];
+    // The purchase APR is what new spending on the card costs. A "special" APR (a 0% intro offer)
+    // may cover only part of the balance, and Plaid gives no end date, so it applies only when the
+    // user has entered when the promo ends (see mapAccount). Plaid Sandbox's card, for one, has a
+    // 0% special APR on $1,000 next to a 12.5% purchase APR.
+    const special = card.aprs.find((a) => a.apr_type === "special");
+    const apr = card.aprs.find((a) => a.apr_type === "purchase_apr") ?? card.aprs.find((a) => a.apr_type !== "special") ?? special;
     terms.set(card.account_id, {
       annualRate: apr ? percentToRate(apr.apr_percentage) : null,
+      promoRate: special ? percentToRate(special.apr_percentage) : null,
       minimumPaymentCents: card.minimum_payment_amount === null ? null : toCents(card.minimum_payment_amount),
       nextPaymentDueOn: card.next_payment_due_date,
     });
@@ -94,6 +98,7 @@ function liabilityTerms(liabilities: PlaidLiabilities): Map<string, LiabilityTer
   for (const loan of liabilities.mortgage ?? []) {
     terms.set(loan.account_id, {
       annualRate: loan.interest_rate.percentage === null ? null : percentToRate(loan.interest_rate.percentage),
+      promoRate: null,
       minimumPaymentCents: loan.next_monthly_payment === null ? null : toCents(loan.next_monthly_payment),
       nextPaymentDueOn: loan.next_payment_due_date,
     });
@@ -101,6 +106,7 @@ function liabilityTerms(liabilities: PlaidLiabilities): Map<string, LiabilityTer
   for (const loan of liabilities.student ?? []) {
     terms.set(loan.account_id, {
       annualRate: loan.interest_rate_percentage === null ? null : percentToRate(loan.interest_rate_percentage),
+      promoRate: null,
       minimumPaymentCents: loan.minimum_payment_amount === null ? null : toCents(loan.minimum_payment_amount),
       nextPaymentDueOn: loan.next_payment_due_date,
     });
@@ -127,8 +133,11 @@ function mapAccount(
     institution,
     // Plaid reports what is owed on cards and loans as a positive current balance.
     balanceCents: Math.max(0, toCents(current ?? available ?? 0)),
-    // What the user set wins; the bank fills in the rest.
-    annualRate: details?.annualRate ?? terms?.annualRate ?? null,
+    // What the user set wins; the bank fills in the rest. A promo rate counts only with a known end.
+    annualRate:
+      details?.annualRate ??
+      (details?.promoRateEndsOn && terms?.promoRate != null ? terms.promoRate : terms?.annualRate) ??
+      null,
     minimumPaymentCents: details?.minimumPaymentCents ?? terms?.minimumPaymentCents ?? null,
     promoRateEndsOn: details?.promoRateEndsOn ?? null,
     subtype: account.subtype,

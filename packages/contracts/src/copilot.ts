@@ -55,6 +55,14 @@ export const CopilotMetrics = z.object({
       totalInterestCents: Cents,
     })
     .nullable(),
+  /**
+   * Checkout or card payment: move money from savings that no goal is using into checking first,
+   * so checking stays at the safety cushion. Null when checking covers it or no such savings exist.
+   */
+  transfer: z
+    .object({ fromAccountName: z.string(), amountCents: Cents })
+    .nullable()
+    .default(null),
   /** Checkout: pay part from checking down to the buffer, the rest on a 0% promo card. */
   splitPlan: z
     .object({

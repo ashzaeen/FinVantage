@@ -17,9 +17,11 @@ Tests: `npm run check` passes (simulator 11, math core 24, card 14, extension 3,
 
 ## Not done
 
-- **Gemini is off for the demo** (`LLM_PROVIDER=mock`), so every card is the instant template card with no network call. Gemini was tested live on 2026-11-07 and works: `gemini-3-flash-preview` with minimal thinking returns `source: "llm"` cards in about 1.5 s. The team chose not to risk it in the demo because the key is free tier (5 requests a minute). To turn it back on, set `LLM_PROVIDER=gemini` in `.env` and restart.
+- **Gemini writes the Copilot cards** (`LLM_PROVIDER=gemini`, `gemini-3-flash-preview`, minimal thinking), about 1.5 s per card. Any failure (error, timeout, rate limit, or a reply the guardrail rejects) shows the template card, and the API terminal logs `Copilot card: template used (<reason>)`. An accepted card is reused for identical inputs, so reopening a page costs no request. The key is free tier (5 requests a minute, shared with the quarterly report), so a fast run of new pages can still hit the limit and show template cards. The deployed API stays on template cards until `LLM_PROVIDER`, `GEMINI_API_KEY`, and `GEMINI_MODEL_FLASH` are set in its Vercel project. To turn Gemini off, set `LLM_PROVIDER=mock` and restart.
+- **Plaid data in the Copilot:** sign in on the FinVantage dashboard and link a bank (Accounts, Linked banks); the extension follows the dashboard's sign-in, so cards use that bank's balances, cards, and APRs. Goals and income still come from your profile, since Plaid doesn't know them. Signed out, cards use the demo profile.
 - **"Open full simulation"** links to `/simulator?copilotEvent=<id>`. Check with the dashboard owner that the page applies the purchase.
-- **Live-site rules** (Zillow, Best Buy and others) are not written. The demo runs on the mock pages, as the PRD says.
+- **Live sites:** Amazon product pages work (rule in `apps/extension/src/content/sites.ts`, checked live on 2026-11-07 on 8 products, including decoy prices and switching options). Amazon cart and checkout, and the other sites (Zillow, Best Buy and others), are not written. The main demo still runs on the mock pages, as the PRD says. Amazon changes its markup, so open one product page on demo day before presenting.
+- **Gemini writes every card** with a paid key (`COPILOT_GEMINI_MERCHANTS` unset). Setting it to `Amazon` limits Gemini to Amazon again. A card that fails the number check, uses jargon, or shows a negative dollar amount falls back to the template.
 - The extension's on/off and snooze settings live in `chrome.storage` only, not in the API.
 
 ## Shared changes to tell the team about
@@ -36,10 +38,11 @@ Tests: `npm run check` passes (simulator 11, math core 24, card 14, extension 3,
 
 Suggested flow, about 3 minutes:
 
-1. Circuit & Co.: $15 earbuds (green, on track), then the $1,499 Arc 14 laptop (Japan trip at risk, with the split-payment fix).
-2. "Open full simulation" to hand off to the dashboard.
-3. Hearth Rentals: $1,950 a month (emergency fund out of reach, safe rent $1,200).
+1. Circuit & Co.: $15 earbuds (green, "Looks good"), then the $1,499 Arc 14 laptop (amber "Heads up": it dips under the safety cushion and nudges the House down payment, fixed by the 0% card split), then the $3,299 Arc 16 Pro (red "Warning": the Japan trip goes from on track to unlikely, and the card suggests a cheaper option, not financing).
+2. "See the full picture" to hand off to the dashboard.
+3. Hearth Rentals: $1,950 a month (red: emergency fund out of reach, rent you can afford $1,200).
 4. Demo Bank: pay the $860 balance (green, $198 a year saved), then switch to the $35 minimum to show the card change live.
-5. Meridian Motors if there is time.
+5. Amazon: one real product page, opened once before presenting (Amazon changes its markup).
+6. Meridian Motors if there is time.
 
 If a card was closed during practice, use the extension popup's "Reset dismissed cards" and refresh.

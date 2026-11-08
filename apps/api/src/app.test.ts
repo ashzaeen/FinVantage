@@ -106,6 +106,25 @@ test("runs can be diffed and link to the previous run", async () => {
   assert.equal(diff.goals.length, first.goalOutcomes.length);
 });
 
+test("COPILOT_GEMINI_MERCHANTS limits model calls to the listed merchants", async () => {
+  const { client, deps } = setup({ COPILOT_GEMINI_MERCHANTS: "Amazon, Best Buy" });
+  let calls = 0;
+  deps.llm = {
+    provider: "test",
+    generate: async () => {
+      calls += 1;
+      throw new Error("model down");
+    },
+  };
+  const unlisted = await client.evaluateCopilot({ body: rental });
+  assert.equal(calls, 0, "an unlisted merchant must not call the model");
+  assert.equal(unlisted.status === "ok" && unlisted.card.source, "template");
+
+  const listed = await client.evaluateCopilot({ body: { ...rental, merchant: "amazon" } });
+  assert.equal(calls, 1, "a listed merchant calls the model, matched case-insensitively");
+  assert.equal(listed.status === "ok" && listed.card.source, "template", "and still falls back when it fails");
+});
+
 test("the Copilot returns a card and records the event", async () => {
   const { client } = setup();
   const result = await client.evaluateCopilot({ body: rental });
