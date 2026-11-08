@@ -20,7 +20,13 @@ export function registerProfileRoutes(app: Hono<AppEnv>, deps: AppDeps) {
   });
 
   mount(app, deps, routes.loadDemoProfile, async ({ userId }) => {
+    // The demo replaces the user's money, not who they are: keep their own name and email.
+    const before = await deps.ledger.getUser(userId);
     await deps.ledger.loadDemoProfile(userId);
+    const after = await deps.ledger.getUser(userId);
+    if (before && after) {
+      await deps.ledger.saveUser({ ...after, displayName: before.displayName, email: before.email });
+    }
     if ((await deps.docs.listSimulationRuns(userId)).length === 0) {
       const latest = latestCompletedQuarter(deps.today());
       const quarters = [previousQuarter(previousQuarter(latest)), previousQuarter(latest), latest];

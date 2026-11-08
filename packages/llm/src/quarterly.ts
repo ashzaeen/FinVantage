@@ -103,6 +103,16 @@ export function quarterlySystemPrompt(hasPreviousQuarter: boolean) {
   ].join(" ");
 }
 
+/**
+ * Whether the text states a stored sentence, such as the cause of a change. The model works it
+ * into its own sentence ("...because the saved monthly savings scenario changed, so..."), so
+ * capitals, spacing and the closing full stop don't count. The words must still all be there.
+ */
+function mentions(text: string, sentence: string) {
+  const normalize = (value: string) => value.toLowerCase().replace(/\s+/g, " ").trim();
+  return normalize(text).includes(normalize(sentence).replace(/[.!]+$/, ""));
+}
+
 function allText(body: ReportBody) {
   return [
     ...body.wentWell,
@@ -202,7 +212,7 @@ export async function generateQuarterlyReport(
       if (!previousFigure || !text.includes(previousFigure.value)) {
         return { body: fallback, source: "template" };
       }
-      if (!text.includes(input.largestChange.cause)) {
+      if (!mentions(text, input.largestChange.cause)) {
         return { body: fallback, source: "template" };
       }
     }
