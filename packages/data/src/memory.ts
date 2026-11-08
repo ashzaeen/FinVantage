@@ -11,7 +11,7 @@ import {
   type QuarterlyReport,
   type Recommendation,
   type SimulationRun,
-  type Transaction,
+  Transaction,
   type User,
   type Account,
 } from "@finvantage/contracts";
@@ -78,12 +78,13 @@ export class MemoryLedgerStore implements LedgerStore {
   }
 
   async addTransaction(transaction: NewTransaction) {
-    const saved: Transaction = {
+    // parse fills the bank-only fields (pending, categoryDetailed, ...) with their defaults.
+    const saved: Transaction = Transaction.parse({
       ...transaction,
       id: randomUUID(),
       category: null,
       isRecurring: false,
-    };
+    });
     this.transactions.push(saved);
     return saved;
   }

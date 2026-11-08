@@ -64,6 +64,7 @@ These replace the Tiger Data and Vultr lines above, and the "Spacetime: enter or
 | The Spacetime module is published from the platform owner's laptop, not CI | The schema changes rarely, and it needs no extra repo secret |
 | CI is manual-only for now | It failed on Linux in the build step, the logs weren't visible without signing in, and deploys don't depend on it |
 | Sign-in is our own email + password, not SpacetimeAuth. The API issues RS256 tokens and publishes its key at `/.well-known/jwks.json`. Accounts live in a private Spacetime `credential` table, with scrypt hashes | SpacetimeAuth only offers magic link, anonymous, and social logins, and the team wanted email + password. Our tokens are OpenID-shaped, so SpacetimeDB can still accept them as identities for live subscriptions |
+| Bank data is modeled on Plaid: Spacetime tables mirror Plaid's objects and signs, the demo fixture is in Plaid's format, and one mapper (`packages/data/src/plaid/map.ts`) turns it into the app's `Account` and `Transaction`, which only gained optional fields | Plaid is the main bank connector. Keeping Plaid's shape at the edge means live Plaid is a data-source swap, and keeping the app types stable avoids breaking teammates' code. See `docs/DATA-MODEL.md` |
 
 ## Open questions
 

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
   Account,
+  BalanceSnapshot,
+  BudgetLimit,
   Cents,
   Goal,
   LifeEvent,
@@ -8,6 +10,8 @@ import {
   User,
   type FinancialSnapshot,
 } from "@finvantage/contracts";
+import { AccountDetails, mapItemSnapshot } from "./plaid/map";
+import { PlaidItemSnapshot } from "./plaid/schema";
 // A static import, not a file read, so the fixture survives bundling for serverless deploys.
 import planner from "../fixtures/planner.json" with { type: "json" };
 
@@ -23,6 +27,24 @@ export const IncomeProfile = z.object({
 });
 export type IncomeProfile = z.infer<typeof IncomeProfile>;
 
+/**
+ * A fixture file. Bank data is in Plaid's own format (one snapshot per Plaid Item), so the demo
+ * goes through the same mapper as a real bank connection. `accountDetails` is what a person
+ * would enter by hand because Plaid doesn't provide it.
+ */
+export const DemoProfileSource = z.object({
+  user: User,
+  income: IncomeProfile,
+  goals: z.array(Goal),
+  lifeEvents: z.array(LifeEvent),
+  bank: z.array(PlaidItemSnapshot),
+  accountDetails: z.record(z.string(), AccountDetails).default({}),
+  budgets: z.array(BudgetLimit).default([]),
+  balanceHistory: z.array(BalanceSnapshot).default([]),
+});
+export type DemoProfileSource = z.infer<typeof DemoProfileSource>;
+
+/** A fixture in the app's own types, ready for the stores. */
 export const DemoProfile = z.object({
   user: User,
   income: IncomeProfile,
@@ -30,6 +52,8 @@ export const DemoProfile = z.object({
   goals: z.array(Goal),
   transactions: z.array(Transaction),
   lifeEvents: z.array(LifeEvent),
+  budgets: z.array(BudgetLimit),
+  balanceHistory: z.array(BalanceSnapshot),
 });
 export type DemoProfile = z.infer<typeof DemoProfile>;
 
@@ -40,7 +64,25 @@ export function loadDemoProfileFixture(name = "planner"): DemoProfile {
   const fixture = FIXTURES[name];
   if (fixture === undefined) throw new Error(`Unknown demo profile fixture: ${name}`);
   // structuredClone so callers can never mutate the shared imported object.
-  return DemoProfile.parse(structuredClone(fixture));
+  const source = DemoProfileSource.parse(structuredClone(fixture));
+  const bank = source.bank.map((item) => mapItemSnapshot(item, source.user.id, source.accountDetails));
+  return DemoProfile.parse({
+    user: source.user,
+    income: source.income,
+    accounts: bank.flatMap((b) => b.accounts),
+    transactions: bank.flatMap((b) => b.transactions),
+    goals: source.goals,
+    lifeEvents: source.lifeEvents,
+    budgets: source.budgets,
+    balanceHistory: source.balanceHistory,
+  });
+}
+
+/** The raw Plaid-format bank data of a fixture, for loading into Spacetime's bank tables. */
+export function loadDemoProfileSource(name = "planner"): DemoProfileSource {
+  const fixture = FIXTURES[name];
+  if (fixture === undefined) throw new Error(`Unknown demo profile fixture: ${name}`);
+  return DemoProfileSource.parse(structuredClone(fixture));
 }
 
 /**
@@ -63,6 +105,8 @@ export function demoProfileFor(userId: string, name = "planner"): DemoProfile {
     })),
     transactions: profile.transactions.map((t) => ({ ...t, id: id(t.id), accountId: id(t.accountId) })),
     lifeEvents: profile.lifeEvents.map((e) => ({ ...e, id: id(e.id), userId })),
+    budgets: profile.budgets,
+    balanceHistory: profile.balanceHistory.map((b) => ({ ...b, accountId: id(b.accountId) })),
   };
 }
 

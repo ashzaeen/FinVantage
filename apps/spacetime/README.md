@@ -10,16 +10,13 @@ The relational ledger and the live event feed, published to Maincloud as the dat
 
 ## Tables
 
-| Table | Holds |
-| --- | --- |
-| `app_user` | `User` from contracts, flattened |
-| `income_profile` | `IncomeProfile`, one per user |
-| `account`, `ledger_transaction`, `goal` | Same fields as the contracts. Transactions also carry `user_id` |
-| `live_event` | Dashboard pushes. `payload` is a JSON `LiveEvent`. The newest 50 per user are kept |
-| `credential` | Email + password accounts: lowercased email, user id, scrypt hash. Written by `register_credential` |
-| `admin`, `user_identity` | Who may write. Which browser identity belongs to which user (Sprint 5) |
+The full model is in `docs/DATA-MODEL.md`. In short:
 
-`user` and `transaction` are SQL keywords, hence `app_user` and `ledger_transaction`.
+- **Bank data, mirroring Plaid:** `bank_item`, `bank_account`, `bank_transaction`, `liability`, `recurring_stream`, `security`, `holding`. Plaid's field names, cents instead of dollars, and Plaid's sign (a positive `bank_transaction.amount_cents` is money out).
+- **User-entered or computed:** `app_user`, `income_profile`, `goal`, `account_detail`, `budget`, `balance_snapshot`.
+- **Platform:** `credential`, `live_event`, `admin`, `user_identity`.
+
+Reducers follow Plaid's endpoints: `sync_bank_transactions` takes one `/transactions/sync` page, `replace_liabilities` takes one `/liabilities/get` result, and so on. `load_profile` loads the demo in one transaction.
 
 ## Commands
 
@@ -32,9 +29,11 @@ Install the CLI once: in PowerShell, run `iwr https://windows.spacetimedb.com -u
 | Look at data | `spacetime sql finvantage "SELECT * FROM goal" --server maincloud` |
 | Read logs | `spacetime logs finvantage --server maincloud` |
 
-Only the platform owner publishes, from their laptop. Adding a table or appending a column with a
-`.default(...)` is safe. Removing or changing a column needs `--delete-data`, which wipes the
-database: warn the team first, then reseed.
+Only the platform owner publishes, from their laptop. Adding a table, or appending a column with a
+`.default(...)`, is safe. Spacetime refuses to remove a table that still has rows. Publish a
+version with a reducer that empties it, call that, then publish without the table. This keeps
+sign-ins (`credential`). `--delete-data` wipes everything, including sign-ins: never use it
+without warning the team.
 
 ## Calling reducers over HTTP
 

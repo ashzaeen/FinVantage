@@ -3,8 +3,13 @@
     "id": "user_demo",
     "displayName": "Jordan Rivera",
     "email": "jordan@example.com",
-    "preferences": { "bufferTargetCents": 250000 },
-    "extensionSettings": { "enabled": true, "snoozedSites": [] }
+    "preferences": {
+      "bufferTargetCents": 250000
+    },
+    "extensionSettings": {
+      "enabled": true,
+      "snoozedSites": []
+    }
   },
   "income": {
     "monthlyIncomeCents": 620000,
@@ -14,34 +19,1055 @@
     "monthlySavingsCents": 120000,
     "paydayDayOfMonth": 15
   },
-  "accounts": [
-    { "id": "acc_checking", "userId": "user_demo", "type": "checking", "loanKind": null, "name": "Everyday Checking", "institution": "Demo Bank", "balanceCents": 340000, "annualRate": null, "minimumPaymentCents": null, "promoRateEndsOn": null },
-    { "id": "acc_savings", "userId": "user_demo", "type": "savings", "loanKind": null, "name": "High-Yield Savings", "institution": "Demo Bank", "balanceCents": 1850000, "annualRate": 0.04, "minimumPaymentCents": null, "promoRateEndsOn": null },
-    { "id": "acc_cd", "userId": "user_demo", "type": "cd", "loanKind": null, "name": "12-Month CD", "institution": "Demo Bank", "balanceCents": 500000, "annualRate": 0.045, "minimumPaymentCents": null, "promoRateEndsOn": null },
-    { "id": "acc_ira", "userId": "user_demo", "type": "ira", "loanKind": null, "name": "Roth IRA", "institution": "Demo Brokerage", "balanceCents": 2240000, "annualRate": null, "minimumPaymentCents": null, "promoRateEndsOn": null },
-    { "id": "acc_auto", "userId": "user_demo", "type": "loan", "loanKind": "auto", "name": "Auto Loan", "institution": "Demo Bank", "balanceCents": 1120000, "annualRate": 0.059, "minimumPaymentCents": 34000, "promoRateEndsOn": null },
-    { "id": "acc_personal", "userId": "user_demo", "type": "loan", "loanKind": "personal", "name": "Personal Loan", "institution": "Demo Bank", "balanceCents": 310000, "annualRate": 0.099, "minimumPaymentCents": 14000, "promoRateEndsOn": null },
-    { "id": "acc_card", "userId": "user_demo", "type": "credit_card", "loanKind": null, "name": "Cash Rewards Card", "institution": "Demo Bank", "balanceCents": 86000, "annualRate": 0.2299, "minimumPaymentCents": 3500, "promoRateEndsOn": null },
-    { "id": "acc_promo", "userId": "user_demo", "type": "credit_card", "loanKind": null, "name": "0% Promo Card", "institution": "Demo Bank", "balanceCents": 0, "annualRate": 0, "minimumPaymentCents": 0, "promoRateEndsOn": "2027-09-30" },
-    { "id": "acc_mortgage", "userId": "user_demo", "type": "mortgage", "loanKind": null, "name": "Condo Mortgage", "institution": "Demo Bank", "balanceCents": 21500000, "annualRate": 0.0625, "minimumPaymentCents": 46500, "promoRateEndsOn": null }
-  ],
   "goals": [
-    { "id": "goal_emergency", "userId": "user_demo", "name": "Emergency fund", "targetCents": 1800000, "currentCents": 1200000, "targetDate": "2027-12-01", "priorityRank": 1, "flexibility": "non_negotiable", "linkedAccountId": "acc_savings" },
-    { "id": "goal_japan", "userId": "user_demo", "name": "Japan trip", "targetCents": 450000, "currentCents": 150000, "targetDate": "2027-06-01", "priorityRank": 2, "flexibility": "flexible", "linkedAccountId": "acc_savings" },
-    { "id": "goal_house", "userId": "user_demo", "name": "House down payment", "targetCents": 6000000, "currentCents": 650000, "targetDate": "2030-06-01", "priorityRank": 3, "flexibility": "flexible", "linkedAccountId": "acc_savings" },
-    { "id": "goal_car", "userId": "user_demo", "name": "Next car", "targetCents": 1200000, "currentCents": 0, "targetDate": "2029-01-01", "priorityRank": 4, "flexibility": "flexible", "linkedAccountId": null }
+    {
+      "id": "goal_emergency",
+      "userId": "user_demo",
+      "name": "Emergency fund",
+      "targetCents": 1800000,
+      "currentCents": 1200000,
+      "targetDate": "2027-12-01",
+      "priorityRank": 1,
+      "flexibility": "non_negotiable",
+      "linkedAccountId": "acc_savings"
+    },
+    {
+      "id": "goal_japan",
+      "userId": "user_demo",
+      "name": "Japan trip",
+      "targetCents": 450000,
+      "currentCents": 150000,
+      "targetDate": "2027-06-01",
+      "priorityRank": 2,
+      "flexibility": "flexible",
+      "linkedAccountId": "acc_savings"
+    },
+    {
+      "id": "goal_house",
+      "userId": "user_demo",
+      "name": "House down payment",
+      "targetCents": 6000000,
+      "currentCents": 650000,
+      "targetDate": "2030-06-01",
+      "priorityRank": 3,
+      "flexibility": "flexible",
+      "linkedAccountId": "acc_savings"
+    },
+    {
+      "id": "goal_car",
+      "userId": "user_demo",
+      "name": "Next car",
+      "targetCents": 1200000,
+      "currentCents": 0,
+      "targetDate": "2029-01-01",
+      "priorityRank": 4,
+      "flexibility": "flexible",
+      "linkedAccountId": null
+    }
   ],
-  "transactions": [
-    { "id": "txn_01", "accountId": "acc_checking", "date": "2026-10-15", "amountCents": 310000, "merchant": "Acme Payroll", "category": "income", "isRecurring": true },
-    { "id": "txn_02", "accountId": "acc_checking", "date": "2026-10-31", "amountCents": 310000, "merchant": "Acme Payroll", "category": "income", "isRecurring": true },
-    { "id": "txn_03", "accountId": "acc_checking", "date": "2026-11-01", "amountCents": -46500, "merchant": "Demo Mortgage Servicing", "category": "housing", "isRecurring": true },
-    { "id": "txn_04", "accountId": "acc_checking", "date": "2026-11-02", "amountCents": -34000, "merchant": "Demo Auto Finance", "category": "debt", "isRecurring": true },
-    { "id": "txn_05", "accountId": "acc_card", "date": "2026-11-02", "amountCents": -1599, "merchant": "StreamFlix", "category": "subscriptions", "isRecurring": true },
-    { "id": "txn_06", "accountId": "acc_card", "date": "2026-11-03", "amountCents": -8742, "merchant": "Green Grocer", "category": "groceries", "isRecurring": false },
-    { "id": "txn_07", "accountId": "acc_card", "date": "2026-11-04", "amountCents": -3210, "merchant": "Taqueria Norte", "category": "dining", "isRecurring": false },
-    { "id": "txn_08", "accountId": "acc_checking", "date": "2026-11-05", "amountCents": -12300, "merchant": "City Power", "category": "utilities", "isRecurring": true },
-    { "id": "txn_09", "accountId": "acc_card", "date": "2026-11-05", "amountCents": -4500, "merchant": "Fuel Stop", "category": "transport", "isRecurring": false },
-    { "id": "txn_10", "accountId": "acc_card", "date": "2026-11-06", "amountCents": -999, "merchant": "Tunewave", "category": "subscriptions", "isRecurring": true }
+  "lifeEvents": [],
+  "bank": [
+    {
+      "item": {
+        "item_id": "item_demo_bank",
+        "institution_id": "ins_demo_bank",
+        "institution_name": "Demo Bank"
+      },
+      "accounts": [
+        {
+          "account_id": "acc_checking",
+          "balances": {
+            "available": 3400,
+            "current": 3400,
+            "limit": null,
+            "iso_currency_code": "USD"
+          },
+          "mask": "0042",
+          "name": "Everyday Checking",
+          "official_name": "Demo Bank Everyday Checking",
+          "type": "depository",
+          "subtype": "checking"
+        },
+        {
+          "account_id": "acc_savings",
+          "balances": {
+            "available": 18500,
+            "current": 18500,
+            "limit": null,
+            "iso_currency_code": "USD"
+          },
+          "mask": "1187",
+          "name": "High-Yield Savings",
+          "official_name": null,
+          "type": "depository",
+          "subtype": "savings"
+        },
+        {
+          "account_id": "acc_cd",
+          "balances": {
+            "available": null,
+            "current": 5000,
+            "limit": null,
+            "iso_currency_code": "USD"
+          },
+          "mask": "5530",
+          "name": "12-Month CD",
+          "official_name": null,
+          "type": "depository",
+          "subtype": "cd"
+        },
+        {
+          "account_id": "acc_auto",
+          "balances": {
+            "available": null,
+            "current": 11200,
+            "limit": null,
+            "iso_currency_code": "USD"
+          },
+          "mask": "7781",
+          "name": "Auto Loan",
+          "official_name": null,
+          "type": "loan",
+          "subtype": "auto"
+        },
+        {
+          "account_id": "acc_personal",
+          "balances": {
+            "available": null,
+            "current": 3100,
+            "limit": null,
+            "iso_currency_code": "USD"
+          },
+          "mask": "2264",
+          "name": "Personal Loan",
+          "official_name": null,
+          "type": "loan",
+          "subtype": "consumer"
+        },
+        {
+          "account_id": "acc_card",
+          "balances": {
+            "available": 4140,
+            "current": 860,
+            "limit": 5000,
+            "iso_currency_code": "USD"
+          },
+          "mask": "3005",
+          "name": "Cash Rewards Card",
+          "official_name": null,
+          "type": "credit",
+          "subtype": "credit card"
+        },
+        {
+          "account_id": "acc_promo",
+          "balances": {
+            "available": 8000,
+            "current": 0,
+            "limit": 8000,
+            "iso_currency_code": "USD"
+          },
+          "mask": "9912",
+          "name": "0% Promo Card",
+          "official_name": null,
+          "type": "credit",
+          "subtype": "credit card"
+        },
+        {
+          "account_id": "acc_mortgage",
+          "balances": {
+            "available": null,
+            "current": 215000,
+            "limit": null,
+            "iso_currency_code": "USD"
+          },
+          "mask": "6420",
+          "name": "Condo Mortgage",
+          "official_name": null,
+          "type": "loan",
+          "subtype": "mortgage"
+        }
+      ],
+      "transactions": [
+        {
+          "transaction_id": "txn_01",
+          "account_id": "acc_checking",
+          "amount": -3100,
+          "iso_currency_code": "USD",
+          "date": "2026-10-15",
+          "authorized_date": "2026-10-15",
+          "name": "ACME PAYROLL",
+          "merchant_name": "Acme Payroll",
+          "merchant_entity_id": null,
+          "logo_url": null,
+          "website": null,
+          "payment_channel": "online",
+          "pending": false,
+          "pending_transaction_id": null,
+          "personal_finance_category": {
+            "primary": "INCOME",
+            "detailed": "INCOME_WAGES",
+            "confidence_level": "VERY_HIGH"
+          }
+        },
+        {
+          "transaction_id": "txn_02",
+          "account_id": "acc_checking",
+          "amount": -3100,
+          "iso_currency_code": "USD",
+          "date": "2026-10-31",
+          "authorized_date": "2026-10-31",
+          "name": "ACME PAYROLL",
+          "merchant_name": "Acme Payroll",
+          "merchant_entity_id": null,
+          "logo_url": null,
+          "website": null,
+          "payment_channel": "online",
+          "pending": false,
+          "pending_transaction_id": null,
+          "personal_finance_category": {
+            "primary": "INCOME",
+            "detailed": "INCOME_WAGES",
+            "confidence_level": "VERY_HIGH"
+          }
+        },
+        {
+          "transaction_id": "txn_03",
+          "account_id": "acc_checking",
+          "amount": 465,
+          "iso_currency_code": "USD",
+          "date": "2026-11-01",
+          "authorized_date": "2026-11-01",
+          "name": "DEMO MORTGAGE SERVICING",
+          "merchant_name": "Demo Mortgage Servicing",
+          "merchant_entity_id": null,
+          "logo_url": null,
+          "website": null,
+          "payment_channel": "online",
+          "pending": false,
+          "pending_transaction_id": null,
+          "personal_finance_category": {
+            "primary": "LOAN_PAYMENTS",
+            "detailed": "LOAN_PAYMENTS_MORTGAGE_PAYMENT",
+            "confidence_level": "VERY_HIGH"
+          }
+        },
+        {
+          "transaction_id": "txn_04",
+          "account_id": "acc_checking",
+          "amount": 340,
+          "iso_currency_code": "USD",
+          "date": "2026-11-02",
+          "authorized_date": "2026-11-02",
+          "name": "DEMO AUTO FINANCE",
+          "merchant_name": "Demo Auto Finance",
+          "merchant_entity_id": null,
+          "logo_url": null,
+          "website": null,
+          "payment_channel": "online",
+          "pending": false,
+          "pending_transaction_id": null,
+          "personal_finance_category": {
+            "primary": "LOAN_PAYMENTS",
+            "detailed": "LOAN_PAYMENTS_CAR_PAYMENT",
+            "confidence_level": "VERY_HIGH"
+          }
+        },
+        {
+          "transaction_id": "txn_05",
+          "account_id": "acc_card",
+          "amount": 15.99,
+          "iso_currency_code": "USD",
+          "date": "2026-11-02",
+          "authorized_date": "2026-11-02",
+          "name": "STREAMFLIX",
+          "merchant_name": "StreamFlix",
+          "merchant_entity_id": null,
+          "logo_url": null,
+          "website": null,
+          "payment_channel": "online",
+          "pending": false,
+          "pending_transaction_id": null,
+          "personal_finance_category": {
+            "primary": "ENTERTAINMENT",
+            "detailed": "ENTERTAINMENT_TV_AND_MOVIES",
+            "confidence_level": "VERY_HIGH"
+          }
+        },
+        {
+          "transaction_id": "txn_06",
+          "account_id": "acc_card",
+          "amount": 87.42,
+          "iso_currency_code": "USD",
+          "date": "2026-11-03",
+          "authorized_date": "2026-11-03",
+          "name": "GREEN GROCER",
+          "merchant_name": "Green Grocer",
+          "merchant_entity_id": null,
+          "logo_url": null,
+          "website": null,
+          "payment_channel": "in store",
+          "pending": false,
+          "pending_transaction_id": null,
+          "personal_finance_category": {
+            "primary": "FOOD_AND_DRINK",
+            "detailed": "FOOD_AND_DRINK_GROCERIES",
+            "confidence_level": "VERY_HIGH"
+          }
+        },
+        {
+          "transaction_id": "txn_07",
+          "account_id": "acc_card",
+          "amount": 32.1,
+          "iso_currency_code": "USD",
+          "date": "2026-11-04",
+          "authorized_date": "2026-11-04",
+          "name": "TAQUERIA NORTE",
+          "merchant_name": "Taqueria Norte",
+          "merchant_entity_id": null,
+          "logo_url": null,
+          "website": null,
+          "payment_channel": "in store",
+          "pending": false,
+          "pending_transaction_id": null,
+          "personal_finance_category": {
+            "primary": "FOOD_AND_DRINK",
+            "detailed": "FOOD_AND_DRINK_RESTAURANT",
+            "confidence_level": "VERY_HIGH"
+          }
+        },
+        {
+          "transaction_id": "txn_08",
+          "account_id": "acc_checking",
+          "amount": 123,
+          "iso_currency_code": "USD",
+          "date": "2026-11-05",
+          "authorized_date": "2026-11-05",
+          "name": "CITY POWER",
+          "merchant_name": "City Power",
+          "merchant_entity_id": null,
+          "logo_url": null,
+          "website": null,
+          "payment_channel": "online",
+          "pending": false,
+          "pending_transaction_id": null,
+          "personal_finance_category": {
+            "primary": "RENT_AND_UTILITIES",
+            "detailed": "RENT_AND_UTILITIES_GAS_AND_ELECTRICITY",
+            "confidence_level": "VERY_HIGH"
+          }
+        },
+        {
+          "transaction_id": "txn_09",
+          "account_id": "acc_card",
+          "amount": 45,
+          "iso_currency_code": "USD",
+          "date": "2026-11-05",
+          "authorized_date": "2026-11-05",
+          "name": "FUEL STOP",
+          "merchant_name": "Fuel Stop",
+          "merchant_entity_id": null,
+          "logo_url": null,
+          "website": null,
+          "payment_channel": "in store",
+          "pending": false,
+          "pending_transaction_id": null,
+          "personal_finance_category": {
+            "primary": "TRANSPORTATION",
+            "detailed": "TRANSPORTATION_GAS",
+            "confidence_level": "VERY_HIGH"
+          }
+        },
+        {
+          "transaction_id": "txn_10",
+          "account_id": "acc_card",
+          "amount": 9.99,
+          "iso_currency_code": "USD",
+          "date": "2026-11-06",
+          "authorized_date": "2026-11-06",
+          "name": "TUNEWAVE",
+          "merchant_name": "Tunewave",
+          "merchant_entity_id": null,
+          "logo_url": null,
+          "website": null,
+          "payment_channel": "online",
+          "pending": false,
+          "pending_transaction_id": null,
+          "personal_finance_category": {
+            "primary": "ENTERTAINMENT",
+            "detailed": "ENTERTAINMENT_MUSIC_AND_AUDIO",
+            "confidence_level": "VERY_HIGH"
+          }
+        }
+      ],
+      "transactions_cursor": "demo-cursor-2026-11-06",
+      "liabilities": {
+        "credit": [
+          {
+            "account_id": "acc_card",
+            "aprs": [
+              {
+                "apr_percentage": 22.99,
+                "apr_type": "purchase_apr",
+                "balance_subject_to_apr": 860
+              }
+            ],
+            "is_overdue": false,
+            "last_payment_amount": 350,
+            "last_payment_date": "2026-10-20",
+            "last_statement_balance": 860,
+            "minimum_payment_amount": 35,
+            "next_payment_due_date": "2026-11-20"
+          },
+          {
+            "account_id": "acc_promo",
+            "aprs": [
+              {
+                "apr_percentage": 0,
+                "apr_type": "special",
+                "balance_subject_to_apr": 0
+              },
+              {
+                "apr_percentage": 24.99,
+                "apr_type": "purchase_apr",
+                "balance_subject_to_apr": 0
+              }
+            ],
+            "is_overdue": false,
+            "last_payment_amount": null,
+            "last_payment_date": null,
+            "last_statement_balance": 0,
+            "minimum_payment_amount": 0,
+            "next_payment_due_date": null
+          }
+        ],
+        "mortgage": [
+          {
+            "account_id": "acc_mortgage",
+            "interest_rate": {
+              "percentage": 6.25,
+              "type": "fixed"
+            },
+            "next_monthly_payment": 465,
+            "next_payment_due_date": "2026-12-01",
+            "origination_date": "2023-06-15",
+            "maturity_date": "2053-07-01",
+            "origination_principal_amount": 230000
+          }
+        ],
+        "student": []
+      },
+      "recurring": {
+        "inflow_streams": [
+          {
+            "stream_id": "stream_payroll",
+            "account_id": "acc_checking",
+            "description": "ACME PAYROLL",
+            "merchant_name": "Acme Payroll",
+            "first_date": "2026-10-15",
+            "last_date": "2026-10-31",
+            "predicted_next_date": "2026-11-15",
+            "frequency": "SEMI_MONTHLY",
+            "transaction_ids": [
+              "txn_01",
+              "txn_02"
+            ],
+            "average_amount": {
+              "amount": -3100,
+              "iso_currency_code": "USD"
+            },
+            "last_amount": {
+              "amount": -3100,
+              "iso_currency_code": "USD"
+            },
+            "is_active": true,
+            "status": "MATURE",
+            "personal_finance_category": {
+              "primary": "INCOME",
+              "detailed": "INCOME_WAGES",
+              "confidence_level": "VERY_HIGH"
+            }
+          }
+        ],
+        "outflow_streams": [
+          {
+            "stream_id": "stream_mortgage",
+            "account_id": "acc_checking",
+            "description": "DEMO MORTGAGE SERVICING",
+            "merchant_name": "Demo Mortgage Servicing",
+            "first_date": "2023-08-01",
+            "last_date": "2026-11-01",
+            "predicted_next_date": "2026-12-01",
+            "frequency": "MONTHLY",
+            "transaction_ids": [
+              "txn_03"
+            ],
+            "average_amount": {
+              "amount": 465,
+              "iso_currency_code": "USD"
+            },
+            "last_amount": {
+              "amount": 465,
+              "iso_currency_code": "USD"
+            },
+            "is_active": true,
+            "status": "MATURE",
+            "personal_finance_category": {
+              "primary": "LOAN_PAYMENTS",
+              "detailed": "LOAN_PAYMENTS_MORTGAGE_PAYMENT",
+              "confidence_level": "VERY_HIGH"
+            }
+          },
+          {
+            "stream_id": "stream_auto",
+            "account_id": "acc_checking",
+            "description": "DEMO AUTO FINANCE",
+            "merchant_name": "Demo Auto Finance",
+            "first_date": "2025-03-02",
+            "last_date": "2026-11-02",
+            "predicted_next_date": "2026-12-02",
+            "frequency": "MONTHLY",
+            "transaction_ids": [
+              "txn_04"
+            ],
+            "average_amount": {
+              "amount": 340,
+              "iso_currency_code": "USD"
+            },
+            "last_amount": {
+              "amount": 340,
+              "iso_currency_code": "USD"
+            },
+            "is_active": true,
+            "status": "MATURE",
+            "personal_finance_category": {
+              "primary": "LOAN_PAYMENTS",
+              "detailed": "LOAN_PAYMENTS_CAR_PAYMENT",
+              "confidence_level": "VERY_HIGH"
+            }
+          },
+          {
+            "stream_id": "stream_power",
+            "account_id": "acc_checking",
+            "description": "CITY POWER",
+            "merchant_name": "City Power",
+            "first_date": "2024-01-05",
+            "last_date": "2026-11-05",
+            "predicted_next_date": "2026-12-05",
+            "frequency": "MONTHLY",
+            "transaction_ids": [
+              "txn_08"
+            ],
+            "average_amount": {
+              "amount": 123,
+              "iso_currency_code": "USD"
+            },
+            "last_amount": {
+              "amount": 123,
+              "iso_currency_code": "USD"
+            },
+            "is_active": true,
+            "status": "MATURE",
+            "personal_finance_category": {
+              "primary": "RENT_AND_UTILITIES",
+              "detailed": "RENT_AND_UTILITIES_GAS_AND_ELECTRICITY",
+              "confidence_level": "VERY_HIGH"
+            }
+          },
+          {
+            "stream_id": "stream_streamflix",
+            "account_id": "acc_card",
+            "description": "STREAMFLIX",
+            "merchant_name": "StreamFlix",
+            "first_date": "2025-06-02",
+            "last_date": "2026-11-02",
+            "predicted_next_date": "2026-12-02",
+            "frequency": "MONTHLY",
+            "transaction_ids": [
+              "txn_05"
+            ],
+            "average_amount": {
+              "amount": 15.99,
+              "iso_currency_code": "USD"
+            },
+            "last_amount": {
+              "amount": 15.99,
+              "iso_currency_code": "USD"
+            },
+            "is_active": true,
+            "status": "MATURE",
+            "personal_finance_category": {
+              "primary": "ENTERTAINMENT",
+              "detailed": "ENTERTAINMENT_TV_AND_MOVIES",
+              "confidence_level": "VERY_HIGH"
+            }
+          },
+          {
+            "stream_id": "stream_tunewave",
+            "account_id": "acc_card",
+            "description": "TUNEWAVE",
+            "merchant_name": "Tunewave",
+            "first_date": "2025-09-06",
+            "last_date": "2026-11-06",
+            "predicted_next_date": "2026-12-06",
+            "frequency": "MONTHLY",
+            "transaction_ids": [
+              "txn_10"
+            ],
+            "average_amount": {
+              "amount": 9.99,
+              "iso_currency_code": "USD"
+            },
+            "last_amount": {
+              "amount": 9.99,
+              "iso_currency_code": "USD"
+            },
+            "is_active": true,
+            "status": "MATURE",
+            "personal_finance_category": {
+              "primary": "ENTERTAINMENT",
+              "detailed": "ENTERTAINMENT_MUSIC_AND_AUDIO",
+              "confidence_level": "VERY_HIGH"
+            }
+          }
+        ]
+      },
+      "investments": {
+        "holdings": [],
+        "securities": []
+      }
+    },
+    {
+      "item": {
+        "item_id": "item_demo_brokerage",
+        "institution_id": "ins_demo_brokerage",
+        "institution_name": "Demo Brokerage"
+      },
+      "accounts": [
+        {
+          "account_id": "acc_ira",
+          "balances": {
+            "available": null,
+            "current": 22400,
+            "limit": null,
+            "iso_currency_code": "USD"
+          },
+          "mask": "8801",
+          "name": "Roth IRA",
+          "official_name": null,
+          "type": "investment",
+          "subtype": "roth"
+        }
+      ],
+      "transactions": [],
+      "transactions_cursor": null,
+      "liabilities": {
+        "credit": [],
+        "mortgage": [],
+        "student": []
+      },
+      "recurring": {
+        "inflow_streams": [],
+        "outflow_streams": []
+      },
+      "investments": {
+        "holdings": [
+          {
+            "account_id": "acc_ira",
+            "security_id": "sec_vti",
+            "quantity": 40,
+            "institution_price": 280,
+            "institution_value": 11200,
+            "cost_basis": 9600,
+            "iso_currency_code": "USD"
+          },
+          {
+            "account_id": "acc_ira",
+            "security_id": "sec_vxus",
+            "quantity": 80,
+            "institution_price": 70,
+            "institution_value": 5600,
+            "cost_basis": 5200,
+            "iso_currency_code": "USD"
+          },
+          {
+            "account_id": "acc_ira",
+            "security_id": "sec_bnd",
+            "quantity": 70,
+            "institution_price": 72,
+            "institution_value": 5040,
+            "cost_basis": 5180,
+            "iso_currency_code": "USD"
+          },
+          {
+            "account_id": "acc_ira",
+            "security_id": "sec_cash",
+            "quantity": 560,
+            "institution_price": 1,
+            "institution_value": 560,
+            "cost_basis": 560,
+            "iso_currency_code": "USD"
+          }
+        ],
+        "securities": [
+          {
+            "security_id": "sec_vti",
+            "name": "Total Stock Market ETF",
+            "ticker_symbol": "VTI",
+            "type": "etf",
+            "close_price": 280,
+            "close_price_as_of": "2026-11-06",
+            "is_cash_equivalent": false
+          },
+          {
+            "security_id": "sec_vxus",
+            "name": "Total International Stock ETF",
+            "ticker_symbol": "VXUS",
+            "type": "etf",
+            "close_price": 70,
+            "close_price_as_of": "2026-11-06",
+            "is_cash_equivalent": false
+          },
+          {
+            "security_id": "sec_bnd",
+            "name": "Total Bond Market ETF",
+            "ticker_symbol": "BND",
+            "type": "etf",
+            "close_price": 72,
+            "close_price_as_of": "2026-11-06",
+            "is_cash_equivalent": false
+          },
+          {
+            "security_id": "sec_cash",
+            "name": "Cash sweep",
+            "ticker_symbol": null,
+            "type": "cash",
+            "close_price": 1,
+            "close_price_as_of": "2026-11-06",
+            "is_cash_equivalent": true
+          }
+        ]
+      }
+    }
   ],
-  "lifeEvents": []
+  "accountDetails": {
+    "acc_savings": {
+      "annualRate": 0.04
+    },
+    "acc_cd": {
+      "annualRate": 0.045
+    },
+    "acc_auto": {
+      "annualRate": 0.059,
+      "minimumPaymentCents": 34000
+    },
+    "acc_personal": {
+      "annualRate": 0.099,
+      "minimumPaymentCents": 14000
+    },
+    "acc_promo": {
+      "promoRateEndsOn": "2027-09-30"
+    }
+  },
+  "budgets": [
+    {
+      "category": "groceries",
+      "monthlyLimitCents": 50000
+    },
+    {
+      "category": "dining",
+      "monthlyLimitCents": 25000
+    },
+    {
+      "category": "subscriptions",
+      "monthlyLimitCents": 10000
+    },
+    {
+      "category": "housing",
+      "monthlyLimitCents": 200000
+    },
+    {
+      "category": "utilities",
+      "monthlyLimitCents": 30000
+    },
+    {
+      "category": "transport",
+      "monthlyLimitCents": 25000
+    },
+    {
+      "category": "debt",
+      "monthlyLimitCents": 100000
+    }
+  ],
+  "balanceHistory": [
+    {
+      "accountId": "acc_checking",
+      "date": "2026-05-31",
+      "balanceCents": 316516
+    },
+    {
+      "accountId": "acc_checking",
+      "date": "2026-06-30",
+      "balanceCents": 320314
+    },
+    {
+      "accountId": "acc_checking",
+      "date": "2026-07-31",
+      "balanceCents": 324158
+    },
+    {
+      "accountId": "acc_checking",
+      "date": "2026-08-31",
+      "balanceCents": 328048
+    },
+    {
+      "accountId": "acc_checking",
+      "date": "2026-09-30",
+      "balanceCents": 331985
+    },
+    {
+      "accountId": "acc_checking",
+      "date": "2026-10-31",
+      "balanceCents": 335968
+    },
+    {
+      "accountId": "acc_savings",
+      "date": "2026-05-31",
+      "balanceCents": 1662207
+    },
+    {
+      "accountId": "acc_savings",
+      "date": "2026-06-30",
+      "balanceCents": 1692127
+    },
+    {
+      "accountId": "acc_savings",
+      "date": "2026-07-31",
+      "balanceCents": 1722585
+    },
+    {
+      "accountId": "acc_savings",
+      "date": "2026-08-31",
+      "balanceCents": 1753591
+    },
+    {
+      "accountId": "acc_savings",
+      "date": "2026-09-30",
+      "balanceCents": 1785156
+    },
+    {
+      "accountId": "acc_savings",
+      "date": "2026-10-31",
+      "balanceCents": 1817289
+    },
+    {
+      "accountId": "acc_cd",
+      "date": "2026-05-31",
+      "balanceCents": 488166
+    },
+    {
+      "accountId": "acc_cd",
+      "date": "2026-06-30",
+      "balanceCents": 490119
+    },
+    {
+      "accountId": "acc_cd",
+      "date": "2026-07-31",
+      "balanceCents": 492079
+    },
+    {
+      "accountId": "acc_cd",
+      "date": "2026-08-31",
+      "balanceCents": 494048
+    },
+    {
+      "accountId": "acc_cd",
+      "date": "2026-09-30",
+      "balanceCents": 496024
+    },
+    {
+      "accountId": "acc_cd",
+      "date": "2026-10-31",
+      "balanceCents": 498008
+    },
+    {
+      "accountId": "acc_ira",
+      "date": "2026-05-31",
+      "balanceCents": 2097689
+    },
+    {
+      "accountId": "acc_ira",
+      "date": "2026-06-30",
+      "balanceCents": 2120764
+    },
+    {
+      "accountId": "acc_ira",
+      "date": "2026-07-31",
+      "balanceCents": 2144092
+    },
+    {
+      "accountId": "acc_ira",
+      "date": "2026-08-31",
+      "balanceCents": 2167677
+    },
+    {
+      "accountId": "acc_ira",
+      "date": "2026-09-30",
+      "balanceCents": 2191521
+    },
+    {
+      "accountId": "acc_ira",
+      "date": "2026-10-31",
+      "balanceCents": 2215628
+    },
+    {
+      "accountId": "acc_auto",
+      "date": "2026-05-31",
+      "balanceCents": 1264333
+    },
+    {
+      "accountId": "acc_auto",
+      "date": "2026-06-30",
+      "balanceCents": 1239047
+    },
+    {
+      "accountId": "acc_auto",
+      "date": "2026-07-31",
+      "balanceCents": 1214266
+    },
+    {
+      "accountId": "acc_auto",
+      "date": "2026-08-31",
+      "balanceCents": 1189980
+    },
+    {
+      "accountId": "acc_auto",
+      "date": "2026-09-30",
+      "balanceCents": 1166181
+    },
+    {
+      "accountId": "acc_auto",
+      "date": "2026-10-31",
+      "balanceCents": 1142857
+    },
+    {
+      "accountId": "acc_personal",
+      "date": "2026-05-31",
+      "balanceCents": 349949
+    },
+    {
+      "accountId": "acc_personal",
+      "date": "2026-06-30",
+      "balanceCents": 342950
+    },
+    {
+      "accountId": "acc_personal",
+      "date": "2026-07-31",
+      "balanceCents": 336091
+    },
+    {
+      "accountId": "acc_personal",
+      "date": "2026-08-31",
+      "balanceCents": 329370
+    },
+    {
+      "accountId": "acc_personal",
+      "date": "2026-09-30",
+      "balanceCents": 322782
+    },
+    {
+      "accountId": "acc_personal",
+      "date": "2026-10-31",
+      "balanceCents": 316327
+    },
+    {
+      "accountId": "acc_card",
+      "date": "2026-05-31",
+      "balanceCents": 116992
+    },
+    {
+      "accountId": "acc_card",
+      "date": "2026-06-30",
+      "balanceCents": 111143
+    },
+    {
+      "accountId": "acc_card",
+      "date": "2026-07-31",
+      "balanceCents": 105585
+    },
+    {
+      "accountId": "acc_card",
+      "date": "2026-08-31",
+      "balanceCents": 100306
+    },
+    {
+      "accountId": "acc_card",
+      "date": "2026-09-30",
+      "balanceCents": 95291
+    },
+    {
+      "accountId": "acc_card",
+      "date": "2026-10-31",
+      "balanceCents": 90526
+    },
+    {
+      "accountId": "acc_promo",
+      "date": "2026-05-31",
+      "balanceCents": 0
+    },
+    {
+      "accountId": "acc_promo",
+      "date": "2026-06-30",
+      "balanceCents": 0
+    },
+    {
+      "accountId": "acc_promo",
+      "date": "2026-07-31",
+      "balanceCents": 0
+    },
+    {
+      "accountId": "acc_promo",
+      "date": "2026-08-31",
+      "balanceCents": 0
+    },
+    {
+      "accountId": "acc_promo",
+      "date": "2026-09-30",
+      "balanceCents": 0
+    },
+    {
+      "accountId": "acc_promo",
+      "date": "2026-10-31",
+      "balanceCents": 0
+    },
+    {
+      "accountId": "acc_mortgage",
+      "date": "2026-05-31",
+      "balanceCents": 21707561
+    },
+    {
+      "accountId": "acc_mortgage",
+      "date": "2026-06-30",
+      "balanceCents": 21672829
+    },
+    {
+      "accountId": "acc_mortgage",
+      "date": "2026-07-31",
+      "balanceCents": 21638152
+    },
+    {
+      "accountId": "acc_mortgage",
+      "date": "2026-08-31",
+      "balanceCents": 21603531
+    },
+    {
+      "accountId": "acc_mortgage",
+      "date": "2026-09-30",
+      "balanceCents": 21568965
+    },
+    {
+      "accountId": "acc_mortgage",
+      "date": "2026-10-31",
+      "balanceCents": 21534455
+    }
+  ]
 }

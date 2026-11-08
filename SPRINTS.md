@@ -80,6 +80,20 @@ Notes:
 - The bindings wait for Sprint 5. They import `spacetimedb`, which `apps/web` doesn't depend on yet, so committing them now would break the web build. They also need the per-user views that Sprint 5 adds.
 - `spacetime login show --token` prints a sentence, not a bare token. Extract the token before piping it anywhere.
 
+## Sprint 4b: Plaid-shaped schema (done 2026-11-07)
+
+- [x] Plaid's objects as Zod schemas (`packages/data/src/plaid/schema.ts`), and one mapper to the app's types (`map.ts`)
+- [x] The demo fixture's bank data rewritten in Plaid's exact format, mapping back to the same accounts and transactions, value for value
+- [x] `Account` and `Transaction` gain Plaid fields, all optional or defaulted: subtype, mask, available balance, credit limit, due date, pending, detailed category, channel, logo
+- [x] Spacetime tables mirror Plaid (`bank_item`, `bank_account`, `bank_transaction`, `liability`, `recurring_stream`, `security`, `holding`), plus `account_detail`, `budget`, and `balance_snapshot` for the PRD. Reducers follow Plaid's endpoints
+- [x] Republished without losing sign-ins, and seeded
+- [ ] Live Plaid Sandbox (Link, token exchange, sync). Not started
+
+Notes:
+- The full model, and where each PRD feature reads from, is in `docs/DATA-MODEL.md`.
+- The old `account` and `ledger_transaction` tables were emptied by a temporary reducer and then removed, because Spacetime refuses to drop tables with rows. `--delete-data` would have wiped `credential` too.
+- The budgets, net-worth history, recurring, bills, and portfolio routes still use built-in estimates. The data to replace them now exists. Switching needs Sprint 6 and the transactions owner.
+
 ## Sprint 5: Live subscriptions with the TS SDK
 
 - [ ] `SpacetimeBus.publish` calls `publish_live_event` over HTTP, fire-and-forget. Production sets `LIVE_TRANSPORT=spacetime`
