@@ -103,7 +103,7 @@ for (const backend of backends) {
       assert.equal((await store.listAccounts(userId)).find((a) => a.id === account.id)?.balanceCents, 20_000);
 
       const tx = await store.addTransaction({
-        accountId: account.id, date: "2026-11-07", amountCents: -2_500, currency: "USD", originalAmountCents: null,
+        accountId: account.id, date: "2099-01-01", amountCents: -2_500, currency: "USD", originalAmountCents: null,
         exchangeRateToUsd: null, exchangeRateDate: null, merchant: "Corner Cafe", category: "dining", subcategory: null, isRecurring: false,
         pending: false, categoryDetailed: null, paymentChannel: null, logoUrl: null,
       });
@@ -176,27 +176,31 @@ for (const backend of backends) {
       await store.applyBankUpdate(userId, first);
       const [item] = await store.listBankItems(userId);
       assert.equal(item?.itemId, itemId);
-      assert.equal(item?.accountCount, 8);
+      assert.equal(item?.accountCount, first.accounts.length);
       assert.equal(item?.transactionsCursor, "synthetic-cursor");
-      assert.equal((await store.listAccounts(userId)).length, accountsBefore + 8);
+      assert.equal((await store.listAccounts(userId)).length, accountsBefore + first.accounts.length);
       assert.equal((await store.listTransactions(userId, 1000)).length, transactionsBefore + first.added.length);
 
       // The user edits a bank transaction, then the next sync removes one and adds one.
-      const groceries = (await store.listTransactions(userId, 1000)).find((t) => t.id === `${itemId}__txn_06`)!;
+      // Any two of the bank's transactions: one to edit, one for the bank to remove.
+      const editedId = first.added[5]!.transaction_id;
+      const removedId = first.added[6]!.transaction_id;
+      const groceries = (await store.listTransactions(userId, 1000)).find((t) => t.id === editedId)!;
       await store.updateTransaction(userId, groceries.id, { ...groceries, category: "household" });
-      const added = { ...first.added[0]!, transaction_id: `${itemId}__txn_new`, date: "2026-11-07", amount: 42 };
+      // Dated after everything in the demo profile, so it sorts first.
+      const added = { ...first.added[0]!, transaction_id: `${itemId}__txn_new`, date: "2099-01-01", amount: 42 };
       await store.applyBankUpdate(userId, {
         ...first,
         added: [added],
         modified: [],
-        removedTransactionIds: [`${itemId}__txn_07`],
+        removedTransactionIds: [removedId],
         nextCursor: "synthetic-cursor-2",
       });
       const after = await store.listTransactions(userId, 1000);
       assert.equal(after.length, transactionsBefore + first.added.length);
       assert.equal(after[0]?.id, `${itemId}__txn_new`);
       assert.equal(after[0]?.amountCents, -4200);
-      assert.ok(!after.some((t) => t.id === `${itemId}__txn_07`));
+      assert.ok(!after.some((t) => t.id === removedId));
       assert.equal(after.find((t) => t.id === groceries.id)?.category, "household", "edits survive a sync");
       assert.equal((await store.listBankItems(userId))[0]?.transactionsCursor, "synthetic-cursor-2");
 

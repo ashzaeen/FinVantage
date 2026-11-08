@@ -142,7 +142,7 @@ test("life simulator context reflects the demo user's real goals", async () => {
   const context = await client.getLifeSimulatorContext();
   const japan = context.goals.find((goal) => goal.id === "goal_japan");
   assert.equal(japan?.kind, "trip");
-  assert.equal(japan?.plannedDate, "2027-06-01"); // the goal's own targetDate doubles as its planned trip date
+  assert.equal(japan?.plannedDate, "2027-10-01"); // the goal's own targetDate doubles as its planned trip date
   assert.equal(context.goals.find((goal) => goal.id === "goal_emergency")?.kind, "standard");
   assert.ok(context.freeCashCents > 0);
   assert.ok(
@@ -615,22 +615,23 @@ test("budgets report spending, pace and a suggestion, and work on subcategories"
 
   const [account] = await client.listAccounts();
   await client.addTransaction({
-    body: { accountId: account!.id, date: "2026-11-09", amountCents: -3_000, merchant: "Bean There", category: "dining_out", subcategory: "dining_out.coffee" },
+    // A subcategory the demo profile has no spending in, so the figures below are this test's alone.
+    body: { accountId: account!.id, date: "2026-11-09", amountCents: -3_000, merchant: "Corner Pub", category: "dining_out", subcategory: "dining_out.bars_alcohol" },
   });
-  const coffee = await client.setBudget({ body: { category: "dining_out.coffee", monthlyLimitCents: 5_000 } });
+  const coffee = await client.setBudget({ body: { category: "dining_out.bars_alcohol", monthlyLimitCents: 5_000 } });
   assert.equal(coffee.spentCents, 3_000);
   assert.equal(coffee.remainingCents, 2_000);
   // $30 in 10 days heads for $90 in a 30-day month, over the $50 limit.
   assert.equal(coffee.projectedCents, 9_000);
   assert.equal(coffee.status, "at_risk");
 
-  const tight = await client.setBudget({ body: { category: "dining_out.coffee", monthlyLimitCents: 2_000 } });
+  const tight = await client.setBudget({ body: { category: "dining_out.bars_alcohol", monthlyLimitCents: 2_000 } });
   assert.equal(tight.status, "over");
-  assert.equal((await client.listBudgets()).filter((b) => b.category === "dining_out.coffee").length, 1);
+  assert.equal((await client.listBudgets()).filter((b) => b.category === "dining_out.bars_alcohol").length, 1);
 
   assert.equal((await raw(app, "POST", "/v1/budgets", { category: "income", monthlyLimitCents: 100 })).json.error?.code, "excluded_budget");
-  await client.deleteBudget({ params: { category: "dining_out.coffee" } });
-  assert.equal((await raw(app, "DELETE", "/v1/budgets/dining_out.coffee")).status, 404);
+  await client.deleteBudget({ params: { category: "dining_out.bars_alcohol" } });
+  assert.equal((await raw(app, "DELETE", "/v1/budgets/dining_out.bars_alcohol")).status, 404);
 });
 
 test("merchant rules re-categorise past transactions and new ones without a category", async () => {
@@ -680,9 +681,9 @@ test("recurring charges and bills come from the bank's streams and due dates", a
   const names = bills.map((b) => b.merchant);
   // Within 14 days: the card and mortgage due dates, and streams with no due date of their own.
   assert.ok(names.includes("Cash Rewards Card") && names.includes("Condo Mortgage"), names.join(", "));
-  assert.ok(names.includes("Demo Auto Finance") && names.includes("StreamFlix"), names.join(", "));
+  assert.ok(names.includes("Fiberlink Internet") && names.includes("StreamFlix"), names.join(", "));
   // The mortgage stream duplicates the mortgage due date, so it is left out.
-  assert.ok(!names.includes("Demo Mortgage Servicing"), names.join(", "));
+  assert.ok(!names.includes("Lakeside Home Loans"), names.join(", "));
   // Past the 14-day window.
   assert.ok(!names.includes("Tunewave"), names.join(", "));
   assert.deepEqual(bills.map((b) => b.nextDate), [...bills.map((b) => b.nextDate)].sort());
@@ -815,11 +816,11 @@ test("the Advisor saves conversations and grounds answers in tool results", asyn
 
 test("an Advisor answer with an invented figure falls back to a safe answer from code", async () => {
   const { client, deps } = setup();
-  deps.llm = toolCallingLlm([{ name: "get_budgets" }], () => "Cut $9,876 a month.").llm;
+  deps.llm = toolCallingLlm([{ name: "get_budgets" }], () => "Cut $7,654,321 a month.").llm;
   const conversation = await client.createAdvisorConversation({ body: {} });
   const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "Help" } });
   assert.equal(turn.reply.source, "fallback");
-  assert.doesNotMatch(turn.reply.content, /9,876/);
+  assert.doesNotMatch(turn.reply.content, /7,654,321/);
 });
 
 test("with no model, the Advisor still answers from the user's data", async () => {
@@ -892,7 +893,7 @@ test("plan_goal works out the monthly amount in code, with its working attached"
   assert.equal(turn.reply.source, "gemini", turn.reply.content);
   const [working] = turn.reply.attachments;
   assert.equal(working?.kind, "calculation");
-  assert.match(working?.kind === "calculation" ? working.expression : "", /\$4,500 target - \$1,500 saved/);
+  assert.match(working?.kind === "calculation" ? working.expression : "", /\$5,000 target - \$1,850 saved/);
 });
 
 test("find_savings sizes cuts from flexible spending and simulates them", async () => {
@@ -913,14 +914,14 @@ test("the calculator only takes figures the Advisor was given", async () => {
   let results: ToolResults = [];
   deps.llm = toolCallingLlm(
     [
-      { name: "calculate", args: { expression: "(4500 - 1500) / 6", label: "Monthly for Japan" } },
+      { name: "calculate", args: { expression: "(5000 - 1850) / 6", label: "Monthly for Japan" } },
       { name: "calculate", args: { expression: "777 * 3", label: "Made up" } },
     ],
     (r) => { results = r as ToolResults; return "Done."; },
   ).llm;
   const conversation = await client.createAdvisorConversation({ body: {} });
   const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "Work it out" } });
-  assert.equal(results[0]!.response.result!.result, "500");
+  assert.equal(results[0]!.response.result!.result, "525");
   assert.match(results[1]!.response.error ?? "", /777/);
   assert.deepEqual(turn.reply.attachments.map((a) => a.kind), ["calculation"]);
 });

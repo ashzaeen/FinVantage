@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { randomBytes } from "node:crypto";
 import { ApiError, createApiClient, isLiability } from "@finvantage/contracts";
-import { decryptToken, encryptToken } from "@finvantage/data";
+import { decryptToken, encryptToken, loadDemoProfileSource } from "@finvantage/data";
 import { createApp } from "./app";
 import { createDeps } from "./deps";
 import { averageCashFlow, monthlyCashFlow, monthsBefore } from "./reporting/cashflow";
@@ -29,21 +29,24 @@ const status = async (p: Promise<unknown>) => {
   }
 };
 
+/** The synthetic bank links the demo profile's own bank, so its account count comes from the fixture. */
+const DEMO_BANK_ACCOUNTS = loadDemoProfileSource().bank[0]!.accounts.length;
+
 test("linking a bank replaces the demo copy's accounts, and a re-sync doesn't duplicate them", async () => {
   const { client, deps, user } = await signedIn();
 
   const item = await client.linkSandboxBank();
   assert.equal(item.institutionName, "Demo Bank");
-  assert.equal(item.accountCount, 8);
+  assert.equal(item.accountCount, DEMO_BANK_ACCOUNTS);
   assert.deepEqual((await client.listBankItems()).map((i) => i.itemId), [item.itemId]);
 
   // The linked bank is the truth about the user's money: the demo copy's accounts are hidden, so
   // nothing is counted twice (packages/data/src/linked-banks.ts).
   const accounts = await client.listAccounts();
-  assert.equal(accounts.length, 8);
+  assert.equal(accounts.length, DEMO_BANK_ACCOUNTS);
   assert.ok(accounts.every((a) => a.id.startsWith(`${item.itemId}__`)));
   const linked = accounts.filter((a) => a.id.startsWith(`${item.itemId}__`));
-  assert.ok(linked.some((a) => a.type === "credit_card" && a.annualRate === 0.2299 && a.nextPaymentDueOn === "2026-11-20"));
+  assert.ok(linked.some((a) => a.type === "credit_card" && a.annualRate === 0.2299 && a.nextPaymentDueOn === "2026-11-25"));
   const transactions = await client.listTransactions({ query: { limit: 500 } });
   assert.ok(transactions.length > 0);
   assert.ok(transactions.every((t) => t.accountId.startsWith(`${item.itemId}__`)));

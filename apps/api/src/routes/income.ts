@@ -61,7 +61,11 @@ export function registerIncomeRoutes(app: Hono<AppEnv>, deps: AppDeps) {
             isRecurring: (source?.isRecurring ?? false) || t.isRecurring,
           });
         }
-      } else if (row && t.amountCents < 0 && categoryIdOf(t) !== null && topCategoryId(categoryIdOf(t)!) !== "transfers") {
+      } else if (
+        row && t.amountCents < 0 && categoryIdOf(t) !== null &&
+        // Transfers between the user's own accounts, and money moved to savings or investments, are not spending.
+        !["transfers", "savings_investing"].includes(topCategoryId(categoryIdOf(t)!))
+      ) {
         row.spendingCents += Math.abs(t.amountCents);
       }
     }

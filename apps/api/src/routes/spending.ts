@@ -8,6 +8,7 @@ import {
   categoryDepth,
   parentCategoryId,
   routes,
+  topCategoryId,
   type Account,
   type Budget,
   type BudgetedBucket,
@@ -394,10 +395,13 @@ export function registerSpendingRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     const trendKeys = Array.from({ length: 6 }, (_, offset) => shiftMonth(month, offset - 5));
     const monthlyTrend = new Map(trendKeys.map((key) => [key, { incomeCents: 0, spendingCents: 0 }]));
     for (const t of transactions) {
+      // Income is money in the Income category; spending leaves out transfers between the user's
+      // own accounts and money moved to savings or investments, which is saving, not spending.
       const trend = monthlyTrend.get(monthKey(t.date));
       if (trend) {
-        if (t.amountCents > 0) trend.incomeCents += t.amountCents;
-        else trend.spendingCents += Math.abs(t.amountCents);
+        const id = categoryIdOf(t);
+        if (t.amountCents > 0 && id !== null && topCategoryId(id) === "income") trend.incomeCents += t.amountCents;
+        else if (isSpending(catalog, t) && bucketOf(catalog, t) !== "savings") trend.spendingCents += Math.abs(t.amountCents);
       }
       if (!isSpending(catalog, t) || !t.category) continue;
       const key = monthKey(t.date);

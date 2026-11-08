@@ -18,7 +18,8 @@ function isTransfer(t: Transaction) {
 
 /**
  * Income, spending and savings for each month, from transactions. Transfers are left out, so
- * paying a card from checking or moving cash to savings isn't counted as money in or out.
+ * paying a card from checking isn't counted as money in or out, and contributions to savings or
+ * investments count as savings rather than spending.
  * Spending is money out in any other category (uncategorized included).
  */
 export function monthlyCashFlow(transactions: Transaction[], monthKeys: string[]): MonthCashFlow[] {
@@ -33,7 +34,8 @@ export function monthlyCashFlow(transactions: Transaction[], monthKeys: string[]
         continue;
       }
       const id = categoryIdOf(t);
-      if (categoryBucket(id) === "excluded") continue;
+      // Money moved to savings or investments is saving, not spending.
+      if (categoryBucket(id) === "excluded" || categoryBucket(id) === "savings") continue;
       const cents = Math.abs(t.amountCents);
       spendingCents += cents;
       const label = id ? categoryLabel(topCategoryId(id)) : "Uncategorized";

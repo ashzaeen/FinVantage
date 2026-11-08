@@ -77,19 +77,19 @@ test("rates, minimum payments, and due dates come from user details, then liabil
   // Credit card: purchase APR, minimum payment, due date, limit, and available credit from Plaid.
   assert.equal(byId.acc_card!.annualRate, 0.2299);
   assert.equal(byId.acc_card!.minimumPaymentCents, 3500);
-  assert.equal(byId.acc_card!.nextPaymentDueOn, "2026-11-20");
-  assert.equal(byId.acc_card!.creditLimitCents, 500000);
+  assert.equal(byId.acc_card!.nextPaymentDueOn, "2026-11-25");
+  assert.equal(byId.acc_card!.creditLimitCents, 800000);
   // A promotional ("special") APR wins over the purchase APR when the user entered its end date.
   assert.equal(byId.acc_promo!.annualRate, 0);
-  assert.equal(byId.acc_promo!.promoRateEndsOn, "2027-09-30");
+  assert.equal(byId.acc_promo!.promoRateEndsOn, "2027-06-30");
   // Mortgage terms from Plaid's mortgage liability.
-  assert.equal(byId.acc_mortgage!.annualRate, 0.0625);
-  assert.equal(byId.acc_mortgage!.minimumPaymentCents, 46500);
+  assert.equal(byId.acc_mortgage!.annualRate, 0.03875);
+  assert.equal(byId.acc_mortgage!.minimumPaymentCents, 132000);
   // Plaid has no terms for these, so they come from accountDetails.
   assert.equal(byId.acc_auto!.annualRate, 0.059);
-  assert.equal(byId.acc_auto!.minimumPaymentCents, 34000);
-  assert.equal(byId.acc_savings!.annualRate, 0.04);
-  assert.equal(byId.acc_checking!.mask, "0042");
+  assert.equal(byId.acc_auto!.minimumPaymentCents, 38900);
+  assert.equal(byId.acc_savings!.annualRate, 0.041);
+  assert.equal(byId.acc_checking!.mask, "4421");
 });
 
 test("a rate the user entered beats the bank's", () => {
