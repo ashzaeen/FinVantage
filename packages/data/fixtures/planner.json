@@ -656,6 +656,34 @@
           "official_name": null,
           "type": "investment",
           "subtype": "roth"
+        },
+        {
+          "account_id": "acc_401k",
+          "balances": {
+            "available": null,
+            "current": 18500,
+            "limit": null,
+            "iso_currency_code": "USD"
+          },
+          "mask": "4410",
+          "name": "401(k)",
+          "official_name": null,
+          "type": "investment",
+          "subtype": "401k"
+        },
+        {
+          "account_id": "acc_brokerage",
+          "balances": {
+            "available": null,
+            "current": 10300,
+            "limit": null,
+            "iso_currency_code": "USD"
+          },
+          "mask": "7302",
+          "name": "Brokerage",
+          "official_name": null,
+          "type": "investment",
+          "subtype": "brokerage"
         }
       ],
       "transactions": [],
@@ -706,6 +734,87 @@
             "institution_value": 560,
             "cost_basis": 560,
             "iso_currency_code": "USD"
+          },
+          {
+            "account_id": "acc_401k",
+            "security_id": "sec_vti",
+            "quantity": 30,
+            "institution_price": 280,
+            "institution_value": 8400,
+            "cost_basis": 7100,
+            "iso_currency_code": "USD"
+          },
+          {
+            "account_id": "acc_401k",
+            "security_id": "sec_voo",
+            "quantity": 10,
+            "institution_price": 620,
+            "institution_value": 6200,
+            "cost_basis": 5000,
+            "iso_currency_code": "USD"
+          },
+          {
+            "account_id": "acc_401k",
+            "security_id": "sec_bnd",
+            "quantity": 50,
+            "institution_price": 72,
+            "institution_value": 3600,
+            "cost_basis": 3700,
+            "iso_currency_code": "USD"
+          },
+          {
+            "account_id": "acc_401k",
+            "security_id": "sec_cash",
+            "quantity": 300,
+            "institution_price": 1,
+            "institution_value": 300,
+            "cost_basis": 300,
+            "iso_currency_code": "USD"
+          },
+          {
+            "account_id": "acc_brokerage",
+            "security_id": "sec_aapl",
+            "quantity": 12,
+            "institution_price": 270,
+            "institution_value": 3240,
+            "cost_basis": 2280,
+            "iso_currency_code": "USD"
+          },
+          {
+            "account_id": "acc_brokerage",
+            "security_id": "sec_msft",
+            "quantity": 5,
+            "institution_price": 510,
+            "institution_value": 2550,
+            "cost_basis": 1900,
+            "iso_currency_code": "USD"
+          },
+          {
+            "account_id": "acc_brokerage",
+            "security_id": "sec_nvda",
+            "quantity": 10,
+            "institution_price": 185,
+            "institution_value": 1850,
+            "cost_basis": 900,
+            "iso_currency_code": "USD"
+          },
+          {
+            "account_id": "acc_brokerage",
+            "security_id": "sec_btc",
+            "quantity": 0.02,
+            "institution_price": 71000,
+            "institution_value": 1420,
+            "cost_basis": 1100,
+            "iso_currency_code": "USD"
+          },
+          {
+            "account_id": "acc_brokerage",
+            "security_id": "sec_cash",
+            "quantity": 1240,
+            "institution_price": 1,
+            "institution_value": 1240,
+            "cost_basis": 1240,
+            "iso_currency_code": "USD"
           }
         ],
         "securities": [
@@ -744,6 +853,51 @@
             "close_price": 1,
             "close_price_as_of": "2026-11-06",
             "is_cash_equivalent": true
+          },
+          {
+            "security_id": "sec_voo",
+            "name": "S&P 500 Index ETF",
+            "ticker_symbol": "VOO",
+            "type": "etf",
+            "close_price": 620,
+            "close_price_as_of": "2026-11-06",
+            "is_cash_equivalent": false
+          },
+          {
+            "security_id": "sec_aapl",
+            "name": "Apple",
+            "ticker_symbol": "AAPL",
+            "type": "equity",
+            "close_price": 270,
+            "close_price_as_of": "2026-11-06",
+            "is_cash_equivalent": false
+          },
+          {
+            "security_id": "sec_msft",
+            "name": "Microsoft",
+            "ticker_symbol": "MSFT",
+            "type": "equity",
+            "close_price": 510,
+            "close_price_as_of": "2026-11-06",
+            "is_cash_equivalent": false
+          },
+          {
+            "security_id": "sec_nvda",
+            "name": "NVIDIA",
+            "ticker_symbol": "NVDA",
+            "type": "equity",
+            "close_price": 185,
+            "close_price_as_of": "2026-11-06",
+            "is_cash_equivalent": false
+          },
+          {
+            "security_id": "sec_btc",
+            "name": "Bitcoin",
+            "ticker_symbol": "BTC",
+            "type": "cryptocurrency",
+            "close_price": 71000,
+            "close_price_as_of": "2026-11-06",
+            "is_cash_equivalent": false
           }
         ]
       }
@@ -918,6 +1072,66 @@
       "accountId": "acc_ira",
       "date": "2026-10-31",
       "balanceCents": 2215628
+    },
+    {
+      "accountId": "acc_401k",
+      "date": "2026-05-31",
+      "balanceCents": 1722000
+    },
+    {
+      "accountId": "acc_401k",
+      "date": "2026-06-30",
+      "balanceCents": 1741000
+    },
+    {
+      "accountId": "acc_401k",
+      "date": "2026-07-31",
+      "balanceCents": 1765000
+    },
+    {
+      "accountId": "acc_401k",
+      "date": "2026-08-31",
+      "balanceCents": 1787000
+    },
+    {
+      "accountId": "acc_401k",
+      "date": "2026-09-30",
+      "balanceCents": 1806000
+    },
+    {
+      "accountId": "acc_401k",
+      "date": "2026-10-31",
+      "balanceCents": 1830000
+    },
+    {
+      "accountId": "acc_brokerage",
+      "date": "2026-05-31",
+      "balanceCents": 941000
+    },
+    {
+      "accountId": "acc_brokerage",
+      "date": "2026-06-30",
+      "balanceCents": 956000
+    },
+    {
+      "accountId": "acc_brokerage",
+      "date": "2026-07-31",
+      "balanceCents": 972000
+    },
+    {
+      "accountId": "acc_brokerage",
+      "date": "2026-08-31",
+      "balanceCents": 985000
+    },
+    {
+      "accountId": "acc_brokerage",
+      "date": "2026-09-30",
+      "balanceCents": 1001000
+    },
+    {
+      "accountId": "acc_brokerage",
+      "date": "2026-10-31",
+      "balanceCents": 1018000
     },
     {
       "accountId": "acc_auto",

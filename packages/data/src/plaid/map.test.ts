@@ -57,16 +57,17 @@ test("Plaid types and subtypes map to the app's account types", () => {
   assert.deepEqual(t("loan", "student"), { type: "loan", loanKind: "personal" });
   assert.deepEqual(t("loan", "mortgage"), { type: "mortgage", loanKind: null });
   assert.deepEqual(t("investment", "roth"), { type: "ira", loanKind: null });
-  assert.equal(t("investment", "brokerage"), null);
+  assert.deepEqual(t("investment", "401k"), { type: "ira", loanKind: null });
+  assert.deepEqual(t("investment", "brokerage"), { type: "brokerage", loanKind: null });
   assert.equal(t("other", null), null);
 });
 
-test("the demo fixture is valid Plaid data and maps to all six account categories", () => {
+test("the demo fixture is valid Plaid data and maps to all seven account categories", () => {
   const source = loadDemoProfileSource();
   for (const item of source.bank) PlaidItemSnapshot.parse(item);
   const profile = loadDemoProfileFixture();
   const categories = new Set(profile.accounts.map((a) => ACCOUNT_CATEGORY[a.type]));
-  assert.equal(categories.size, 6);
+  assert.equal(categories.size, 7);
   // PRD feature 2: every synthetic transaction categorizes without user input.
   assert.ok(profile.transactions.every((t) => t.category !== null));
 });
@@ -128,10 +129,10 @@ test("transactions on accounts the app can't place are dropped with the account"
         account_id: "brk",
         balances: { available: null, current: 100, limit: null, iso_currency_code: "USD" },
         mask: null,
-        name: "Taxable brokerage",
+        name: "Unplaceable account",
         official_name: null,
-        type: "investment",
-        subtype: "brokerage",
+        type: "other",
+        subtype: null,
       },
     ],
     transactions: [plaidTxn({ account_id: "brk" })],

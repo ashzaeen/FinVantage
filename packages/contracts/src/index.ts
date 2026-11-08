@@ -8,6 +8,7 @@ export * from "./copilot";
 export * from "./advisory";
 export * from "./advisor-visuals";
 export * from "./spending";
+export * from "./investments";
 export * from "./categories";
 export * from "./live";
 export * from "./session";

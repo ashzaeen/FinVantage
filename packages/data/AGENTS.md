@@ -10,6 +10,7 @@ Storage and data sources. Read the root `AGENTS.md` first. Briefs: `docs/workstr
 | `src/spacetime/` | `SpacetimeLedgerStore` and its HTTP client (SQL and reducer calls, SATS-JSON decoding) |
 | `src/mongo/` | MongoDB Atlas `DocumentStore` implementation |
 | `src/bank.ts` | Bank providers: synthetic demo data |
+| `src/market.ts` | `MarketDataProvider` and the sample prices, statistics and headlines behind the Investments page |
 | `src/plaid/` | Plaid's objects (`schema.ts`), the mapper to app types (`map.ts`), and Spacetime rows (`spacetime-rows.ts`). See `docs/DATA-MODEL.md` |
 | `fixtures/planner.json` | The demo profile |
 
@@ -36,4 +37,4 @@ A signed-up user starts with a copy of the demo profile. Once they link a bank, 
 
 ## The demo profile
 
-Editing `fixtures/planner.json` changes cards and projections with no code change, which the PRD requires. Its bank data (`bank`) is in Plaid's exact format, with dollars and Plaid's sign (positive `amount` is money out), and goes through `mapItemSnapshot` like real Plaid data. Terms Plaid doesn't provide go in `accountDetails`. It must keep all seven account types and validates against `DemoProfile` at startup. Restart the API after editing. The PRD's "starter" persona has no fixture yet: add `fixtures/starter.json`.
+Editing `fixtures/planner.json` changes cards and projections with no code change, which the PRD requires. Its bank data (`bank`) is in Plaid's exact format, with dollars and Plaid's sign (positive `amount` is money out), and goes through `mapItemSnapshot` like real Plaid data. Terms Plaid doesn't provide go in `accountDetails`. It must keep all eight account types and validates against `DemoProfile` at startup. A holding's `close_price` must match its symbol's price in `src/market.ts`, so the Investments page adds up to the Accounts page. Restart the API after editing. The PRD's "starter" persona has no fixture yet: add `fixtures/starter.json`.

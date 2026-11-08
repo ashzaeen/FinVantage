@@ -23,6 +23,7 @@ const ACCOUNT_TYPE_LABEL: Record<AccountTypeValue, string> = {
   savings: "Savings",
   cd: "Certificate of deposit",
   ira: "IRA",
+  brokerage: "Brokerage",
   loan: "Loan",
   credit_card: "Credit card",
   mortgage: "Mortgage",

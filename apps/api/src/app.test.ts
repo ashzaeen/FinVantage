@@ -60,13 +60,34 @@ test("all read routes match their contracts", async () => {
   ]);
 });
 
-test("the demo profile covers all six account categories", async () => {
+test("the demo profile covers all seven account categories", async () => {
   const { client } = setup();
   const netWorth = await client.getNetWorth();
-  assert.equal(netWorth.byCategory.length, 6);
+  assert.equal(netWorth.byCategory.length, 7);
   const accounts = await client.listAccounts();
   const types = new Set(accounts.map((a) => a.type));
-  assert.equal(types.size, 7);
+  assert.equal(types.size, 8);
+});
+
+test("investments open on All and each account matches its balance on the Accounts page", async () => {
+  const { client } = setup();
+  const [overview, accounts] = await Promise.all([client.getInvestments(), client.listAccounts()]);
+  assert.equal(overview.mocked, true);
+  assert.deepEqual(overview.views.map((v) => v.label), ["All", "Roth IRA", "401(k)", "Brokerage"]);
+
+  const invested = accounts.filter((a) => a.type === "ira" || a.type === "brokerage");
+  assert.equal(invested.length, 3);
+  for (const account of invested) {
+    assert.equal(overview.views.find((v) => v.id === account.id)?.totalValueCents, account.balanceCents);
+  }
+  assert.equal(overview.views[0]!.totalValueCents, invested.reduce((sum, a) => sum + a.balanceCents, 0));
+});
+
+test("the older portfolio route reports the same total as the All view", async () => {
+  const { client } = setup();
+  const [portfolio, overview] = await Promise.all([client.getPortfolio(), client.getInvestments()]);
+  const all = overview.views[0]!;
+  assert.equal(portfolio.holdings.reduce((sum, h) => sum + h.valueCents, 0) + all.cashCents, all.totalValueCents);
 });
 
 test("a saved life event triggers a new run and lowers the linked goal", async () => {

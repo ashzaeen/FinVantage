@@ -158,6 +158,18 @@ Answers to the open questions above. These replace those rows.
 | A purchase or card payment is judged on what it changes. The cushion counts only when checking was at or above it beforehand: then dropping below it warns, and a transfer restores it. When checking was already under the cushion, a payment checking covers is fine, the card leaves the cushion out, and a transfer covers only a shortfall | A $12.99 extension cord told a Plaid Sandbox user (checking $100, cushion $2,500) to "move $2,413" and to keep a cushion they were already under. Leaving the cushion figures out also stops a model from bringing it up, through the number check |
 | The extension installs from the dashboard's Copilot tab: a zip, loaded with Developer mode's "Load unpacked". The web build (`apps/web/scripts/bundle-extension.mjs`) builds it from the current code and points it at that dashboard's API and origin (`NEXT_PUBLIC_API_URL`, `VERCEL_PROJECT_PRODUCTION_URL`, or `EXTENSION_*` overrides). `apps/extension` changes now redeploy the web app | Teammates and judges had no way to install it without the repo. The Chrome Web Store is the only one-click install and its review is too slow for the hackathon |
 
+## Investments, decided 2026-11-08
+
+| Decision | Why |
+| --- | --- |
+| The Investments page is built to take live market data, which replaces the portfolio brief's "no market data feed in v1". Until the keys exist, `SampleMarketData` supplies made-up prices, labeled on the page | The page was designed around live prices, and the feed can now be added in `apps/api/src/deps.ts` alone. Share counts stay demo data, so `mocked: true` and `MockedBadge` stay even with real prices |
+| `AccountType` gains `brokerage`, with its own `brokerage` category, and the demo profile gains a 401(k) (stored as `ira`) and a Brokerage account as real accounts | The account switcher needs real accounts, and accounts that existed only on this page would make its total disagree with the Accounts page. This raises net worth and simulation results across the app |
+| The API returns every view and range in one response, and the page only chooses among them | Switching accounts and ranges is instant and animates with no request that could fail. The web app computes nothing |
+| `GET /v1/portfolio` now reports the same holdings as the All view | The Advisor reads it, and would otherwise quote a total that disagrees with the page |
+| The chart holds today's share counts and cash steady across a range | The demo has no trade or deposit history, so past values show how today's holdings moved. The card's subtitle says so |
+| The Watchlist lives in browser storage and picks from the sample symbols | A per-viewer convenience for now. It moves to a store when the feed provides symbol search |
+| Market News opens in a reader drawer. `NewsHeadline` carries the story's `body` and a nullable `url`, and the reader shows Read at Source when `url` is set. Sample stories have no `url`, name no real outlet or event, and say they are samples | Fabricated stories must not pass as real reporting. Most real news APIs return a summary and a link rather than the full text, so a live feed will likely fill `body` with its summary and rely on `url` for the full story |
+
 ## Spending categories, decided 2026-11-08
 
 | Decision | Why |

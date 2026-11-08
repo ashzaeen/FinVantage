@@ -34,8 +34,10 @@
   /* Semantic Data Colors */
   --good:            #00c48c;   /* Green for positive / income / completed */
   --good-bg:         #e6faf4;
+  --gain:            #0b8f69;   /* Readable green for gains shown as text */
   --critical:        #ff4d6d;   /* Coral red for expenses / warnings */
   --critical-bg:     #ffecee;
+  --loss:            #d7465d;   /* Readable red for losses shown as text */
   --warning:         #ff9900;
   --warning-bg:      #fff5e6;
   --info:            #2979ff;
@@ -79,8 +81,11 @@
   --color-inset:        var(--surface-inset);
   --color-line:         var(--border);
   --color-ink:          var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
   --color-muted:        var(--ink-muted);
   --color-subtle:       var(--ink-light);
+  --color-gain:         var(--gain);
+  --color-loss:         var(--loss);
   --color-accent:       var(--accent);
   --color-accent-soft:  var(--accent-soft);
   --color-good:         var(--good);
@@ -199,6 +204,46 @@ p, span, label, input, button, table, td, th,
 
 @media (prefers-reduced-motion: reduce) {
   .advisor-visual-enter, .advisor-visual-progress { animation: none; }
+}
+
+/* ─── Investments: cards rise in on load, table rows fade on an account switch ──── */
+@keyframes invest-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes invest-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.invest-rise { animation: invest-rise 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.invest-rise-1 { animation-delay: 50ms; }
+.invest-rise-2 { animation-delay: 100ms; }
+.invest-rise-3 { animation-delay: 150ms; }
+.invest-rise-4 { animation-delay: 200ms; }
+.invest-rise-5 { animation-delay: 250ms; }
+.invest-fade { animation: invest-fade 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* A row's detail panel opens by animating its grid track, and its mini chart draws left to right. */
+.invest-expand { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 280ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.invest-expand[data-open="true"] { grid-template-rows: 1fr; }
+.invest-expand > * { min-height: 0; overflow: hidden; }
+
+@keyframes invest-reveal {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+.invest-reveal { animation: invest-reveal 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@keyframes invest-drawer {
+  from { opacity: 0; transform: translateX(32px); }
+  to { opacity: 1; transform: none; }
+}
+.invest-drawer { animation: invest-drawer 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.invest-drawer::backdrop { background: rgba(22, 25, 44, 0.42); }
+
+@media (prefers-reduced-motion: reduce) {
+  .invest-rise, .invest-fade, .invest-reveal, .invest-drawer { animation: none; }
+  .invest-expand { transition: none; }
 }
 
 /* ─── Cascading category picker animation ────────────────────────────────── */

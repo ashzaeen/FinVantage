@@ -49,6 +49,7 @@ import {
   UpdateSpendingCategory,
 } from "./categories";
 import { Budget, BudgetLimit, CreditScore, Portfolio, IncomeSummary, RecurringCharge, SpendingBreakdownRow, SpendingSummary } from "./spending";
+import { InvestmentsOverview } from "./investments";
 import { AuthResponse, ExtensionSettings, LogInRequest, SignUpRequest, User } from "./user";
 
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
@@ -387,6 +388,7 @@ export const routes = {
 
   // Mocked views (P2)
   getPortfolio: route({ method: "GET", path: "/v1/portfolio", response: Portfolio }),
+  getInvestments: route({ method: "GET", path: "/v1/investments", response: InvestmentsOverview }),
   getCreditScore: route({ method: "GET", path: "/v1/credit-score", response: CreditScore }),
 
   // Bank linking through Plaid. Signed-in users only: the shared demo user can't link a bank.

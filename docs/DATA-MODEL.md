@@ -132,7 +132,7 @@ All are nullable or have defaults, so manual entries and old code are unaffected
 | 3. Budget envelopes | `budget` and transactions | Table and fixture limits exist. The route still uses its built-in demo limits: switch it to `budget` |
 | 4. Net worth over time | `balance_snapshot` | Six months of demo history exist. The route still draws a flat line: switch it to snapshots |
 | 5. Recurring detection | `recurring_stream` | Streams carry real frequency and next date. The route still estimates monthly +30 days: switch it to streams |
-| 6. Portfolio | `holding`, `security` | Demo IRA holdings exist. The route is still mocked |
+| 6. Portfolio | `holding`, `security` | Demo holdings exist for the Roth IRA, 401(k) and Brokerage. `/v1/investments` reads them from the fixture and uses sample prices, so it is still mocked |
 | 7. Bill reminders | `liability.next_payment_due_date`, `recurring_stream.predicted_next_date` | Data exists. The route reuses the recurring list |
 | 8. Savings goals | `goal` | Done |
 | 9. Credit score | None. Plaid doesn't provide one | Mocked and labeled, as the PRD allows |
@@ -142,6 +142,6 @@ The "switch it to..." items belong to the transactions workstream, and need the 
 
 ## Known gaps
 
-- **Non-retirement brokerage accounts** are skipped by the mapper, because `AccountType` has no brokerage type. Their holdings still load. Adding a type means updating every `Record<AccountType, ...>` map.
+- **Other investment subtypes** that are neither retirement accounts nor `brokerage` (an investment HSA, for example) are skipped by the mapper. Their holdings still load. A retirement account of any kind, including a 401(k), is stored as `ira`.
 - **Student loans** map to `loan` / `personal`.
 - **Multi-currency:** currency codes are stored, but the app assumes USD.
