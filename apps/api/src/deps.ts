@@ -1,6 +1,7 @@
 import { createBankProvider, createStores, type BankDataProvider, type DocumentStore, type LedgerStore } from "@finvantage/data";
 import { createLiveBus, type LiveBus } from "@finvantage/live";
 import { createLlmClient, type LlmClient } from "@finvantage/llm";
+import { createTokenVerifier, rejectAllTokens, type TokenVerifier } from "./auth";
 import {
   createMailClient,
   createPdfStore,
@@ -16,6 +17,8 @@ export interface AppDeps {
   bank: BankDataProvider;
   mail: MailClient;
   pdf: PdfStore;
+  /** Checks SpacetimeAuth sign-in tokens. The demo token is handled separately in app.ts. */
+  verifyToken: TokenVerifier;
   /** Injectable so demos and tests are repeatable. */
   today: () => string;
   now: () => string;
@@ -33,6 +36,9 @@ export function createDeps(env: NodeJS.ProcessEnv = process.env): AppDeps {
     bank: createBankProvider(env),
     mail: createMailClient(env),
     pdf: createPdfStore(env, now),
+    verifyToken: env.SPACETIMEAUTH_CLIENT_ID
+      ? createTokenVerifier({ clientId: env.SPACETIMEAUTH_CLIENT_ID })
+      : rejectAllTokens,
     today: () => now().slice(0, 10),
     now,
     reportEmailOverride: env.REPORT_EMAIL_OVERRIDE ?? null,

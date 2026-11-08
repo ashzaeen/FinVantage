@@ -39,14 +39,32 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   app.use("*", cors({ origin: (origin) => (allowOrigin(origin) ? origin : null) }));
   app.get("/health", (c) => c.json({ ok: true, llm: deps.llm.provider, live: deps.live.transport }));
 
-  // STUB(platform): one shared demo token maps to the demo user. EventSource cannot set headers,
-  // so the SSE stream also accepts ?token=. Replace with real auth if time allows.
+  // Two kinds of token. A SpacetimeAuth ID token maps to its `sub`. The shared demo token maps to
+  // the demo user, and stays for signed-out visitors, the extension, and tests. EventSource
+  // cannot set headers, so the SSE stream also accepts ?token=.
   app.use("/v1/*", async (c, next) => {
-    const header = c.req.header("authorization")?.replace(/^Bearer /, "");
-    if ((header ?? c.req.query("token")) !== demoToken) {
+    const token = c.req.header("authorization")?.replace(/^Bearer /, "") ?? c.req.query("token");
+    if (token && token === demoToken) {
+      c.set("userId", DEMO_USER_ID);
+      return next();
+    }
+    const user = token ? await deps.verifyToken(token) : null;
+    if (!user) {
       return c.json({ error: { code: "unauthorized", message: "Missing or bad token." } }, 401);
     }
-    c.set("userId", DEMO_USER_ID);
+    // First sign-in (per store instance, while stores are in memory): give them the demo data.
+    if (!(await deps.ledger.getUser(user.userId))) {
+      await deps.ledger.loadDemoProfile(user.userId);
+      const profile = await deps.ledger.getUser(user.userId);
+      if (profile) {
+        await deps.ledger.saveUser({
+          ...profile,
+          displayName: user.name ?? user.email ?? profile.displayName,
+          email: user.email ?? profile.email,
+        });
+      }
+    }
+    c.set("userId", user.userId);
     await next();
   });
 

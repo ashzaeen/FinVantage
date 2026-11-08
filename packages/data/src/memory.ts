@@ -15,7 +15,7 @@ import {
   type User,
   type Account,
 } from "@finvantage/contracts";
-import { loadDemoProfileFixture, type IncomeProfile } from "./profile";
+import { DEMO_USER_ID, demoProfileFor, type IncomeProfile } from "./profile";
 import type { DocumentStore, LedgerStore } from "./stores";
 
 function inRange(createdAt: string, range?: { start: string; end: string }) {
@@ -31,16 +31,21 @@ export class MemoryLedgerStore implements LedgerStore {
   private goals: Goal[] = [];
 
   constructor() {
-    this.seed();
+    this.seed(DEMO_USER_ID);
   }
 
-  private seed() {
-    const profile = loadDemoProfileFixture();
-    this.users.set(profile.user.id, profile.user);
-    this.incomes.set(profile.user.id, profile.income);
-    this.accounts = profile.accounts;
-    this.transactions = profile.transactions;
-    this.goals = profile.goals;
+  /** Replaces only this user's rows with their copy of the demo profile. */
+  private seed(userId: string) {
+    const profile = demoProfileFor(userId);
+    const accountIds = new Set(this.accounts.filter((a) => a.userId === userId).map((a) => a.id));
+    this.users.set(userId, profile.user);
+    this.incomes.set(userId, profile.income);
+    this.accounts = [...this.accounts.filter((a) => a.userId !== userId), ...profile.accounts];
+    this.transactions = [
+      ...this.transactions.filter((t) => !accountIds.has(t.accountId)),
+      ...profile.transactions,
+    ];
+    this.goals = [...this.goals.filter((g) => g.userId !== userId), ...profile.goals];
   }
 
   async getUser(userId: string) {
@@ -95,8 +100,8 @@ export class MemoryLedgerStore implements LedgerStore {
     return saved;
   }
 
-  async loadDemoProfile() {
-    this.seed();
+  async loadDemoProfile(userId: string) {
+    this.seed(userId);
   }
 }
 

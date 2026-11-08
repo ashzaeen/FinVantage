@@ -46,14 +46,21 @@ Notes:
 
 ## Sprint 3: Auth with SpacetimeAuth
 
-- [ ] Create a SpacetimeAuth project, with redirect URLs for Vercel and `localhost:3000`
-- [ ] Web: sign-in and callback (authorization code with PKCE). `apps/web/src/lib/api.ts` sends the token as `Authorization: Bearer`
-- [ ] API: the auth middleware in `apps/api/src/app.ts` verifies the JWT against SpacetimeAuth's keys (JWKS) and maps `sub` to `userId`
-- [ ] The first sign-in loads the demo profile for that user
-- [ ] The demo token stays as a fallback for the extension and for tests
+- [x] Create a SpacetimeAuth project, with redirect URLs for Vercel and `localhost:3000`
+- [x] Web: sign-in and callback (authorization code with PKCE). `apps/web/src/lib/api.ts` sends the token as `Authorization: Bearer`
+- [x] API: the auth middleware in `apps/api/src/app.ts` verifies the JWT against SpacetimeAuth's keys (JWKS) and maps `sub` to `userId`
+- [x] The first sign-in loads the demo profile for that user
+- [x] The demo token stays as a fallback for the extension and for tests
 - [ ] Done when: sign-in works on the deployed site, a bad token gets a 401, and the API tests pass
 
 Notes:
+- Client ID `client_034toWEAVXrYsWQmcOSLDs` (not a secret), issuer `https://auth.spacetimedb.com/oidc`. Redirect URIs: `<origin>/auth/callback`. Post-logout: `<origin>`.
+- No auth library: `apps/web/src/lib/auth.ts` is about 100 lines of PKCE. The token endpoint allows browser requests from our origins (checked).
+- The ID token goes in the `fv_token` cookie (not httpOnly), so server components read it through `next/headers` and the browser reads `document.cookie`. `api` picks the token per request, so no page changed. An expired token falls back to the demo token.
+- Signed-out visitors still see the demo profile. The sidebar card shows who is signed in, with Sign in and Sign out.
+- Each signed-in user gets a copy of the demo profile with IDs prefixed `<userId>__` (`demoProfileFor` in `packages/data`). While stores are in memory, each Vercel instance makes that copy on the user's first request to it.
+- The API verifies RS256, the issuer, the audience (the client ID), and expiry with `jose`. Tests sign tokens with a throwaway key (`apps/api/src/auth.test.ts`).
+- Env: `SPACETIMEAUTH_CLIENT_ID` (API) and `NEXT_PUBLIC_SPACETIMEAUTH_CLIENT_ID` (web), set on Vercel.
 
 ## Sprint 4: Spacetime module and publish pipeline
 

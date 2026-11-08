@@ -66,3 +66,27 @@ test("a due email schedule can only be claimed once", async () => {
   ]);
   assert.equal(claims.filter(Boolean).length, 1);
 });
+
+test("each user gets their own copy of the demo profile, and reloading one leaves others alone", async () => {
+  const { MemoryLedgerStore, DEMO_USER_ID } = await import("./index");
+  const ledger = new MemoryLedgerStore();
+  const demoAccounts = await ledger.listAccounts(DEMO_USER_ID);
+  assert.equal(await ledger.getUser("user_abc"), null);
+
+  await ledger.loadDemoProfile("user_abc");
+  const accounts = await ledger.listAccounts("user_abc");
+  assert.equal(accounts.length, demoAccounts.length);
+  assert.ok(accounts.every((a) => a.userId === "user_abc" && a.id.startsWith("user_abc__")));
+  assert.equal((await ledger.getUser("user_abc"))?.id, "user_abc");
+  assert.equal(
+    (await ledger.listTransactions("user_abc", 100)).length,
+    (await ledger.listTransactions(DEMO_USER_ID, 100)).length,
+  );
+  const goals = await ledger.listGoals("user_abc");
+  assert.ok(goals.every((g) => g.linkedAccountId === null || g.linkedAccountId.startsWith("user_abc__")));
+
+  await ledger.createGoal(DEMO_USER_ID, { ...goals[0]!, linkedAccountId: null });
+  await ledger.loadDemoProfile("user_abc");
+  assert.equal((await ledger.listGoals(DEMO_USER_ID)).length, goals.length + 1);
+  assert.equal((await ledger.listAccounts("user_abc")).length, demoAccounts.length);
+});

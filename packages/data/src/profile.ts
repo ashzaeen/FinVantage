@@ -43,6 +43,29 @@ export function loadDemoProfileFixture(name = "planner"): DemoProfile {
   return DemoProfile.parse(structuredClone(fixture));
 }
 
+/**
+ * The demo profile owned by `userId`. A signed-in user gets their own copy, so record IDs are
+ * prefixed with the user ID to keep them unique across users. The demo user keeps the fixture IDs.
+ */
+export function demoProfileFor(userId: string, name = "planner"): DemoProfile {
+  const profile = loadDemoProfileFixture(name);
+  if (userId === DEMO_USER_ID) return profile;
+  const id = (original: string) => `${userId}__${original}`;
+  return {
+    user: { ...profile.user, id: userId },
+    income: profile.income,
+    accounts: profile.accounts.map((a) => ({ ...a, id: id(a.id), userId })),
+    goals: profile.goals.map((g) => ({
+      ...g,
+      id: id(g.id),
+      userId,
+      linkedAccountId: g.linkedAccountId === null ? null : id(g.linkedAccountId),
+    })),
+    transactions: profile.transactions.map((t) => ({ ...t, id: id(t.id), accountId: id(t.accountId) })),
+    lifeEvents: profile.lifeEvents.map((e) => ({ ...e, id: id(e.id), userId })),
+  };
+}
+
 function nextPayday(asOf: string, dayOfMonth: number): string {
   const date = new Date(`${asOf}T00:00:00Z`);
   if (date.getUTCDate() >= dayOfMonth) date.setUTCMonth(date.getUTCMonth() + 1);

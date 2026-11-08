@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { NAV_ITEMS } from "@/lib/nav";
+import { AccountCard } from "./AccountCard";
 
 /* ─── Navigation SVG Icons (Clean, Consistent 20x20 Stroke) ─────────────────── */
 function OverviewIcon({ active }: { active: boolean }) {
@@ -309,36 +310,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* User Profile Card at Bottom */}
-        <div
-          className="mt-4 flex items-center justify-between rounded-2xl p-2.5 transition-all cursor-pointer hover:bg-white/15 shrink-0"
-          style={{ background: "rgba(255, 255, 255, 0.12)" }}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 shrink-0 rounded-full border-2 border-white/40 bg-white/20 flex items-center justify-center font-poppins font-bold text-white text-base overflow-hidden">
-              🧑‍💻
-            </div>
-            <div className="min-w-0">
-              <p className="font-poppins truncate text-sm font-semibold text-white leading-tight">
-                Ali Raza
-              </p>
-              <p className="font-roboto truncate text-xs text-white/60">
-                Web Developer
-              </p>
-            </div>
-          </div>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            className="text-white/60 mr-1 shrink-0"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </div>
+        {/* User Profile Card at Bottom: who is signed in, with sign-in and sign-out */}
+        <AccountCard />
       </aside>
 
       {/* ── Mobile Header ─────────────────────────────────────────────── */}
