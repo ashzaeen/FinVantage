@@ -30,6 +30,10 @@ Tiger Data is no longer used (`docs/DECISIONS.md`). Do not add a third store. Pr
 - Money stays integer cents in every store.
 - Run documents store inputs and outputs in full, so diffs read stored results and never recalculate.
 
+## Linked banks replace the demo copy
+
+A signed-up user starts with a copy of the demo profile. Once they link a bank, `preferLinkedBanks` (wrapped around the ledger in `createStores`) hides the demo copy's accounts and their transactions, so the linked bank is the only source of balances. It relies on the demo copy's `<userId>__` ID prefix from `demoProfileFor` and `demoSourceFor`; keep that prefix if you change them.
+
 ## The demo profile
 
 Editing `fixtures/planner.json` changes cards and projections with no code change, which the PRD requires. Its bank data (`bank`) is in Plaid's exact format, with dollars and Plaid's sign (positive `amount` is money out), and goes through `mapItemSnapshot` like real Plaid data. Terms Plaid doesn't provide go in `accountDetails`. It must keep all seven account types and validates against `DemoProfile` at startup. Restart the API after editing. The PRD's "starter" persona has no fixture yet: add `fixtures/starter.json`.

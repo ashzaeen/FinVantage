@@ -28,25 +28,26 @@ const status = async (p: Promise<unknown>) => {
   }
 };
 
-test("linking a bank adds its accounts and transactions, and a re-sync doesn't duplicate them", async () => {
+test("linking a bank replaces the demo copy's accounts, and a re-sync doesn't duplicate them", async () => {
   const { client, deps, user } = await signedIn();
-  const accountsBefore = (await client.listAccounts()).length;
-  const transactionsBefore = (await client.listTransactions({ query: { limit: 500 } })).length;
 
   const item = await client.linkSandboxBank();
   assert.equal(item.institutionName, "Demo Bank");
   assert.equal(item.accountCount, 8);
   assert.deepEqual((await client.listBankItems()).map((i) => i.itemId), [item.itemId]);
 
+  // The linked bank is the truth about the user's money: the demo copy's accounts are hidden, so
+  // nothing is counted twice (packages/data/src/linked-banks.ts).
   const accounts = await client.listAccounts();
-  assert.equal(accounts.length, accountsBefore + 8);
+  assert.equal(accounts.length, 8);
+  assert.ok(accounts.every((a) => a.id.startsWith(`${item.itemId}__`)));
   const linked = accounts.filter((a) => a.id.startsWith(`${item.itemId}__`));
   assert.ok(linked.some((a) => a.type === "credit_card" && a.annualRate === 0.2299 && a.nextPaymentDueOn === "2026-11-20"));
   const transactions = await client.listTransactions({ query: { limit: 500 } });
-  assert.equal(transactions.length, transactionsBefore + 10);
+  assert.equal(transactions.length, 10);
 
   await client.syncBankItem({ params: { id: item.itemId } });
-  assert.equal((await client.listTransactions({ query: { limit: 500 } })).length, transactionsBefore + 10);
+  assert.equal((await client.listTransactions({ query: { limit: 500 } })).length, 10);
 
   // The access token is stored, but never sent to the client.
   assert.ok(await deps.bankTokens.get(user.id, item.itemId));
