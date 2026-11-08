@@ -1,23 +1,25 @@
 import { z } from "zod";
 import { Cents, Id, IsoDate, Rate } from "./common";
 
-/** The seven stored values from PRD section 9. */
+/** The seven stored values from PRD section 9, plus taxable brokerage accounts. */
 export const AccountType = z.enum([
   "checking",
   "savings",
   "cd",
   "ira",
+  "brokerage",
   "loan",
   "credit_card",
   "mortgage",
 ]);
 export type AccountType = z.infer<typeof AccountType>;
 
-/** The six PNC display categories. CDs and IRAs share one. */
+/** The six PNC display categories, plus brokerage. CDs and IRAs share one. */
 export const AccountCategory = z.enum([
   "checking",
   "savings",
   "cds_and_iras",
+  "brokerage",
   "auto_and_personal_loans",
   "credit_cards",
   "mortgages",
@@ -29,6 +31,7 @@ export const ACCOUNT_CATEGORY: Record<AccountType, AccountCategory> = {
   savings: "savings",
   cd: "cds_and_iras",
   ira: "cds_and_iras",
+  brokerage: "brokerage",
   loan: "auto_and_personal_loans",
   credit_card: "credit_cards",
   mortgage: "mortgages",
@@ -38,6 +41,7 @@ export const ACCOUNT_CATEGORY_LABEL: Record<AccountCategory, string> = {
   checking: "Checking",
   savings: "Savings",
   cds_and_iras: "CDs and IRAs",
+  brokerage: "Brokerage",
   auto_and_personal_loans: "Auto and personal loans",
   credit_cards: "Credit cards",
   mortgages: "Mortgages",

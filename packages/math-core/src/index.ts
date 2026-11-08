@@ -6,6 +6,10 @@ import {
   type Goal,
   type GoalImpact,
 } from "@finvantage/contracts";
+import { monthsBetween } from "./dates";
+
+export * from "./dates";
+export * from "./life-scenario";
 
 /*
  * The deterministic math core. Every figure on a Copilot card comes from here, before any LLM
@@ -228,14 +232,6 @@ export function currentHousingPayment(snapshot: FinancialSnapshot): number {
 
 export function daysBetween(fromIso: string, toIso: string): number {
   return Math.round((Date.parse(toIso) - Date.parse(fromIso)) / MS_PER_DAY);
-}
-
-function monthsBetween(fromIso: string, toIso: string): number {
-  const from = new Date(`${fromIso}T00:00:00Z`);
-  const to = new Date(`${toIso}T00:00:00Z`);
-  return (
-    (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth())
-  );
 }
 
 /** What non-negotiable goals need each month to land on their dates. */
@@ -595,3 +591,4 @@ export function computeCopilotMetrics(
   return { ...partial, verdict: pickVerdict(context, partial) };
 }
 export * from "./advisor";
+export * from "./investments";

@@ -5,7 +5,7 @@ import { parseLifeEvent } from "@finvantage/llm";
 import { diffOutcomes } from "@finvantage/simulator";
 import type { AppDeps } from "../deps";
 import { mount, type AppEnv } from "../mount";
-import { runSimulation } from "../services";
+import { previewLifeEvent, runSimulation } from "../services";
 
 export function registerLifeEventRoutes(app: Hono<AppEnv>, deps: AppDeps) {
   mount(app, deps, routes.listLifeEvents, ({ userId }) => deps.docs.listLifeEvents(userId));
@@ -13,6 +13,10 @@ export function registerLifeEventRoutes(app: Hono<AppEnv>, deps: AppDeps) {
   // Never saves. The client shows the draft, then POSTs it after the user confirms.
   mount(app, deps, routes.parseLifeEvent, ({ body }) =>
     parseLifeEvent(deps.llm, body.text, deps.today()),
+  );
+
+  mount(app, deps, routes.previewLifeEvent, ({ userId, body }) =>
+    previewLifeEvent(deps, userId, body),
   );
 
   mount(app, deps, routes.createLifeEvent, async ({ userId, body }) => {

@@ -39,7 +39,7 @@ export function registerCopilotRoutes(app: Hono<AppEnv>, deps: AppDeps) {
       eventId: event.id,
       metrics,
       card,
-      simulationPath: `/simulator?copilotEvent=${event.id}`,
+      simulationPath: `/life-events?copilotEvent=${event.id}`,
     };
   });
 

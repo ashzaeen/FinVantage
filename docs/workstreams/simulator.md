@@ -8,7 +8,7 @@ The Monte Carlo engine behind the dashboard and the Copilot. Takes balances, inc
 
 ## You have now
 
-A closed-form stub with the real signatures, tested against the acceptance criteria. Nothing else needs to change when you swap the body.
+The seeded Monte Carlo engine feeds a dashboard scenario planner. It shows the saved financial baseline, previews monthly-savings and purchase changes, adjusts the timing of each logged life event, and compares each goal's baseline and scenario probability range with a fan chart. A new event can be simulated beside the current plan before it is saved: every goal gets a before/after probability range and projected balance timeline using the same seed and savings assumptions. The Life Simulator page also has a deterministic event planner that compares a chosen event against every current goal, displays two impact charts before the funding-date timeline, and lets users save and reopen named events with their generated results. Named Monte Carlo runs can also be saved, reloaded, and compared.
 
 ## Start here
 
@@ -25,6 +25,7 @@ A closed-form stub with the real signatures, tested against the acceptance crite
 - Goals compete for the same dollars.
 - What-if results return in under 2 seconds.
 - `evaluatePurchase` returns the change in probability and date for the Copilot.
+- Saved scenario runs retain their full server-side input/output snapshot. Browser storage keeps only the user's scenario name and what-if settings needed to load the plan again.
 
 Heavy runs must not block the UI. The API is single-process, so watch long synchronous work, and use a worker thread if needed.
 

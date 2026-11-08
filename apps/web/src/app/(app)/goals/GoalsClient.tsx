@@ -221,12 +221,12 @@ export function GoalsClient({ goals, outcomes, accounts }: { goals: Goal[]; outc
       })}
       </div>
     </> : <div className="page-cascade grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-      {goals.map((goal) => <GoalCard key={goal.id} goal={goal} outcome={outcomes.find((outcome) => outcome.goalId === goal.id)} onOpen={() => { setError(""); setConfirmDelete(false); setSelectedGoal(goal); }} />)}
       <button type="button" onClick={() => openCreateGoal()} className="flex min-h-64 flex-col items-center justify-center rounded-3xl border-2 border-dashed border-[#d9ddec] bg-white p-8 text-center transition hover:border-[#544af7] hover:bg-[#fafaff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eef1fc] text-2xl font-semibold text-[#544af7]">+</span>
         <span className="mt-3 font-semibold text-[#16192c]">Add a goal</span>
         <span className="mt-1 text-sm text-[#8d94a8]">Create another savings goal</span>
       </button>
+      {goals.map((goal) => <GoalCard key={goal.id} goal={goal} outcome={outcomes.find((outcome) => outcome.goalId === goal.id)} onOpen={() => { setError(""); setConfirmDelete(false); setSelectedGoal(goal); }} />)}
     </div>}
 
     {(showForm || selectedGoal) && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) { setShowForm(false); setSelectedGoal(null); setConfirmDelete(false); } }} className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#16192c]/45 p-3 backdrop-blur-[2px] sm:p-6">

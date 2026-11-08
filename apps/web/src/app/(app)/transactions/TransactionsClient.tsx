@@ -99,9 +99,9 @@ function formatCurrency(amountCents: number, currency: CurrencyCode) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amountCents / 100);
 }
 
-export function TransactionsClient({ transactions: initialTransactions, accounts, categories: spendingCategories }: { transactions: Transaction[]; accounts: Account[]; categories: SpendingCategory[] }) {
+export function TransactionsClient({ transactions: initialTransactions, accounts, categories: spendingCategories, initialQuery = "" }: { transactions: Transaction[]; accounts: Account[]; categories: SpendingCategory[]; initialQuery?: string }) {
   const [transactions, setTransactions] = useState(initialTransactions);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [type, setType] = useState<"all" | "income" | "expense">("all");
   const [category, setCategory] = useState("all");
   const [editing, setEditing] = useState<Transaction | null>(null);

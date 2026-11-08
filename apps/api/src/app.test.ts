@@ -1,19 +1,22 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createApiClient, type CopilotContext } from "@finvantage/contracts";
+import { ApiError, createApiClient, type ApiClient, type CopilotContext, type NewLifeScenario } from "@finvantage/contracts";
 import { createApp, originMatcher } from "./app";
 import { createDeps } from "./deps";
+import { monthlyCashFlow } from "./reporting/cashflow";
 
 /** A real client against the real app, in process. Every call validates against the contracts. */
 function setup(env: Record<string, string> = {}) {
   const deps = createDeps({ REPORT_OUTPUT_DIR: "/tmp/finvantage-report-tests", ...env });
   const app = createApp(deps, {});
-  const client = createApiClient({
-    baseUrl: "http://test",
-    token: "demo-token",
-    fetch: ((url: string, init: RequestInit) => app.request(url, init)) as typeof fetch,
-  });
-  return { app, client, deps };
+  const clientFor = (token: string): ApiClient =>
+    createApiClient({
+      baseUrl: "http://test",
+      token,
+      fetch: ((url: string, init: RequestInit) => app.request(url, init)) as typeof fetch,
+    });
+  const client = clientFor("demo-token");
+  return { app, client, clientFor, deps };
 }
 
 const rental: CopilotContext = {
@@ -60,13 +63,34 @@ test("all read routes match their contracts", async () => {
   ]);
 });
 
-test("the demo profile covers all six account categories", async () => {
+test("the demo profile covers all seven account categories", async () => {
   const { client } = setup();
   const netWorth = await client.getNetWorth();
-  assert.equal(netWorth.byCategory.length, 6);
+  assert.equal(netWorth.byCategory.length, 7);
   const accounts = await client.listAccounts();
   const types = new Set(accounts.map((a) => a.type));
-  assert.equal(types.size, 7);
+  assert.equal(types.size, 8);
+});
+
+test("investments open on All and each account matches its balance on the Accounts page", async () => {
+  const { client } = setup();
+  const [overview, accounts] = await Promise.all([client.getInvestments(), client.listAccounts()]);
+  assert.equal(overview.mocked, true);
+  assert.deepEqual(overview.views.map((v) => v.label), ["All", "Roth IRA", "401(k)", "Brokerage"]);
+
+  const invested = accounts.filter((a) => a.type === "ira" || a.type === "brokerage");
+  assert.equal(invested.length, 3);
+  for (const account of invested) {
+    assert.equal(overview.views.find((v) => v.id === account.id)?.totalValueCents, account.balanceCents);
+  }
+  assert.equal(overview.views[0]!.totalValueCents, invested.reduce((sum, a) => sum + a.balanceCents, 0));
+});
+
+test("the older portfolio route reports the same total as the All view", async () => {
+  const { client } = setup();
+  const [portfolio, overview] = await Promise.all([client.getPortfolio(), client.getInvestments()]);
+  const all = overview.views[0]!;
+  assert.equal(portfolio.holdings.reduce((sum, h) => sum + h.valueCents, 0) + all.cashCents, all.totalValueCents);
 });
 
 test("a saved life event triggers a new run and lowers the linked goal", async () => {
@@ -84,6 +108,179 @@ test("a saved life event triggers a new run and lowers the linked goal", async (
   });
   assert.equal(result.run.persisted, true);
   assert.ok(result.goalChanges.some((g) => g.probabilityHighDelta < 0));
+});
+
+test("a baby scenario compares every current goal before saving the event", async () => {
+  const { client } = setup();
+  const goals = await client.listGoals();
+  const existingEvents = await client.listLifeEvents();
+  const preview = await client.previewLifeEvent({
+    body: {
+      event: {
+        type: "child",
+        date: "2027-06-01",
+        recurrence: "recurring",
+        dollarImpactCents: -120_000,
+        durationMonths: null,
+        linkedGoalId: null,
+        source: "form",
+      },
+      seed: 52,
+      paths: 2_000,
+    },
+  });
+
+  assert.equal(preview.before.seed, preview.after.seed);
+  assert.equal(preview.before.goalOutcomes.length, goals.length);
+  assert.equal(preview.after.goalOutcomes.length, goals.length);
+  assert.ok(preview.goalChanges.some((goal) => goal.probabilityHighDelta < 0));
+  assert.deepEqual(await client.listLifeEvents(), existingEvents, "preview must not save the drafted event");
+});
+
+test("life simulator context reflects the demo user's real goals", async () => {
+  const { client } = setup();
+  const context = await client.getLifeSimulatorContext();
+  const japan = context.goals.find((goal) => goal.id === "goal_japan");
+  assert.equal(japan?.kind, "trip");
+  assert.equal(japan?.plannedDate, "2027-06-01"); // the goal's own targetDate doubles as its planned trip date
+  assert.equal(context.goals.find((goal) => goal.id === "goal_emergency")?.kind, "standard");
+  assert.ok(context.freeCashCents > 0);
+  assert.ok(
+    context.goals.reduce((sum, goal) => sum + goal.monthlyContributionCents, 0) <= context.freeCashCents,
+    "the current monthly goal contributions must fit the user's actual free cash",
+  );
+});
+
+test("life simulator analyze uses the user's current server-side goals and cash flow", async () => {
+  const { client } = setup();
+  const context = await client.getLifeSimulatorContext();
+  const result = await client.analyzeLifeScenario({
+    body: {
+      eventType: "new_baby",
+      customEventName: "",
+      startMonth: "2027-03-01",
+      monthlyCostCents: 0,
+      oneTimeCostCents: 0,
+      oneTimeSourceGoalId: context.goals[0]!.id,
+      selectedGoalIds: context.goals.map((goal) => goal.id),
+      split: Object.fromEntries(context.goals.map((goal) => [goal.id, Math.floor(context.freeCashCents / context.goals.length)])),
+      selectedOption: "keep",
+      allowOverCommit: false,
+    },
+  });
+
+  assert.equal(result.asOf, context.asOf);
+  assert.deepEqual(result.goals.map((goal) => goal.goalId), context.goals.map((goal) => goal.id));
+  assert.equal(result.analysis.freeCashBeforeCents, context.freeCashCents);
+});
+
+test("analyze rejects an event dated in the current month", async () => {
+  const { client, deps } = setup();
+  await assert.rejects(
+    client.analyzeLifeScenario({
+      body: {
+        eventType: "custom",
+        customEventName: "Test",
+        startMonth: deps.today(),
+        monthlyCostCents: 0,
+        oneTimeCostCents: 0,
+        oneTimeSourceGoalId: "g",
+        selectedGoalIds: ["g"],
+        split: { g: 0 },
+        selectedOption: "keep",
+        allowOverCommit: false,
+      },
+    }),
+    (error: unknown) => error instanceof ApiError && error.status === 400 && error.code === "event_not_future",
+  );
+});
+
+/** A scenario against the demo user's real goals: modest enough to fit their free cash. */
+function scenarioBody(overrides: Partial<NewLifeScenario> = {}): NewLifeScenario {
+  return {
+    name: "New baby plan",
+    eventType: "new_baby",
+    customEventName: "",
+    startMonth: "2027-06-01",
+    monthlyCostCents: 20_000,
+    oneTimeCostCents: 50_000,
+    oneTimeSourceGoalId: "goal_japan",
+    selectedGoalIds: ["goal_japan", "goal_emergency", "goal_house", "goal_car"],
+    split: { goal_japan: 40_000, goal_emergency: 30_000, goal_house: 20_000, goal_car: 10_000 },
+    selectedOption: "keep",
+    allowOverCommit: false,
+    ...overrides,
+  };
+}
+
+test("scenarios can be created, listed, reopened, updated, and deleted", async () => {
+  const { client } = setup();
+  const created = await client.createLifeScenario({ body: scenarioBody() });
+  assert.equal(created.status, "saved");
+  assert.ok((await client.listLifeScenarios()).some((s) => s.id === created.id));
+  assert.equal((await client.getLifeScenario({ params: { id: created.id } })).name, "New baby plan");
+
+  const updated = await client.updateLifeScenario({ params: { id: created.id }, body: scenarioBody({ name: "Renamed plan" }) });
+  assert.equal(updated.name, "Renamed plan");
+
+  assert.deepEqual(await client.deleteLifeScenario({ params: { id: created.id } }), { deleted: true });
+  await assert.rejects(client.getLifeScenario({ params: { id: created.id } }), (error: unknown) => error instanceof ApiError && error.status === 404);
+});
+
+test("Life Events exports a PDF from current server data without saving the scenario", async () => {
+  const { client } = setup();
+  const { name: _name, ...input } = scenarioBody();
+  const report = await client.exportLifeScenarioPdf({ body: input });
+  const pdf = Buffer.from(report.base64, "base64");
+  assert.match(report.filename, /new-baby-comparison\.pdf$/);
+  assert.equal(pdf.subarray(0, 5).toString(), "%PDF-");
+  assert.equal((await client.listLifeScenarios()).length, 0, "downloading must not save the scenario");
+});
+
+test("apply drafts a scenario without touching real goals; confirm changes them; undo reverts", async () => {
+  const { client } = setup();
+  const before = await client.listGoals();
+  const japanBefore = before.find((g) => g.id === "goal_japan")!;
+
+  const created = await client.createLifeScenario({ body: scenarioBody() });
+  const applied = await client.applyLifeScenario({ params: { id: created.id } });
+  assert.equal(applied.scenario.status, "draft_applied");
+  assert.deepEqual(await client.listGoals(), before, "apply must not change real goals");
+
+  const confirmed = await client.confirmLifeScenario({ params: { id: created.id } });
+  assert.equal(confirmed.scenario.status, "applied");
+  assert.ok(confirmed.lifeEventIds.length >= 1);
+  assert.ok(confirmed.updatedGoalIds.length >= 1);
+  const afterConfirm = await client.listGoals();
+  const japanAfterConfirm = afterConfirm.find((g) => g.id === "goal_japan")!;
+  assert.notEqual(japanAfterConfirm.targetDate, japanBefore.targetDate, "a scenario that delays the trip goal should move its targetDate");
+
+  // Confirming again is a no-op: same ids, no duplicate life events.
+  const confirmedAgain = await client.confirmLifeScenario({ params: { id: created.id } });
+  assert.deepEqual(confirmedAgain.lifeEventIds, confirmed.lifeEventIds);
+  assert.deepEqual(confirmedAgain.updatedGoalIds, confirmed.updatedGoalIds);
+
+  const undone = await client.undoLifeScenario({ params: { id: created.id } });
+  assert.equal(undone.scenario.status, "saved");
+  const afterUndo = await client.listGoals();
+  // updateGoal always re-normalizes `status` from the balance on every write (pre-existing
+  // behavior, not scoped to this feature), so compare targetDate specifically rather than the
+  // whole record.
+  for (const goal of before) {
+    assert.equal(afterUndo.find((g) => g.id === goal.id)?.targetDate, goal.targetDate, `${goal.name}'s targetDate should be restored`);
+  }
+  const events = await client.listLifeEvents();
+  for (const id of confirmed.lifeEventIds) assert.ok(!events.some((e) => e.id === id), "undo must remove the life events confirm created");
+});
+
+test("a scenario is scoped to the user who created it", async () => {
+  const { client, clientFor } = setup();
+  const created = await client.createLifeScenario({ body: scenarioBody() });
+  const { token } = await clientFor("").signUp({ body: { displayName: "Other", email: "other-sim@example.com", password: "s3cret-pass" } });
+  const other = clientFor(token);
+  await assert.rejects(other.getLifeScenario({ params: { id: created.id } }), (error: unknown) => error instanceof ApiError && error.status === 404);
+  await assert.rejects(other.applyLifeScenario({ params: { id: created.id } }), (error: unknown) => error instanceof ApiError && error.status === 404);
+  assert.ok(!(await other.listLifeScenarios()).some((s) => s.id === created.id));
 });
 
 test("what-if previews are returned but not stored", async () => {
@@ -131,6 +328,7 @@ test("the Copilot returns a card and records the event", async () => {
   assert.equal(result.status, "ok");
   if (result.status !== "ok") return;
   assert.equal(result.card.source, "template");
+  assert.equal(result.simulationPath, `/life-events?copilotEvent=${result.eventId}`);
   await client.recordCopilotAction({
     params: { id: result.eventId },
     body: { action: "dismissed" },
@@ -204,10 +402,11 @@ test("a quarterly report compares consecutive quarters, saves a PDF, and emails 
   assert.equal(report.visuals.goalComparisons.length, current.goalOutcomes.length);
   assert.equal(report.visuals.goalPathways.length, current.goalOutcomes.length);
   assert.equal(report.visuals.suggestions.length, current.goalOutcomes.length);
-  assert.ok(
-    report.visuals.monthlyBreakdown.every(
-      (month) => month.incomeCents === 0 && month.spendingCents === 0,
-    ),
+  // The demo profile's own transactions for the quarter, transfers left out.
+  const expectedMonths = monthlyCashFlow(await client.listTransactions({ query: { limit: 500 } }), ["2026-07", "2026-08", "2026-09"]);
+  assert.deepEqual(
+    report.visuals.monthlyBreakdown.map((m) => [m.monthKey, m.incomeCents, m.spendingCents]),
+    expectedMonths.map((m) => [m.monthKey, m.incomeCents, m.spendingCents]),
   );
   assert.ok(report.visuals.goalPathways.every((goal) => goal.points.length >= 2));
   assert.equal(report.pdf.status, "ready");

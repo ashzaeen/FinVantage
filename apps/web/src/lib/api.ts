@@ -21,10 +21,24 @@ export async function currentToken(): Promise<string> {
   return usableToken(saved) ?? API_TOKEN;
 }
 
-const fetchAsCurrentUser: typeof fetch = async (input, init) => {
+async function fetchWithToken(input: RequestInfo | URL, init: RequestInit | undefined, token: string) {
   const headers = new Headers(init?.headers);
-  headers.set("authorization", `Bearer ${await currentToken()}`);
+  headers.set("authorization", `Bearer ${token}`);
   return fetch(input, { ...init, headers });
+}
+
+const fetchAsCurrentUser: typeof fetch = async (input, init) => {
+  const token = await currentToken();
+  const response = await fetchWithToken(input, init, token);
+  if (response.status !== 401 || token === API_TOKEN) return response;
+
+  // A local API restart can rotate its development-only signing key and invalidate a still-live
+  // browser cookie. Treat that rejected session as signed out so server-rendered pages can still
+  // load the public demo profile instead of failing with an auth runtime error.
+  if (typeof window !== "undefined") {
+    document.cookie = `${TOKEN_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+  }
+  return fetchWithToken(input, init, API_TOKEN);
 };
 
 /** Works in server and client components. Every response is validated against the contracts. */

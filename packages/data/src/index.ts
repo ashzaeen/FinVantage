@@ -16,6 +16,8 @@ export { isDemoCopy, preferLinkedBanks } from "./linked-banks";
 export * from "./plaid/spacetime-rows";
 export * from "./plaid/client";
 export * from "./bank-tokens";
+export * from "./market";
+export { createMarketData, LiveMarketData, type LiveMarketOptions } from "./market-live";
 export * from "./spending";
 export { goalStatusForBalance, MemoryDocumentStore, MemoryLedgerStore } from "./memory";
 export { SpacetimeLedgerStore } from "./spacetime/ledger";

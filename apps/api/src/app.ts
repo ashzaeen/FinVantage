@@ -11,6 +11,8 @@ import { registerBankRoutes } from "./routes/bank";
 import { registerCopilotRoutes } from "./routes/copilot";
 import { registerGoalRoutes } from "./routes/goals";
 import { registerLifeEventRoutes } from "./routes/life-events";
+import { registerLifeScenarioRoutes } from "./routes/life-scenarios";
+import { registerLifeSimulatorRoutes } from "./routes/life-simulator";
 import { registerLiveRoutes } from "./routes/live";
 import { registerMockedRoutes } from "./routes/mocked";
 import { registerProfileRoutes } from "./routes/profile";
@@ -77,6 +79,8 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   registerIncomeRoutes(app, deps);
   registerGoalRoutes(app, deps);
   registerLifeEventRoutes(app, deps);
+  registerLifeSimulatorRoutes(app, deps);
+  registerLifeScenarioRoutes(app, deps);
   registerSimulationRoutes(app, deps);
   registerCopilotRoutes(app, deps);
   registerAgentRoutes(app, deps);

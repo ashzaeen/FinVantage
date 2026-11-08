@@ -26,12 +26,25 @@ import {
 } from "./copilot";
 import { Goal, NewGoal } from "./goal";
 import {
+  LifeScenario,
+  LifeScenarioAnalysis,
+  LifeScenarioInput,
+  LifeScenarioPdfResponse,
+  LifeScenarioApplyResponse,
+  LifeScenarioConfirmResponse,
+  LifeScenarioUndoResponse,
+  LifeSimulatorContext,
+  NewLifeScenario,
+} from "./life-scenario";
+import {
   LifeEvent,
   LifeEventDraft,
   ParseLifeEventRequest,
   ParseLifeEventResponse,
 } from "./life-event";
 import {
+  LifeEventPreview,
+  LifeEventPreviewRequest,
   GoalImpact,
   SimulationDiff,
   SimulationRequest,
@@ -49,6 +62,7 @@ import {
   UpdateSpendingCategory,
 } from "./categories";
 import { Budget, BudgetLimit, CreditScore, Portfolio, IncomeSummary, RecurringCharge, SpendingBreakdownRow, SpendingSummary } from "./spending";
+import { InvestmentsOverview } from "./investments";
 import { AuthResponse, ExtensionSettings, LogInRequest, SignUpRequest, User } from "./user";
 
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
@@ -146,6 +160,72 @@ export const routes = {
       run: SimulationRun,
       goalChanges: z.array(GoalImpact),
     }),
+  }),
+  previewLifeEvent: route({
+    method: "POST",
+    path: "/v1/life-events/preview",
+    body: LifeEventPreviewRequest,
+    response: LifeEventPreview,
+  }),
+  // Life simulator: stateless context + analysis, plus persisted, mutable scenarios.
+  getLifeSimulatorContext: route({
+    method: "GET",
+    path: "/v1/life-simulator/context",
+    response: LifeSimulatorContext,
+  }),
+  analyzeLifeScenario: route({
+    method: "POST",
+    path: "/v1/life-simulator/analyze",
+    body: LifeScenarioInput,
+    response: LifeScenarioAnalysis,
+  }),
+  exportLifeScenarioPdf: route({
+    method: "POST",
+    path: "/v1/life-simulator/export/pdf",
+    body: LifeScenarioInput,
+    response: LifeScenarioPdfResponse,
+  }),
+  listLifeScenarios: route({
+    method: "GET",
+    path: "/v1/life-simulator/scenarios",
+    response: z.array(LifeScenario),
+  }),
+  createLifeScenario: route({
+    method: "POST",
+    path: "/v1/life-simulator/scenarios",
+    body: NewLifeScenario,
+    response: LifeScenario,
+  }),
+  getLifeScenario: route({
+    method: "GET",
+    path: "/v1/life-simulator/scenarios/:id",
+    response: LifeScenario,
+  }),
+  updateLifeScenario: route({
+    method: "PATCH",
+    path: "/v1/life-simulator/scenarios/:id",
+    body: NewLifeScenario,
+    response: LifeScenario,
+  }),
+  deleteLifeScenario: route({
+    method: "DELETE",
+    path: "/v1/life-simulator/scenarios/:id",
+    response: z.object({ deleted: z.literal(true) }),
+  }),
+  applyLifeScenario: route({
+    method: "POST",
+    path: "/v1/life-simulator/scenarios/:id/apply",
+    response: LifeScenarioApplyResponse,
+  }),
+  confirmLifeScenario: route({
+    method: "POST",
+    path: "/v1/life-simulator/scenarios/:id/confirm",
+    response: LifeScenarioConfirmResponse,
+  }),
+  undoLifeScenario: route({
+    method: "POST",
+    path: "/v1/life-simulator/scenarios/:id/undo",
+    response: LifeScenarioUndoResponse,
   }),
 
   // Simulator
@@ -387,6 +467,7 @@ export const routes = {
 
   // Mocked views (P2)
   getPortfolio: route({ method: "GET", path: "/v1/portfolio", response: Portfolio }),
+  getInvestments: route({ method: "GET", path: "/v1/investments", response: InvestmentsOverview }),
   getCreditScore: route({ method: "GET", path: "/v1/credit-score", response: CreditScore }),
 
   // Bank linking through Plaid. Signed-in users only: the shared demo user can't link a bank.

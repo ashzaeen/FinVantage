@@ -9,8 +9,10 @@ import {
   Transaction,
   User,
   type FinancialSnapshot,
+  type InvestmentAccountRef,
+  type InvestmentPosition,
 } from "@finvantage/contracts";
-import { AccountDetails, mapItemSnapshot } from "./plaid/map";
+import { AccountDetails, mapItemSnapshot, toCents } from "./plaid/map";
 import { PlaidItemSnapshot } from "./plaid/schema";
 // A static import, not a file read, so the fixture survives bundling for serverless deploys.
 import planner from "../fixtures/planner.json" with { type: "json" };
@@ -137,6 +139,36 @@ export function demoSourceFor(userId: string, name = "planner"): DemoProfileSour
 /** The demo profile owned by `userId`, in the app's types. Same IDs as demoSourceFor. */
 export function demoProfileFor(userId: string, name = "planner"): DemoProfile {
   return profileFromSource(demoSourceFor(userId, name));
+}
+
+/**
+ * The demo profile's investment accounts and positions, for the mocked Investments page.
+ * STUB(portfolio): reads the fixture for every user. Read `holding` and `security` from the
+ * ledger once it has a method for them, so linked accounts show up here.
+ */
+export function demoInvestments(name = "planner"): { accounts: InvestmentAccountRef[]; positions: InvestmentPosition[] } {
+  const bank = loadDemoProfileSource(name).bank;
+  const accounts = bank.flatMap((item) =>
+    item.accounts
+      .filter((a) => a.type === "investment" || a.type === "brokerage")
+      .map((a) => ({ id: a.account_id, name: a.name })),
+  );
+  const positions = bank.flatMap((item) => {
+    const securities = new Map(item.investments.securities.map((s) => [s.security_id, s]));
+    return item.investments.holdings.map((holding): InvestmentPosition => {
+      const security = securities.get(holding.security_id);
+      const isCash = security?.type === "cash" || security?.is_cash_equivalent === true;
+      return {
+        accountId: holding.account_id,
+        symbol: isCash ? null : (security?.ticker_symbol ?? holding.security_id),
+        name: security?.name ?? security?.ticker_symbol ?? "Unknown security",
+        quantity: holding.quantity,
+        costBasisCents: holding.cost_basis === null ? null : toCents(holding.cost_basis),
+        lastPriceCents: toCents(holding.institution_price),
+      };
+    });
+  });
+  return { accounts, positions };
 }
 
 function nextPayday(asOf: string, dayOfMonth: number): string {

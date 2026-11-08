@@ -3,8 +3,8 @@
  * is the only place that knows Plaid's conventions:
  * - Plaid amounts are dollars, and a positive transaction amount is money OUT. The app uses
  *   integer cents, and negative is money out.
- * - Plaid's type and subtype become the app's seven AccountTypes. Accounts the app can't place
- *   (non-retirement brokerage, "other") are skipped; their holdings still reach the portfolio.
+ * - Plaid's type and subtype become the app's AccountTypes. Accounts the app can't place
+ *   ("other") are skipped; their holdings still reach the portfolio.
  * - Rates, minimum payments, and due dates come from /liabilities/get. Plaid has none for CDs,
  *   savings, or auto and personal loans, and no promo end dates, so those come from
  *   user-entered `AccountDetails`. A value the user entered always wins over the bank's.
@@ -56,7 +56,8 @@ export function accountTypeFor(account: Pick<PlaidAccount, "type" | "subtype">):
       return { type: "loan", loanKind: subtype === "auto" ? "auto" : "personal" };
     case "investment":
     case "brokerage":
-      return RETIREMENT_SUBTYPES.has(subtype) ? { type: "ira", loanKind: null } : null;
+      if (RETIREMENT_SUBTYPES.has(subtype)) return { type: "ira", loanKind: null };
+      return subtype === "brokerage" ? { type: "brokerage", loanKind: null } : null;
     default:
       return null;
   }

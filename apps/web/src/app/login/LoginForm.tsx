@@ -31,8 +31,17 @@ interface LoginFormProps {
   footer?: ReactNode;
 }
 
+/** Reads ?mode=signup so a link can deep-link straight into account creation. Read directly from
+ * window.location rather than useSearchParams, so this client component needs no Suspense
+ * boundary at its call sites (matches the window.location pattern already used for ?copilotEvent
+ * on the life-events page). */
+function initialModeFromUrl(): Mode {
+  if (typeof window === "undefined") return "signin";
+  return new URLSearchParams(window.location.search).get("mode") === "signup" ? "signup" : "signin";
+}
+
 export function LoginForm({ embedded = false, footer }: LoginFormProps = {}) {
-  const [mode, setMode] = useState<Mode>("signin");
+  const [mode, setMode] = useState<Mode>(initialModeFromUrl);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

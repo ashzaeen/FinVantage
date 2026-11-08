@@ -1,9 +1,11 @@
 import {
   createBankProvider,
+  createMarketData,
   createStores,
   type BankDataProvider,
   type BankTokenStore,
   type DocumentStore,
+  type MarketDataProvider,
   type SpendingStore,
   type LedgerStore,
 } from "@finvantage/data";
@@ -27,6 +29,8 @@ export interface AppDeps {
   llm: LlmClient;
   live: LiveBus;
   bank: BankDataProvider;
+  /** Prices and market news for the Investments page: Alpaca and FMP when their keys are set, else sample data. */
+  market: MarketDataProvider;
   /** Plaid access tokens, encrypted at rest. Never returned to clients. */
   bankTokens: BankTokenStore;
   mail: MailClient;
@@ -57,6 +61,7 @@ export function createDeps(env: NodeJS.ProcessEnv = process.env): AppDeps {
     llm: createLlmClient(env),
     live: createLiveBus(env),
     bank: createBankProvider(env),
+    market: createMarketData(env),
     mail: createMailClient(env),
     pdf: createPdfStore(env, now, stores.docs),
     auth: createAuth({ privateJwk: requiredInProduction(env, "AUTH_PRIVATE_JWK"), issuer: env.AUTH_ISSUER }),

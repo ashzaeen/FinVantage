@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Account } from "./account";
 import { Cents, Id, IsoDate, IsoDateTime, Probability } from "./common";
 import { Goal } from "./goal";
-import { LifeEvent } from "./life-event";
+import { LifeEvent, LifeEventDraft } from "./life-event";
 
 /** Derived from the ledger. The math core and simulator read this, never the raw stores. */
 export const FinancialSnapshot = z.object({
@@ -35,6 +35,15 @@ export const SimulationRequest = z.object({
   persist: z.boolean().default(true),
 });
 export type SimulationRequest = z.input<typeof SimulationRequest>;
+
+/** An unsaved life-event scenario compared with the same current plan and random seed. */
+export const LifeEventPreviewRequest = z.object({
+  event: LifeEventDraft,
+  whatIf: WhatIf.optional(),
+  seed: z.number().int().optional(),
+  paths: z.number().int().positive().max(50_000).optional(),
+});
+export type LifeEventPreviewRequest = z.input<typeof LifeEventPreviewRequest>;
 
 export const SimulationInputs = z.object({
   snapshot: FinancialSnapshot,
@@ -105,6 +114,29 @@ export const GoalImpact = z.object({
   delayMonths: z.number().nullable(),
 });
 export type GoalImpact = z.infer<typeof GoalImpact>;
+
+export const LifeEventPreview = z.object({
+  before: SimulationResult,
+  after: SimulationResult,
+  goalChanges: z.array(GoalImpact),
+  analysis: z.object({
+    monthlySavingsBeforeCents: Cents,
+    monthlySavingsDuringEventCents: Cents.nullable(),
+    oneTimeEventImpactCents: Cents.nullable(),
+    goalsLessLikely: z.number().int().nonnegative(),
+    goalsMoreLikely: z.number().int().nonnegative(),
+    goalsMixed: z.number().int().nonnegative(),
+    goalsUnchanged: z.number().int().nonnegative(),
+    goalsDelayed: z.number().int().nonnegative(),
+    goalDetails: z.array(z.object({
+      goalId: Id,
+      direction: z.enum(["less_likely", "more_likely", "mixed", "unchanged"]),
+      lowChangePercentagePoints: z.number(),
+      highChangePercentagePoints: z.number(),
+    })),
+  }),
+});
+export type LifeEventPreview = z.infer<typeof LifeEventPreview>;
 
 export const SimulationDiff = z.object({
   fromRunId: Id,

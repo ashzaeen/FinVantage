@@ -1,6 +1,6 @@
 # Landing Page Plan: One Row per Headline Feature
 
-Status: planned, not built. The hero's purchase tryout (idea 1) is built. These rows come later.
+Status: remaining feature rows are planned. The hero purchase tryout was removed; the hero now uses a static, clearly labeled product illustration.
 
 ## Goal
 

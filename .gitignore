@@ -14,3 +14,6 @@ dist-live/
 # Built by apps/web/scripts/bundle-extension.mjs on every web build.
 apps/web/public/finvantage-copilot.zip
 apps/api/advisor-eval.json
+
+# Local brainstorming mockups.
+.superpowers/

@@ -23,6 +23,7 @@ const ACCOUNT_TYPE_LABEL: Record<AccountTypeValue, string> = {
   savings: "Savings",
   cd: "Certificate of deposit",
   ira: "IRA",
+  brokerage: "Brokerage",
   loan: "Loan",
   credit_card: "Credit card",
   mortgage: "Mortgage",
@@ -122,12 +123,12 @@ export function AccountsClient({ accounts, netWorth, transactions }: { accounts:
       annualRate,
       minimumPaymentCents: minimumPayment === null ? null : Math.round(minimumPayment * 100),
       promoRateEndsOn: String(form.get("promoRateEndsOn")) || null,
-      // Bank-connection fields: unknown for a manually entered account.
-      subtype: null,
-      mask: null,
-      availableBalanceCents: null,
-      creditLimitCents: null,
-      nextPaymentDueOn: null,
+      // Preserve provider metadata when editing a linked account; manual accounts keep nulls.
+      subtype: selectedAccount?.subtype ?? null,
+      mask: selectedAccount?.mask ?? null,
+      availableBalanceCents: selectedAccount?.availableBalanceCents ?? null,
+      creditLimitCents: selectedAccount?.creditLimitCents ?? null,
+      nextPaymentDueOn: selectedAccount?.nextPaymentDueOn ?? null,
     };
     setSaving(true);
     setError("");
