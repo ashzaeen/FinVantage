@@ -200,3 +200,9 @@ p, span, label, input, button, table, td, th,
 @media (prefers-reduced-motion: reduce) {
   .advisor-visual-enter, .advisor-visual-progress { animation: none; }
 }
+
+/* ─── Cascading category picker animation ────────────────────────────────── */
+@keyframes cascadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
