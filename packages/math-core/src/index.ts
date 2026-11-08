@@ -19,6 +19,13 @@ export const ASSUMED_ANNUAL_RETURN = 0.07;
 export const VEHICLE_TERM_MONTHS = 60;
 export const VEHICLE_ANNUAL_RATE = 0.07;
 
+/**
+ * A purchase is "big" for this person at half a month's income, or a quarter of their spare cash.
+ * Big but affordable is worth a second look, not an automatic yes.
+ */
+export const BIG_PURCHASE_INCOME_SHARE = 0.5;
+export const BIG_PURCHASE_SPARE_SHARE = 0.25;
+
 /** Safe rent is rounded down to this step so it reads like a real search filter. */
 export const SAFE_RENT_ROUNDING_CENTS = 5_000;
 
@@ -118,6 +125,34 @@ export function spareSavings(snapshot: FinancialSnapshot, goals: Goal[]): number
 /** Money not set aside for anything: checking above the cushion, plus savings no goal uses. */
 export function spareCash(snapshot: FinancialSnapshot, goals: Goal[]): number {
   return spareChecking(snapshot) + spareSavings(snapshot, goals);
+}
+
+/** How big a purchase is next to monthly income and spare cash. */
+export function purchaseSize(snapshot: FinancialSnapshot, goals: Goal[], priceCents: number): CopilotMetrics["purchaseSize"] {
+  const spare = spareCash(snapshot, goals);
+  const monthlyIncomeShare = snapshot.monthlyIncomeCents > 0 ? priceCents / snapshot.monthlyIncomeCents : null;
+  const spareCashShare = spare > 0 ? priceCents / spare : null;
+  const big =
+    (monthlyIncomeShare !== null && monthlyIncomeShare >= BIG_PURCHASE_INCOME_SHARE) ||
+    (spareCashShare !== null && spareCashShare >= BIG_PURCHASE_SPARE_SHARE);
+  return { monthlyIncomeShare, spareCashShare, big };
+}
+
+/**
+ * The debt worth paying before a discretionary purchase: the highest-rate credit card or personal
+ * loan with a balance and a known rate above the assumed investing return. Paying it is a
+ * guaranteed return at that rate. Student loans and mortgages are long-term and usually cheaper.
+ */
+export function payFirstDebt(snapshot: FinancialSnapshot): CopilotMetrics["payFirst"] {
+  const debt = snapshot.accounts
+    .filter(
+      (a) =>
+        (a.type === "credit_card" || (a.type === "loan" && a.loanKind === "personal")) &&
+        a.balanceCents > 0 &&
+        (a.annualRate ?? 0) > ASSUMED_ANNUAL_RETURN,
+    )
+    .sort((a, b) => (b.annualRate ?? 0) - (a.annualRate ?? 0))[0];
+  return debt ? { accountName: debt.name, balanceCents: debt.balanceCents, annualRate: debt.annualRate ?? 0 } : null;
 }
 
 /**
@@ -416,7 +451,13 @@ export function pickVerdict(
   context: CopilotContext,
   metrics: Pick<
     CopilotMetrics,
-    "headline" | "liquidBufferAfterCents" | "bufferTargetCents" | "safeRentThresholdCents" | "debtPayment" | "transfer"
+    | "headline"
+    | "liquidBufferAfterCents"
+    | "bufferTargetCents"
+    | "safeRentThresholdCents"
+    | "debtPayment"
+    | "transfer"
+    | "purchaseSize"
   >,
 ): CopilotMetrics["verdict"] {
   const hurts = HURTS.includes(metrics.headline.kind);
@@ -430,7 +471,9 @@ export function pickVerdict(
       const underBuffer =
         after !== null &&
         (afterTransfer < 0 || (before >= metrics.bufferTargetCents && afterTransfer < metrics.bufferTargetCents));
-      return hurts || underBuffer ? "caution" : "good";
+      if (hurts || underBuffer) return "caution";
+      // Affordable, but big for this person: a second look, not an automatic yes.
+      return metrics.purchaseSize?.big ? "neutral" : "good";
     }
     case "rental": {
       const overSafe =
@@ -497,6 +540,8 @@ export function computeCopilotMetrics(
     monthlyChangeCents: isRental || isVehicle ? addedMonthly : null,
     vehicle,
     transfer: isCheckout || (isDebt && debtPayment) ? transferPlan(snapshot, goals, cashOut) : null,
+    purchaseSize: isCheckout ? purchaseSize(snapshot, goals, context.priceCents) : null,
+    payFirst: isCheckout ? payFirstDebt(snapshot) : null,
     splitPlan: isCheckout ? splitPlan(snapshot, context.priceCents, goals) : null,
     headline: pickHeadline(goalImpacts),
     debtPayment,

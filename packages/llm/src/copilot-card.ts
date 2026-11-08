@@ -34,6 +34,14 @@ export function formatDelay(months: number): string {
   return rounded === 1 ? "1 month" : `${rounded} months`;
 }
 
+/**
+ * An interest rate as the lender states it: 12.5% stays 12.5%, 22.99% stays 22.99%. Whole-number
+ * rounding is for estimates (shares, the assumed 7% return), not for a rate someone is charged.
+ */
+export function formatRate(rate: number): string {
+  return `${Number((rate * 100).toFixed(2))}%`;
+}
+
 /** A probability range: "76-77%", or "93%" when both ends round the same. */
 export function formatOdds(low: number, high: number): string {
   const a = Math.round(low * 100);
@@ -99,7 +107,7 @@ export function cardFigures(context: CopilotContext, metrics: CopilotMetrics): R
     f.opportunityYears = `${metrics.opportunityHorizonYears} years`;
   }
   if (metrics.vehicle) {
-    f.vehicleRate = formatPercent(metrics.vehicle.annualRate);
+    f.vehicleRate = formatRate(metrics.vehicle.annualRate);
     f.vehicleTerm = `${metrics.vehicle.termMonths} months`;
     f.vehiclePayment = formatUsd(metrics.vehicle.monthlyPaymentCents);
     f.vehicleInterest = formatUsd(metrics.vehicle.totalInterestCents);
@@ -109,7 +117,7 @@ export function cardFigures(context: CopilotContext, metrics: CopilotMetrics): R
     const d = metrics.debtPayment;
     f.debtPaid = formatUsd(d.paidCents);
     f.debtSaved = formatUsd(d.annualInterestSavedCents);
-    f.debtRate = formatPercent(d.annualRate);
+    f.debtRate = formatRate(d.annualRate);
     // A payment bigger than checking: say how short, never show a negative balance.
     delete f.checkingAfter;
     delete f.checkingShort;
@@ -124,6 +132,16 @@ export function cardFigures(context: CopilotContext, metrics: CopilotMetrics): R
   // The cushion only means something next to what checking would be left at. Without that
   // figure, a model would pair the cushion with rent or a car loan, which the math never said.
   if (metrics.transfer) f.transferAmount = formatUsd(metrics.transfer.amountCents);
+  if (metrics.purchaseSize?.big) {
+    if (metrics.purchaseSize.monthlyIncomeShare !== null) f.incomeShare = formatPercent(metrics.purchaseSize.monthlyIncomeShare);
+    if (metrics.purchaseSize.spareCashShare !== null && metrics.purchaseSize.spareCashShare <= 1) {
+      f.spareShare = formatPercent(metrics.purchaseSize.spareCashShare);
+    }
+  }
+  if (metrics.payFirst) {
+    f.payFirstBalance = formatUsd(metrics.payFirst.balanceCents);
+    f.payFirstRate = formatRate(metrics.payFirst.annualRate);
+  }
   // The cushion is this payment's business only when checking was at or above it beforehand. When
   // it was already under, the card leaves the cushion out, so no card (and no model, by the number
   // check) blames a $13 purchase for a gap it didn't cause.
@@ -142,8 +160,8 @@ export function cardFigures(context: CopilotContext, metrics: CopilotMetrics): R
   const savings = metrics.alternatives.find((a) => a.kind === "savings");
   const topDebt = metrics.alternatives.find((a) => a.kind === "debt");
   if (invest) f.investRate = formatPercent(invest.annualRate);
-  if (savings) f.savingsRate = formatPercent(savings.annualRate);
-  if (topDebt) f.topDebtRate = formatPercent(topDebt.annualRate);
+  if (savings) f.savingsRate = formatRate(savings.annualRate);
+  if (topDebt) f.topDebtRate = formatRate(topDebt.annualRate);
   if (metrics.splitPlan && !goalBeyondFinancing(h)) {
     const s = metrics.splitPlan;
     f.splitFromChecking = formatUsd(s.fromCheckingCents);
@@ -183,6 +201,11 @@ function leadFigure(context: CopilotContext, metrics: CopilotMetrics, f: Record<
     if (f.goalSooner) return { label: h.goalName, value: `${f.goalSooner} sooner` };
     if (statusChange(h)) return { label: h.goalName, value: statusChange(h)! };
   }
+  if (metrics.verdict === "neutral" && context.pageType === "checkout" && (f.incomeShare || f.spareShare)) {
+    return f.incomeShare
+      ? { label: "Big purchase", value: `${f.incomeShare} of monthly income` }
+      : { label: "Big purchase", value: `${f.spareShare} of spare savings` };
+  }
   if (metrics.verdict === "good" && context.pageType === "rental") return { label: "Rent", value: "Under your safe rent" };
   if (metrics.verdict === "good") return { label: "Your goals", value: "On track" };
   return null;
@@ -199,6 +222,8 @@ function keyFigures(metrics: CopilotMetrics, f: Record<string, string>): Copilot
   if (f.debtPaid) figures.push({ label: "You're paying", value: f.debtPaid });
   if (f.debtRate) figures.push({ label: "Card interest rate", value: f.debtRate });
   if (f.debtFreed) figures.push({ label: "Freed up each month", value: f.debtFreed });
+  if (f.incomeShare) figures.push({ label: "Share of a month's income", value: f.incomeShare });
+  if (f.spareShare) figures.push({ label: "Share of your spare savings", value: f.spareShare });
   if (f.checkingBefore) figures.push({ label: "Available in checking", value: f.checkingBefore });
   if (f.checkingAfter) figures.push({ label: "Left in checking", value: f.checkingAfter });
   if (f.checkingShort) figures.push({ label: "Short in checking", value: f.checkingShort });
@@ -282,6 +307,23 @@ export function templateCard(context: CopilotContext, metrics: CopilotMetrics): 
           : cardIsCostly
           ? `Pay from checking, not your ${top.label}. That card charges ${f.topDebtRate} interest if you carry a balance.`
           : "If you planned for it, enjoy it.",
+      };
+    }
+    if (metrics.verdict === "neutral" && metrics.purchaseSize?.big) {
+      // Affordable, but big for this person. A good advisor says so and points to the better order.
+      const size = f.incomeShare
+        ? `It's ${f.incomeShare} of a month's income${f.spareShare ? ` and ${f.spareShare} of your spare savings` : ""}.`
+        : `It's ${f.spareShare} of your spare savings.`;
+      const from = metrics.transfer ? ` Then move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking.` : "";
+      return {
+        ...base,
+        impact: "You can afford this, but it's a big purchase for you.",
+        tradeOff: size,
+        smartMove: metrics.payFirst
+          ? `Pay off your ${metrics.payFirst.accountName} (${f.payFirstBalance} at ${f.payFirstRate}) first: that's a guaranteed return.${from}`
+          : metrics.transfer
+            ? `If it's planned, move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking first.`
+            : "If it's planned, it fits. If not, waiting a few days is a good test.",
       };
     }
     const tradeOff = f.checkingShort
@@ -426,6 +468,7 @@ const SYSTEM_PROMPT = [
   "If `figures.checkingShort` is given, the reader doesn't have enough in checking: say they'd be that amount short. Never write a negative dollar amount.",
   "If `transferFrom` is given, the reader has savings no goal is using: the next step is moving `figures.transferAmount` from that account to checking first. Prefer it over any card or financing.",
   "If the verdict is \"good\", don't dwell on the safety cushion: the purchase itself is fine.",
+  "For a purchase with verdict \"neutral\": the reader can afford it, but it's big for them. Say so using `figures.incomeShare` or `figures.spareShare`. If `payFirst` is given, suggest paying that debt off first (`figures.payFirstBalance` at `figures.payFirstRate`), because it's a guaranteed return.",
   "Plain words only, like you'd text a friend. Short sentences. Call `bufferTarget` the reader's \"safety cushion\" (money they keep in checking), and mention it only when `figures.checkingAfter` is given. `checkingAfter` is what would be left in checking; the cushion is the amount they like to keep. Never call one by the other's name. If `figures.underCushionBy` is given, that is how far below the cushion they'd be. Say \"bills\" for fixed costs and \"debt payments\" for debt-to-income. Never use: buffer, liquidity, fixed costs, debt-to-income, allocate, financial health, optimize, leverage.",
   "Copy figures exactly as given, including symbols. Never calculate, round, invent, or alter a number. Do not mention any number that is not in `figures`.",
   "Tone: direct and warm, like a friend who is good with money. Make the goal feel real, but never shame or lecture. Suggest, never instruct.",
@@ -476,11 +519,12 @@ export async function generateCopilotCard(
     merchant: context.merchant,
     verdict: metrics.verdict,
     headline: { kind: h.kind, goal: h.goalName, statusBefore: cardStatus(h.statusBefore), statusAfter: cardStatus(h.statusAfter) },
-    alternatives: metrics.alternatives.map((a) => ({ label: a.label, rate: formatPercent(a.annualRate) })),
+    alternatives: metrics.alternatives.map((a) => ({ label: a.label, rate: a.kind === "invest" ? formatPercent(a.annualRate) : formatRate(a.annualRate) })),
     debtAccount: metrics.debtPayment?.accountName ?? null,
     figures,
     splitPlanCard: figures.splitOnCard ? (metrics.splitPlan?.promoCardName ?? null) : null,
     transferFrom: metrics.transfer?.fromAccountName ?? null,
+    payFirst: metrics.payFirst?.accountName ?? null,
     exampleCard: { impact: fallback.impact, tradeOff: fallback.tradeOff, smartMove: fallback.smartMove },
   });
 
@@ -517,6 +561,7 @@ export async function generateCopilotCard(
   const names = [
     figures.splitOnCard ? metrics.splitPlan?.promoCardName : undefined,
     metrics.transfer?.fromAccountName,
+    metrics.payFirst?.accountName,
     metrics.debtPayment?.accountName,
     h.goalName,
     ...metrics.alternatives.map((a) => a.label),

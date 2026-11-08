@@ -70,7 +70,7 @@ test("a different person: more cash, no promo card, a pricier card, other goals 
   const { metrics, card } = copilotFor(source, { ...laptop, priceCents: 4_999 });
   assert.equal(metrics.verdict, "good");
   assert.match(card.smartMove, /Platinum Rewards/, "steers away from this person's own card, by its Plaid name");
-  assert.match(card.smartMove, /30%/, "at this person's own APR");
+  assert.match(card.smartMove, /29\.99%/, "at this person's own APR, as the lender states it");
   assert.match(card.tradeOff, /\$1,000 safety cushion/, "with this person's own cushion");
   for (const c of [laptopCard.card, card]) {
     assert.doesNotMatch(cardText(c), /Japan|Promo Card|\$2,500/, "nothing from the demo profile leaks in");

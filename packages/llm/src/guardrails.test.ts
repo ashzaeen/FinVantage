@@ -31,6 +31,8 @@ const metrics: CopilotMetrics = {
   monthlyChangeCents: null,
   vehicle: null,
   transfer: null,
+  purchaseSize: null,
+  payFirst: null,
   splitPlan: {
     fromCheckingCents: 90_000,
     onPromoCardCents: 59_900,
@@ -176,6 +178,25 @@ test("checking already under the cushion: cards don't mention the cushion or a b
   assert.deepEqual(cord.keyFigures[0], { label: "Available in checking", value: "$100" });
 });
 
+test("a big but affordable purchase: worth a look, with the debt to pay first", () => {
+  // Plaid Sandbox's $4,799 MacBook Pro for a person carrying a 12.5% card balance.
+  const card = templateCard({ ...context, priceCents: 479_900 }, {
+    ...metrics,
+    verdict: "neutral",
+    headline: { ...metrics.headline, kind: "none", goalName: null, statusBefore: null, statusAfter: null },
+    liquidBufferAfterCents: -469_900,
+    splitPlan: null,
+    transfer: { fromAccountName: "Plaid Money Market", amountCents: 469_900 },
+    purchaseSize: { monthlyIncomeShare: 0.774, spareCashShare: 0.135, big: true },
+    payFirst: { accountName: "Plaid Credit Card", balanceCents: 41_000, annualRate: 0.125 },
+  });
+  assert.equal(card.impact, "You can afford this, but it's a big purchase for you.");
+  assert.equal(card.tradeOff, "It's 77% of a month's income and 14% of your spare savings.");
+  assert.match(card.smartMove, /Pay off your Plaid Credit Card \(\$410 at 12.5%\) first.*Then move \$4,699 from your Plaid Money Market/);
+  assert.deepEqual(card.lead, { label: "Big purchase", value: "77% of monthly income" });
+  assert.ok(wordCount(cardText(card)) <= MAX_CARD_WORDS);
+});
+
 test("a purchase bigger than checking says how short, never a negative balance", () => {
   const card = templateCard(pricey, outOfReach);
   assert.match(card.tradeOff, /you'd be \$299 short/);
@@ -304,7 +325,7 @@ test("an affordable purchase is affirmed and steered away from card debt", () =>
   const card = templateCard(small, { ...metrics, verdict: "good", headline: none, splitPlan: null, liquidBufferAfterCents: 327_100 });
   assert.match(card.impact, /fits your plan/);
   assert.match(card.tradeOff, /more than your \$2,500 safety cushion/);
-  assert.match(card.smartMove, /Cash Rewards Card.*23%/);
+  assert.match(card.smartMove, /Cash Rewards Card.*22\.99%/);
   assert.deepEqual(card.lead, { label: "Your goals", value: "On track" });
 });
 
@@ -323,7 +344,7 @@ test("paying off a high-rate card is praised and compared to the alternatives", 
     },
   });
   assert.match(card.impact, /Great move: paying off your Cash Rewards Card saves about \$198 a year/);
-  assert.match(card.tradeOff, /guaranteed 23% return, more than investing \(7%\) or a savings account \(4%\)/);
+  assert.match(card.tradeOff, /guaranteed 22\.99% return, more than investing \(7%\) or a savings account \(4%\)/);
   assert.match(card.smartMove, /\$35 you were paying each month/);
   assert.deepEqual(card.lead, { label: "Interest saved", value: "$198 a year" });
   assert.ok(wordCount(cardText(card)) <= MAX_CARD_WORDS);
@@ -350,7 +371,7 @@ test("paying only the minimum nudges toward the full balance", () => {
       isMinimumOnly: true, canPayInFull: true, remainingAnnualInterestCents: 19_000, fullAnnualInterestCents: 19_800,
     },
   });
-  assert.equal(card.impact, "Paying only the minimum leaves $825 on your Cash Rewards Card, still charging 23% interest.");
+  assert.equal(card.impact, "Paying only the minimum leaves $825 on your Cash Rewards Card, still charging 22.99% interest.");
   assert.match(card.smartMove, /full \$860 saves about \$198 a year/);
   assert.deepEqual(card.lead, { label: "Interest you'd still pay", value: "$190 a year" });
   assert.doesNotMatch(cardText(card), /Great move/);
