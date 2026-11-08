@@ -79,7 +79,7 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <button type="button" disabled={!accounts.length} title={!accounts.length ? "Add an account first" : undefined} onClick={() => {
           setIsCreating(true);
-          setEditing({ id: "new", accountId: accounts[0]!.id, date: new Date().toISOString().slice(0, 10), amountCents: 0, currency: "USD", originalAmountCents: null, exchangeRateToUsd: null, exchangeRateDate: null, merchant: "", category: null, isRecurring: false });
+          setEditing({ id: "new", accountId: accounts[0]!.id, date: new Date().toISOString().slice(0, 10), amountCents: 0, currency: "USD", originalAmountCents: null, exchangeRateToUsd: null, exchangeRateDate: null, merchant: "", category: null, isRecurring: false, pending: false, categoryDetailed: null, paymentChannel: null, logoUrl: null });
           setSaveError("");
         }} className="rounded-xl bg-[#544af7] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#453bc9] disabled:cursor-not-allowed disabled:opacity-45">+ Add transaction</button>
         <label className="relative min-w-0 sm:w-72">
