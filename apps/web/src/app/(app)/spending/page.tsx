@@ -1,9 +1,11 @@
-import { formatUsd, type RecurringCharge, type SpendingCategory } from "@finvantage/contracts";
+import { formatUsd, type RecurringCharge, type SpendingCategory, type Transaction } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { api } from "@/lib/api";
 import { BucketSplit } from "./BucketSplit";
-import { BudgetsPanel, CategoryManager, RecentTransactions, RulesPanel } from "./SpendingManager";
+import { ManageTools } from "./ManageTools";
+import { SpendingPie } from "./SpendingPie";
+import { BudgetsPanel } from "./SpendingManager";
 
 const CADENCE_LABEL: Record<RecurringCharge["cadence"], string> = {
   weekly: "Weekly",
@@ -41,8 +43,39 @@ function ChargeList({ charges, label, showCadence }: { charges: RecurringCharge[
   );
 }
 
+/** Ranks 1 to 5 in the left column and 6 to 10 in the right. */
+function TopExpenses({ expenses, label }: { expenses: Transaction[]; label: (id: string | null) => string }) {
+  const columns = [expenses.slice(0, 5), expenses.slice(5, 10)];
+  return (
+    <Card title="Top 10 Expenses" subtitle="This month's largest purchases">
+      {expenses.length === 0 ? (
+        <p className="text-sm" style={{ color: "var(--ink-muted)" }}>No purchases yet this month.</p>
+      ) : (
+        <div className="grid gap-x-8 gap-y-2 md:grid-cols-2">
+          {columns.map((column, c) => (
+            <ol key={c} className="space-y-2">
+              {column.map((t, i) => (
+                <li key={t.id} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "var(--surface-inset)" }}>
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="w-5 shrink-0 text-right text-xs font-semibold tabular-nums" style={{ color: "var(--ink-muted)" }}>{c * 5 + i + 1}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium" style={{ color: "var(--ink)" }}>{t.merchant}</span>
+                      <span className="text-xs" style={{ color: "var(--ink-muted)" }}>{label(t.subcategory ?? t.category)} · {t.date}</span>
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: "var(--ink)" }}>{formatUsd(Math.abs(t.amountCents))}</span>
+                </li>
+              ))}
+            </ol>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default async function SpendingPage() {
-  const [buckets, budgets, categories, rules, transactions, bills, recurring, summary] = await Promise.all([
+  const [buckets, budgets, categories, rules, transactions, bills, recurring, summary, topExpenses] = await Promise.all([
     api.getBucketSummary(),
     api.listBudgets(),
     api.listSpendingCategories(),
@@ -51,17 +84,20 @@ export default async function SpendingPage() {
     api.listUpcomingBills(),
     api.listRecurring(),
     api.getSpendingSummary(),
+    api.listTopExpenses({ query: { limit: 10 } }),
   ]);
   const label = labeler(categories);
   const recentSpending = transactions.filter((t) => t.amountCents < 0).slice(0, 12);
 
   return (
     <>
-      <PageHeader title="Spending" />
+      <PageHeader title="Spending" action={<ManageTools categories={categories} rules={rules} transactions={recentSpending} />} />
       <div className="grid gap-5 md:grid-cols-2">
-        <div className="md:col-span-2">
-          <BucketSplit initial={buckets} />
-        </div>
+        <BucketSplit initial={buckets} />
+        <SpendingPie
+          month={summary.month}
+          categories={summary.categories.map((row) => ({ id: row.category, label: label(row.category), cents: row.spentCents }))}
+        />
 
         <BudgetsPanel budgets={budgets} categories={categories} />
 
@@ -84,11 +120,8 @@ export default async function SpendingPage() {
           </ul>
         </Card>
 
-        <RecentTransactions transactions={recentSpending} categories={categories} />
-        <RulesPanel rules={rules} categories={categories} />
-
         <div className="md:col-span-2">
-          <CategoryManager categories={categories} />
+          <TopExpenses expenses={topExpenses} label={label} />
         </div>
 
         <Card title="Upcoming Bills" subtitle="Due in the next 14 days">

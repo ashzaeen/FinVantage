@@ -161,11 +161,19 @@ export function BudgetsPanel({ budgets, categories }: { budgets: Budget[]; categ
       }
     >
       {adding && <div className="mb-4">{limitForm("", true)}<ErrorLine>{error}</ErrorLine></div>}
+      {budgets.length > 0 && (
+        <p className="mb-3 flex items-center gap-4 text-xs" style={{ color: "var(--ink-muted)" }}>
+          <span className="flex items-center gap-1.5"><i className="h-2 w-4 rounded-full" style={{ background: "var(--accent)" }} /> Spent</span>
+          <span className="flex items-center gap-1.5"><i className="h-2 w-4 rounded-full" style={{ background: "var(--budget-projected)" }} /> Projected by Month End</span>
+        </p>
+      )}
       {budgets.length === 0 && !adding && <p className="text-sm" style={{ color: "var(--ink-muted)" }}>No budgets yet. Add one to start tracking a category.</p>}
       <ul className="space-y-4">
         {budgets.map((b) => {
           const width = Math.min(100, (b.spentCents / b.limitCents) * 100);
+          const projectedWidth = Math.min(100, (b.projectedCents / b.limitCents) * 100);
           const color = b.status === "over" ? "var(--critical)" : b.status === "at_risk" ? "var(--warning)" : "var(--accent)";
+          const projectedColor = b.projectedCents > b.limitCents ? "var(--budget-projected-over)" : "var(--budget-projected)";
           return (
             <li key={b.category}>
               <div className="flex items-center justify-between gap-2 text-sm">
@@ -176,8 +184,14 @@ export function BudgetsPanel({ budgets, categories }: { budgets: Budget[]; categ
                   {formatUsd(b.spentCents)} of {formatUsd(b.limitCents)}
                 </span>
               </div>
-              <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
-                <div className="h-2.5 rounded-full" style={{ width: `${width}%`, background: color }} />
+              {/* Solid: spent so far. Lighter, behind it: where the month ends at this pace. */}
+              <div
+                className="relative mt-1.5 h-2.5 w-full overflow-hidden rounded-full"
+                style={{ background: "var(--border)" }}
+                title={`Spent ${formatUsd(b.spentCents)}, projected ${formatUsd(b.projectedCents)} by month end`}
+              >
+                <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${projectedWidth}%`, background: projectedColor }} />
+                <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${width}%`, background: color }} />
               </div>
               <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
                 <span>

@@ -302,6 +302,15 @@ export function registerSpendingRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     return { deleted: true as const };
   });
 
+  mount(app, deps, routes.listTopExpenses, async ({ userId, query }) => {
+    const [{ catalog }, transactions] = await Promise.all([load(userId), transactionsOf(userId)]);
+    const month = monthKey(deps.today());
+    return transactions
+      .filter((t) => monthKey(t.date) === month && isSpending(catalog, t))
+      .sort((a, b) => a.amountCents - b.amountCents)
+      .slice(0, query.limit);
+  });
+
   /* ─── Merchant rules ───────────────────────────────────────────────────── */
 
   mount(app, deps, routes.listCategoryRules, async ({ userId }) => (await load(userId)).profile.rules);

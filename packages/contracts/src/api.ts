@@ -295,6 +295,13 @@ export const routes = {
     path: "/v1/budgets/:category",
     response: z.object({ deleted: z.literal(true) }),
   }),
+  /** This month's largest purchases, biggest first. Income and transfers are left out. */
+  listTopExpenses: route({
+    method: "GET",
+    path: "/v1/spending/top-expenses",
+    query: z.object({ limit: z.coerce.number().int().positive().max(50).default(10) }),
+    response: z.array(Transaction),
+  }),
   listCategoryRules: route({ method: "GET", path: "/v1/spending/rules", response: z.array(CategoryRule) }),
   createCategoryRule: route({
     method: "POST",

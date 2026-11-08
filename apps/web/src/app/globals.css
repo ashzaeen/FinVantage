@@ -58,6 +58,10 @@
   --fan-outer:       #e4e2fe;
   --fan-inner:       #bcb7fc;
   --fan-line:        #544af7;
+
+  /* Budget bars: the lighter bar behind spending shows the projected month end */
+  --budget-projected:      #cbc7fc;
+  --budget-projected-over: #ffc2ca;
 }
 
 @theme inline {

@@ -469,3 +469,15 @@ test("recurring charges and bills come from the bank's streams and due dates", a
   assert.ok(!names.includes("Tunewave"), names.join(", "));
   assert.deepEqual(bills.map((b) => b.nextDate), [...bills.map((b) => b.nextDate)].sort());
 });
+
+test("top expenses are this month's largest purchases, without transfers", async () => {
+  const { client, deps } = setup();
+  const [account] = await client.listAccounts();
+  await client.addTransaction({ body: { accountId: account!.id, date: deps.today(), amountCents: -900_000, merchant: "Card Payment", category: "transfers" } });
+  await client.addTransaction({ body: { accountId: account!.id, date: deps.today(), amountCents: -800_000, merchant: "Big TV", category: "shopping" } });
+  const top = await client.listTopExpenses({ query: { limit: 10 } });
+  assert.equal(top[0]?.merchant, "Big TV");
+  assert.ok(!top.some((t) => t.merchant === "Card Payment"));
+  assert.ok(top.length <= 10);
+  assert.deepEqual(top.map((t) => t.amountCents), [...top.map((t) => t.amountCents)].sort((a, b) => a - b));
+});
