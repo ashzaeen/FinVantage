@@ -395,10 +395,10 @@ export function advisorTools(ctx: AdvisorToolContext): AdvisorTool[] {
 
     tool(
       "check_purchase",
-      "Check a purchase the way the Copilot does: cash buffer, runway, debt-to-income, fixed-cost ratio, goal impact, opportunity cost, and a verdict. Saves nothing.",
+      "Check a purchase paid in cash, a rent, or a card payment the way the Copilot does: cash buffer, runway, debt-to-income, fixed-cost ratio, goal impact, opportunity cost, and a verdict. Saves nothing. NOT for anything financed: for a car loan or any loan with an APR, use simulate_scenario with a loan, which uses the user's own price, down payment, APR, and term.",
       z.object({
         price: z.number().positive().describe("Dollars. Monthly for rent."),
-        kind: ItemType.describe("rent_monthly, home_listing, retail_purchase, vehicle, or credit_card_payment."),
+        kind: ItemType.exclude(["vehicle"]).describe("rent_monthly, home_listing, retail_purchase, or credit_card_payment. Financing a car is simulate_scenario."),
         merchant: z.string().max(100).optional(),
       }),
       async (a) => {

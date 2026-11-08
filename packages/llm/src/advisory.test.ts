@@ -76,6 +76,7 @@ test("a second invented number falls back to the safe answer written in code", a
   assert.equal(result.source, "fallback");
   assert.match(result.answer, /Dining: \$450\.00 spent/);
   assert.doesNotMatch(result.answer, /175|180/);
+  assert.doesNotMatch(result.answer, /Net worth/, "once tools ran, the general brief stays out");
   assert.deepEqual(result.citations, [{ tool: "Budgets", label: "Budgets" }], "citations survive the fallback");
 });
 

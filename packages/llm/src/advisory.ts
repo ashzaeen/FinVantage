@@ -72,7 +72,7 @@ export const ADVISOR_SYSTEM_PROMPT = [
   "HOW TO WORK",
   "1. Understand what the user is really deciding. If a question rests on a mix-up (for example an IRA is an account type and an S&P 500 index fund is an investment, so one can hold the other), say so kindly and answer the real question.",
   "2. Gather facts. The brief covers the essentials. Call tools for anything else: search_transactions, get_spending, get_budgets, get_recurring_and_bills, get_income, get_accounts, get_goals, list_life_events, list_copilot_scans, get_quarterly_report, list_simulation_runs, get_portfolio_and_credit. For facts outside the user's data (a product's published terms, contribution limits, typical costs of a trip or a car) call web_search with a generic query about the product or topic.",
-  "3. Work out the numbers with tools, never in your head. simulate_scenario models any decision, alone or combined: one-time costs or income on a date, monthly changes, a loan, saving more or less, a new goal, moving a goal's date. It returns the effect on every goal, monthly savings, debt-to-income, and the cash cushion. finance_calc covers loans, investment growth, payoff time, and saving for a target. For growth, pass rates: the user's own rate if they gave one, and for a named investment (an index such as the S&P 500 or the Nasdaq, or a fund) web_search its long-run average annual return first and pass that with source web. Compare up to four. Only with neither, omit rates; the fallback rates are assumptions and you must say so. plan_goal and find_savings size an existing goal and where its money could come from. check_purchase checks a purchase the way the Copilot does. calculate does any other arithmetic on figures you already have.",
+  "3. Work out the numbers with tools, never in your head. simulate_scenario models any decision, alone or combined: one-time costs or income on a date, monthly changes, a loan, saving more or less, a new goal, moving a goal's date. It returns the effect on every goal, monthly savings, debt-to-income, and the cash cushion. finance_calc covers loans, investment growth, payoff time, and saving for a target. For growth, pass rates: the user's own rate if they gave one, and for a named investment (an index such as the S&P 500 or the Nasdaq, or a fund) web_search its long-run average annual return first and pass that with source web. Compare up to four. Only with neither, omit rates; the fallback rates are assumptions and you must say so. plan_goal and find_savings size an existing goal and where its money could come from. For anything financed (a car loan, any loan with an APR), use simulate_scenario with a loan and the user's own price, down payment, APR, and term; it returns the payment, the interest, and the effect on goals. check_purchase is only for purchases paid in cash, rent, and card payments. calculate does any other arithmetic on figures you already have.",
   "4. Answer with two or three options and their trade-offs, citing the figures the tools returned. Recommend nothing as certain. End with a concrete next step the user can take themselves.",
   "",
   "WHEN AN INPUT IS MISSING",
@@ -136,7 +136,9 @@ export async function runAdvisorTurn(llm: LlmClient, input: AdvisorTurnInput): P
   });
   const fallback = (reason: "unavailable" | "unverified", detail?: string) => {
     trace.fallbackReason = detail ?? reason;
-    return finish(safeAdvisorAnswer(reason, [...results.flatMap((r) => r.summary ?? []), ...input.briefLines]), "fallback");
+    // What the tools found answers the question; the general brief is only for when nothing ran.
+    const found = results.flatMap((r) => r.summary ?? []);
+    return finish(safeAdvisorAnswer(reason, found.length > 0 ? found : input.briefLines), "fallback");
   };
 
   if (!llm.chat) return fallback("unavailable", "no chat support");
@@ -209,7 +211,7 @@ export async function runAdvisorTurn(llm: LlmClient, input: AdvisorTurnInput): P
       messages.push({
         role: "user",
         text: check.invented.length > 0
-          ? `Your draft used dollar amounts that are not in the brief, a tool result, or the user's words: ${check.invented.join(", ")}. Use an amount you were given, get it from a tool, or make the point without it.`
+          ? `Your draft used dollar amounts that are not in the brief, a tool result, or the user's words: ${check.invented.join(", ")}. If you need a figure you don't have, call a tool now (simulate_scenario, finance_calc, or calculate) and use what it returns; otherwise make the point without the amount.`
           : "Please answer again in plain text, under 200 words, using only figures from the brief or tool results.",
       });
     }

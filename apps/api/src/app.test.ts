@@ -972,3 +972,18 @@ test("evaluate_card uses searched terms and links the search's sources", async (
   assert.ok(card?.kind === "visual" && card.visual.kind === "card_evaluator");
   assert.deepEqual(card.visual.inputs.sources, [{ title: "chase.com", url: "https://chase.com" }]);
 });
+
+test("a financed car goes through the scenario with the user's own terms, not the Copilot's", async () => {
+  const { turn, results } = await askWithTools(
+    [
+      { name: "check_purchase", args: { price: 10000, kind: "vehicle" } },
+      { name: "simulate_scenario", args: { changes: [{ kind: "loan", label: "Honda Accord", price: 10000, downPayment: 3000, aprPercent: 7.49 }] } },
+    ],
+    "Can I afford a $10,000 Honda Accord at 7.49% APR with $3,000 down?",
+  );
+  assert.match(results[0]!.response.error ?? "", /Bad arguments/, "check_purchase no longer takes financed cars");
+  const loan = (results[1]!.response.result!.loans as Array<{ financed: string }>)[0]!;
+  assert.equal(loan.financed, "$7,000");
+  const visual = turn.reply.attachments.find((a) => a.kind === "visual");
+  assert.ok(visual?.kind === "visual" && visual.visual.kind === "loan_explorer" && visual.visual.inputs.aprPercent === 7.49);
+});
