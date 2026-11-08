@@ -193,7 +193,8 @@ export function AdvisorClient({ initialConversationId, situation }: { initialCon
             <h2 className="font-poppins text-lg font-bold text-ink">Ask Your AI Advisor</h2>
             <p className="truncate text-sm text-muted">Sees your accounts, spending, goals, life events, reports, and Copilot scans</p>
           </div>
-          <button type="button" onClick={() => setShowList(true)} className="rounded-lg p-2 text-muted hover:bg-inset" aria-label="Show Conversation History">
+          <button type="button" onClick={() => setShowList(true)} className="inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted transition hover:bg-inset hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" aria-label="Show Conversation History">
+            <span>View History</span>
             <Menu size={20} />
           </button>
         </header>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LoginForm } from "@/app/login/LoginForm";
 import { LandingHeader } from "@/components/landing/LandingHeader";
 import { PurchaseTryout } from "@/components/landing/PurchaseTryout";
-import { Container, Features, LandingFooter, TryDemoLink } from "@/components/landing/Sections";
+import { ClosingCta, Container, Features, LandingFooter, TrustSection, TryDemoLink } from "@/components/landing/Sections";
 
 export const metadata: Metadata = {
   title: { absolute: "FinVantage: Know What a Purchase Does to Your Goals" },
@@ -45,6 +45,8 @@ export default function LandingPage() {
           </Container>
         </section>
         <Features />
+        <TrustSection />
+        <ClosingCta />
       </main>
       <LandingFooter />
     </div>
