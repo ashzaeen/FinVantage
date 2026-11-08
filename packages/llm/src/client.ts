@@ -35,18 +35,28 @@ class MockLlmClient implements LlmClient {
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 const GEMINI_DEFAULT_TIMEOUT_MS = 15_000;
 
+/** JSON Schema keywords Gemini's response schema doesn't know. It rejects the request (HTTP 400). */
+const UNSUPPORTED_SCHEMA_KEYWORDS = new Set(["additionalProperties", "$schema"]);
+
 /**
- * Gemini's REST schema format uses upper-case type names ("OBJECT", "STRING"). Callers write
- * ordinary JSON Schema, so convert the `type` fields on the way out.
+ * Gemini's REST schema format uses upper-case type names ("OBJECT", "STRING") and a subset of
+ * JSON Schema. Callers write ordinary JSON Schema, so convert the `type` fields and drop the
+ * keywords Gemini rejects on the way out. Keys under `properties` are field names, not keywords,
+ * so they are kept whatever they're called.
  */
 export function toGeminiSchema(schema: unknown): unknown {
   if (Array.isArray(schema)) return schema.map(toGeminiSchema);
   if (!schema || typeof schema !== "object") return schema;
   return Object.fromEntries(
-    Object.entries(schema as Record<string, unknown>).map(([key, value]) => [
-      key,
-      key === "type" && typeof value === "string" ? value.toUpperCase() : toGeminiSchema(value),
-    ]),
+    Object.entries(schema as Record<string, unknown>)
+      .filter(([key]) => !UNSUPPORTED_SCHEMA_KEYWORDS.has(key))
+      .map(([key, value]) => {
+        if (key === "type" && typeof value === "string") return [key, value.toUpperCase()];
+        if (key === "properties" && value && typeof value === "object" && !Array.isArray(value)) {
+          return [key, Object.fromEntries(Object.entries(value).map(([field, sub]) => [field, toGeminiSchema(sub)]))];
+        }
+        return [key, toGeminiSchema(value)];
+      }),
   );
 }
 

@@ -81,3 +81,28 @@ test("schema conversion upper-cases types everywhere and leaves other fields alo
     items: { type: "OBJECT", required: ["type"] },
   });
 });
+
+test("schema conversion drops keywords Gemini rejects, but keeps fields that share their names", () => {
+  // Gemini answers HTTP 400 "Unknown name additionalProperties" for these, which sent every
+  // quarterly report to the template.
+  assert.deepEqual(
+    toGeminiSchema({
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      type: "object",
+      properties: {
+        additionalProperties: { type: "string" },
+        list: { type: "array", items: { type: "object", properties: {}, additionalProperties: false } },
+      },
+      required: ["list"],
+      additionalProperties: false,
+    }),
+    {
+      type: "OBJECT",
+      properties: {
+        additionalProperties: { type: "STRING" },
+        list: { type: "ARRAY", items: { type: "OBJECT", properties: {} } },
+      },
+      required: ["list"],
+    },
+  );
+});
