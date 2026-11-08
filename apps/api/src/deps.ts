@@ -1,7 +1,8 @@
 import { createBankProvider, createStores, type BankDataProvider, type DocumentStore, type LedgerStore } from "@finvantage/data";
 import { createLiveBus, type LiveBus } from "@finvantage/live";
 import { createLlmClient, type LlmClient } from "@finvantage/llm";
-import { createTokenVerifier, rejectAllTokens, type TokenVerifier } from "./auth";
+import { createAuth, type Auth } from "./auth";
+import { MemoryCredentialStore, SpacetimeCredentialStore, type CredentialStore } from "./credentials";
 import {
   createMailClient,
   createPdfStore,
@@ -17,8 +18,10 @@ export interface AppDeps {
   bank: BankDataProvider;
   mail: MailClient;
   pdf: PdfStore;
-  /** Checks SpacetimeAuth sign-in tokens. The demo token is handled separately in app.ts. */
-  verifyToken: TokenVerifier;
+  /** Issues and checks sign-in tokens. The demo token is handled separately in app.ts. */
+  auth: Auth;
+  /** Email + password accounts: Spacetime when SPACETIME_TOKEN is set, otherwise memory. */
+  credentials: CredentialStore;
   /** Injectable so demos and tests are repeatable. */
   today: () => string;
   now: () => string;
@@ -36,12 +39,27 @@ export function createDeps(env: NodeJS.ProcessEnv = process.env): AppDeps {
     bank: createBankProvider(env),
     mail: createMailClient(env),
     pdf: createPdfStore(env, now),
-    verifyToken: env.SPACETIMEAUTH_CLIENT_ID
-      ? createTokenVerifier({ clientId: env.SPACETIMEAUTH_CLIENT_ID })
-      : rejectAllTokens,
+    auth: createAuth({ privateJwk: requiredInProduction(env, "AUTH_PRIVATE_JWK"), issuer: env.AUTH_ISSUER }),
+    credentials: env.SPACETIME_TOKEN
+      ? new SpacetimeCredentialStore({
+          url: env.SPACETIME_URL ?? "https://maincloud.spacetimedb.com",
+          database: env.SPACETIME_MODULE ?? "finvantage",
+          token: env.SPACETIME_TOKEN,
+        })
+      : new MemoryCredentialStore(),
     today: () => now().slice(0, 10),
     now,
     reportEmailOverride: env.REPORT_EMAIL_OVERRIDE ?? null,
     schedulerSecret: env.SCHEDULER_SECRET ?? null,
   };
+}
+
+/**
+ * Without a signing key, tokens use a throwaway key and stop working on restart. Fine locally,
+ * but on Vercel every instance would have its own key, so production refuses to start.
+ */
+function requiredInProduction(env: NodeJS.ProcessEnv, name: string): string | undefined {
+  const value = env[name]?.trim();
+  if (!value && env.NODE_ENV === "production") throw new Error(`${name} must be set in production.`);
+  return value || undefined;
 }

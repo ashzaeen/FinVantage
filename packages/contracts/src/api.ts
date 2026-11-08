@@ -33,7 +33,7 @@ import {
   SimulationRunSummary,
 } from "./simulation";
 import { Budget, CreditScore, Portfolio, RecurringCharge, SpendingSummary } from "./spending";
-import { ExtensionSettings, User } from "./user";
+import { AuthResponse, ExtensionSettings, LogInRequest, SignUpRequest, User } from "./user";
 
 type Method = "GET" | "POST" | "PATCH";
 
@@ -65,6 +65,10 @@ function route<
  * Add or change an endpoint here first.
  */
 export const routes = {
+  // Auth. These two need no token; every /v1 route does.
+  signUp: route({ method: "POST", path: "/auth/signup", body: SignUpRequest, response: AuthResponse }),
+  logIn: route({ method: "POST", path: "/auth/login", body: LogInRequest, response: AuthResponse }),
+
   // Profile
   getMe: route({ method: "GET", path: "/v1/me", response: User }),
   updateExtensionSettings: route({

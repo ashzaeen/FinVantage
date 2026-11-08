@@ -108,8 +108,21 @@ const liveEvent = table(
   },
 );
 
+/** Email + password sign-in. Only the API reads or writes it. The hash is scrypt, never a password. */
+const credential = table(
+  { name: "credential" },
+  {
+    /** Lowercased. */
+    email: t.string().primaryKey(),
+    userId: t.string().unique(),
+    passwordHash: t.string(),
+    createdAt: t.timestamp(),
+  },
+);
+
 const spacetimedb = schema({
   admin,
+  credential,
   userIdentity,
   appUser,
   incomeProfile,
@@ -166,6 +179,16 @@ export const linkIdentity = spacetimedb.reducer(
     } else {
       ctx.db.userIdentity.insert({ identity, userId });
     }
+  },
+);
+
+export const registerCredential = spacetimedb.reducer(
+  { email: t.string(), userId: t.string(), passwordHash: t.string() },
+  (ctx, { email, userId, passwordHash }) => {
+    requireAdmin(ctx);
+    const key = email.trim().toLowerCase();
+    if (ctx.db.credential.email.find(key)) throw new SenderError("email_taken");
+    ctx.db.credential.insert({ email: key, userId, passwordHash, createdAt: ctx.timestamp });
   },
 );
 

@@ -8,7 +8,6 @@ export interface TokenClaims {
   sub: string;
   exp: number;
   name?: string;
-  preferred_username?: string;
   email?: string;
 }
 

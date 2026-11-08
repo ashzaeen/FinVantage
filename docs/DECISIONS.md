@@ -54,7 +54,7 @@ These replace the Tiger Data and Vultr lines above, and the "Spacetime: enter or
 | Decision | Why |
 | --- | --- |
 | SpacetimeDB on Maincloud holds the relational data: users, income profiles, accounts, transactions, goals | Platform owner's call, after talking to the Spacetime team. Replaces Tiger Data, so the Tiger Data track is dropped |
-| SpacetimeDB also handles sign-in (SpacetimeAuth) and live updates. The dashboard subscribes with the Spacetime TypeScript SDK | The Spacetime team recommended building around live subscriptions. It also fixes live updates on serverless, where the in-process SSE bus cannot reach other instances |
+| SpacetimeDB also handles live updates. The dashboard subscribes with the Spacetime TypeScript SDK | The Spacetime team recommended building around live subscriptions. It also fixes live updates on serverless, where the in-process SSE bus cannot reach other instances |
 | MongoDB Atlas holds every document record, as the PRD says. The quarterly-agent owner writes the store | Unchanged from the PRD. Platform only adds the connection |
 | The web app and the API both run on Vercel. The API is bundled into one function with esbuild | One platform, deploy on push, a preview per PR. Spacetime cannot run a server-rendered Next.js site. Replaces Vultr, so the Vultr track is dropped |
 | The API reaches Spacetime over its HTTP API (SQL and reducer calls), not the WebSocket SDK | Serverless functions cannot hold a connection between requests. The browser holds the SDK connection instead |
@@ -63,6 +63,7 @@ These replace the Tiger Data and Vultr lines above, and the "Spacetime: enter or
 | Deploys run from GitHub Actions with the Vercel CLI, into the platform owner's Vercel account. The only repo secret is `VERCEL_TOKEN` | The repo owner is a different person, and only they can install the Vercel GitHub app or add secrets. One secret is the smallest ask |
 | The Spacetime module is published from the platform owner's laptop, not CI | The schema changes rarely, and it needs no extra repo secret |
 | CI is manual-only for now | It failed on Linux in the build step, the logs weren't visible without signing in, and deploys don't depend on it |
+| Sign-in is our own email + password, not SpacetimeAuth. The API issues RS256 tokens and publishes its key at `/.well-known/jwks.json`. Accounts live in a private Spacetime `credential` table, with scrypt hashes | SpacetimeAuth only offers magic link, anonymous, and social logins, and the team wanted email + password. Our tokens are OpenID-shaped, so SpacetimeDB can still accept them as identities for live subscriptions |
 
 ## Open questions
 

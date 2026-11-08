@@ -16,6 +16,7 @@ The relational ledger and the live event feed, published to Maincloud as the dat
 | `income_profile` | `IncomeProfile`, one per user |
 | `account`, `ledger_transaction`, `goal` | Same fields as the contracts. Transactions also carry `user_id` |
 | `live_event` | Dashboard pushes. `payload` is a JSON `LiveEvent`. The newest 50 per user are kept |
+| `credential` | Email + password accounts: lowercased email, user id, scrypt hash. Written by `register_credential` |
 | `admin`, `user_identity` | Who may write. Which browser identity belongs to which user (Sprint 5) |
 
 `user` and `transaction` are SQL keywords, hence `app_user` and `ledger_transaction`.

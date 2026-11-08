@@ -18,3 +18,21 @@ export const User = z.object({
   extensionSettings: ExtensionSettings,
 });
 export type User = z.infer<typeof User>;
+
+/** Email + password sign-in. The API lowercases emails. */
+export const LogInRequest = z.object({
+  email: z.string().trim().toLowerCase().pipe(z.email()),
+  password: z.string().min(1).max(200),
+});
+export type LogInRequest = z.infer<typeof LogInRequest>;
+
+export const SignUpRequest = z.object({
+  displayName: z.string().trim().min(1, "Enter your name").max(80),
+  email: z.string().trim().toLowerCase().pipe(z.email("Enter a valid email")),
+  password: z.string().min(8, "Use at least 8 characters").max(200),
+});
+export type SignUpRequest = z.infer<typeof SignUpRequest>;
+
+/** `token` is a signed JWT. Send it as `Authorization: Bearer`. */
+export const AuthResponse = z.object({ token: z.string().min(1), user: User });
+export type AuthResponse = z.infer<typeof AuthResponse>;
