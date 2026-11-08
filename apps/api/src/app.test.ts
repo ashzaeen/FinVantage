@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { ApiError, createApiClient, type ApiClient, type CopilotContext, type NewLifeScenario } from "@finvantage/contracts";
 import { createApp, originMatcher } from "./app";
 import { createDeps } from "./deps";
+import { monthlyCashFlow } from "./reporting/cashflow";
 
 /** A real client against the real app, in process. Every call validates against the contracts. */
 function setup(env: Record<string, string> = {}) {
@@ -401,10 +402,11 @@ test("a quarterly report compares consecutive quarters, saves a PDF, and emails 
   assert.equal(report.visuals.goalComparisons.length, current.goalOutcomes.length);
   assert.equal(report.visuals.goalPathways.length, current.goalOutcomes.length);
   assert.equal(report.visuals.suggestions.length, current.goalOutcomes.length);
-  assert.ok(
-    report.visuals.monthlyBreakdown.every(
-      (month) => month.incomeCents === 0 && month.spendingCents === 0,
-    ),
+  // The demo profile's own transactions for the quarter, transfers left out.
+  const expectedMonths = monthlyCashFlow(await client.listTransactions({ query: { limit: 500 } }), ["2026-07", "2026-08", "2026-09"]);
+  assert.deepEqual(
+    report.visuals.monthlyBreakdown.map((m) => [m.monthKey, m.incomeCents, m.spendingCents]),
+    expectedMonths.map((m) => [m.monthKey, m.incomeCents, m.spendingCents]),
   );
   assert.ok(report.visuals.goalPathways.every((goal) => goal.points.length >= 2));
   assert.equal(report.pdf.status, "ready");

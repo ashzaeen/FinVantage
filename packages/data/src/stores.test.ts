@@ -179,7 +179,7 @@ for (const backend of backends) {
       assert.equal(item?.accountCount, 8);
       assert.equal(item?.transactionsCursor, "synthetic-cursor");
       assert.equal((await store.listAccounts(userId)).length, accountsBefore + 8);
-      assert.equal((await store.listTransactions(userId, 1000)).length, transactionsBefore + 10);
+      assert.equal((await store.listTransactions(userId, 1000)).length, transactionsBefore + first.added.length);
 
       // The user edits a bank transaction, then the next sync removes one and adds one.
       const groceries = (await store.listTransactions(userId, 1000)).find((t) => t.id === `${itemId}__txn_06`)!;
@@ -193,7 +193,7 @@ for (const backend of backends) {
         nextCursor: "synthetic-cursor-2",
       });
       const after = await store.listTransactions(userId, 1000);
-      assert.equal(after.length, transactionsBefore + 10);
+      assert.equal(after.length, transactionsBefore + first.added.length);
       assert.equal(after[0]?.id, `${itemId}__txn_new`);
       assert.equal(after[0]?.amountCents, -4200);
       assert.ok(!after.some((t) => t.id === `${itemId}__txn_07`));

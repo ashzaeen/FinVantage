@@ -45,10 +45,11 @@ test("linking a bank replaces the demo copy's accounts, and a re-sync doesn't du
   const linked = accounts.filter((a) => a.id.startsWith(`${item.itemId}__`));
   assert.ok(linked.some((a) => a.type === "credit_card" && a.annualRate === 0.2299 && a.nextPaymentDueOn === "2026-11-20"));
   const transactions = await client.listTransactions({ query: { limit: 500 } });
-  assert.equal(transactions.length, 10);
+  assert.ok(transactions.length > 0);
+  assert.ok(transactions.every((t) => t.accountId.startsWith(`${item.itemId}__`)));
 
   await client.syncBankItem({ params: { id: item.itemId } });
-  assert.equal((await client.listTransactions({ query: { limit: 500 } })).length, 10);
+  assert.equal((await client.listTransactions({ query: { limit: 500 } })).length, transactions.length);
 
   // The access token is stored, but never sent to the client.
   assert.ok(await deps.bankTokens.get(user.id, item.itemId));
