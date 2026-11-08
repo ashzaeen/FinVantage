@@ -198,9 +198,9 @@ export function EventForm({
         <button type="button" onClick={() => onChange({ ...form, eventType: "custom" })} className="min-h-11 px-3.5 text-sm font-semibold text-white transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ background: "#544af7" }}>Add New Event</button>
       </div>
       <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--ink-muted)" }}>Built-In Templates</p>
-      <div className="grid gap-2 sm:grid-cols-2">{LifeScenarioEventType.options.filter((type): type is Exclude<EventType, "custom"> => type !== "custom").map((type) => {
+      <div className="no-scrollbar -mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">{LifeScenarioEventType.options.filter((type): type is Exclude<EventType, "custom"> => type !== "custom").map((type) => {
         const selected = form.eventType === type;
-        return <button key={type} type="button" aria-pressed={selected} onClick={() => onChange({ ...form, eventType: type })} className="min-h-[68px] border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]" style={{ borderColor: selected ? "var(--accent)" : "var(--border)", background: selected ? "var(--accent-soft, #eceeff)" : "var(--surface-raised)" }}>
+        return <button key={type} type="button" aria-pressed={selected} onClick={() => onChange({ ...form, eventType: type })} className="min-h-[68px] w-56 shrink-0 snap-start border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]" style={{ borderColor: selected ? "var(--accent)" : "var(--border)", background: selected ? "var(--accent-soft, #eceeff)" : "var(--surface-raised)" }}>
           <span className="block text-sm font-semibold" style={{ color: selected ? "var(--accent)" : "var(--ink)" }}>{EVENT_LABEL[type]}</span>
           <span className="mt-0.5 block text-xs leading-4" style={{ color: "var(--ink-muted)" }}>{EVENT_TEMPLATE_DESCRIPTION[type]}</span>
         </button>;

@@ -1,90 +1,8 @@
 "use client";
 
-import { useState, type MouseEvent } from "react";
 import { formatUsd, type LifeScenarioAnalysis, type LifeSimulatorContext } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
-import {
-  formatDate,
-  SERIES,
-  type ScenarioForm,
-} from "./lifeSimulatorShared";
-
-const WIDTH = 640;
-const HEIGHT = 220;
-const PAD = { top: 12, right: 10, bottom: 22, left: 10 };
-
-/** Trims the trailing flat stretch once both lines have leveled off, so a goal that funds early
- * doesn't stretch the chart out to the full 15-year series cap for no visual reason. */
-function trimToRelevantWindow(series: Array<{ month: string; beforeCents: number; afterCents: number }>) {
-  const MIN_POINTS = 18;
-  const PADDING = 6;
-  let lastChange = series.length - 1;
-  for (let i = series.length - 1; i > 0; i -= 1) {
-    if (series[i]!.beforeCents !== series[i - 1]!.beforeCents || series[i]!.afterCents !== series[i - 1]!.afterCents) {
-      lastChange = i;
-      break;
-    }
-  }
-  const end = Math.max(Math.min(series.length, lastChange + PADDING), Math.min(series.length, MIN_POINTS));
-  return series.slice(0, end);
-}
-
-function LineChart({
-  series: fullSeries, eventMonth, dropMonth,
-}: {
-  series: Array<{ month: string; beforeCents: number; afterCents: number }>;
-  eventMonth: string;
-  dropMonth: string | null;
-}) {
-  const [hover, setHover] = useState<number | null>(null);
-  const series = trimToRelevantWindow(fullSeries);
-  if (series.length < 2) return <p className="py-8 text-center text-sm" style={{ color: "var(--ink-muted)" }}>Not enough data to chart.</p>;
-
-  const max = Math.max(...series.map((p) => Math.max(p.beforeCents, p.afterCents)), 1);
-  const x = (i: number) => PAD.left + (i / (series.length - 1)) * (WIDTH - PAD.left - PAD.right);
-  const y = (cents: number) => HEIGHT - PAD.bottom - (Math.max(0, cents) / max) * (HEIGHT - PAD.top - PAD.bottom);
-  const line = (key: "beforeCents" | "afterCents") => series.map((p, i) => `${x(i)},${y(p[key])}`).join(" ");
-  const eventIndex = series.findIndex((p) => p.month >= eventMonth);
-  const dropIndex = dropMonth ? series.findIndex((p) => p.month === dropMonth) : -1;
-  const first = series[0]!;
-  const last = series[series.length - 1]!;
-  const active = hover === null ? null : series[hover];
-
-  function onMove(event: MouseEvent<SVGSVGElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const ratio = (event.clientX - rect.left) / rect.width;
-    setHover(Math.round(Math.min(1, Math.max(0, ratio)) * (series.length - 1)));
-  }
-
-  return <figure>
-    <svg
-      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-      role="img"
-      aria-label={`Projected balance from ${first.month} to ${last.month}: ${formatUsd(first.afterCents)} to ${formatUsd(last.afterCents)} with the plan, versus ${formatUsd(last.beforeCents)} on the current plan.`}
-      className="w-full"
-      onMouseMove={onMove}
-      onMouseLeave={() => setHover(null)}
-    >
-      <polyline points={line("beforeCents")} fill="none" stroke="var(--ink-light, #b3b9cb)" strokeWidth={2} strokeDasharray="6 5" />
-      <polyline points={line("afterCents")} fill="none" stroke="#544af7" strokeWidth={2.5} />
-      {eventIndex >= 0 && <line x1={x(eventIndex)} x2={x(eventIndex)} y1={PAD.top} y2={HEIGHT - PAD.bottom} stroke="var(--warning)" strokeWidth={1} strokeDasharray="3 3" />}
-      {eventIndex >= 0 && <text x={x(eventIndex)} y={PAD.top + 10} fontSize={10} fill="var(--warning)" textAnchor="middle">Event</text>}
-      {dropIndex >= 0 && <circle cx={x(dropIndex)} cy={y(series[dropIndex]!.afterCents)} r={4} fill="var(--warning)" stroke="white" strokeWidth={1.5} />}
-      {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={PAD.top} y2={HEIGHT - PAD.bottom} stroke="var(--ink-muted)" strokeWidth={1} />}
-      {hover !== null && <circle cx={x(hover)} cy={y(series[hover]!.afterCents)} r={3.5} fill="#544af7" />}
-      <text x={PAD.left} y={HEIGHT - 6} fontSize={11} fill="var(--ink-muted)">{formatDate(first.month)}</text>
-      <text x={WIDTH - PAD.right} y={HEIGHT - 6} fontSize={11} fill="var(--ink-muted)" textAnchor="end">{formatDate(last.month)}</text>
-    </svg>
-    <figcaption className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
-      <span>{active ? `${formatDate(active.month)}: ${formatUsd(active.afterCents)} with this plan, ${formatUsd(active.beforeCents)} on the current plan.` : "Hover the chart to read a month's balance."}</span>
-      <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="inline-flex items-center gap-1.5"><i aria-hidden="true" className="h-0.5 w-4" style={{ background: "var(--ink-light, #b3b9cb)" }} />Current plan</span>
-        <span className="inline-flex items-center gap-1.5"><i aria-hidden="true" className="h-0.5 w-4" style={{ background: "#544af7" }} />With this plan</span>
-        {dropIndex >= 0 && <span className="inline-flex items-center gap-1.5"><i aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: "var(--warning)" }} />One-time cost</span>}
-      </span>
-    </figcaption>
-  </figure>;
-}
+import { SERIES } from "./lifeSimulatorShared";
 
 function MoneyFlowChart({ analysis, context }: { analysis: LifeScenarioAnalysis; context: LifeSimulatorContext }) {
   const included = analysis.goals.filter((goal) => goal.included);
@@ -130,29 +48,14 @@ function MoneyFlowChart({ analysis, context }: { analysis: LifeScenarioAnalysis;
 }
 
 export function LifeSimulatorCharts({
-  context, form, analysis,
+  context, analysis,
 }: {
   context: LifeSimulatorContext;
-  form: ScenarioForm;
   analysis: LifeScenarioAnalysis;
 }) {
-  const goals = analysis.goals.filter((goal) => goal.included);
-  const [activeGoalId, setActiveGoalId] = useState<string | null>(null);
-  const activeGoal = goals.find((goal) => goal.goalId === activeGoalId) ?? goals[0] ?? null;
-
-  return <section aria-labelledby="scenario-charts-heading" className="space-y-4 border-t pt-4" style={{ borderColor: "var(--border)" }}>
-    <div><h2 id="scenario-charts-heading" className="font-poppins text-lg font-bold" style={{ color: "var(--ink)" }}>Charts</h2><p className="mt-1 text-xs" style={{ color: "var(--ink-muted)" }}>See how the event changes each goal’s projected balance and monthly contribution.</p></div>
-    <div className="grid gap-4 xl:grid-cols-2">
-      <Card title="Goal Balance Over Time">
-        {goals.length ? <>
-          <div className="flex flex-wrap gap-2">{goals.map((goal) => <button key={goal.goalId} type="button" onClick={() => setActiveGoalId(goal.goalId)} aria-pressed={activeGoal?.goalId === goal.goalId} className="min-h-11 px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]" style={activeGoal?.goalId === goal.goalId ? { background: "var(--accent-soft, #eceeff)", color: "var(--accent)" } : { background: "var(--surface-inset)", color: "var(--ink-muted)" }}>{goal.name}</button>)}</div>
-          <div className="mt-4">{activeGoal && <LineChart series={activeGoal.series} eventMonth={form.startMonth} dropMonth={activeGoal.goalId === form.oneTimeSourceGoalId && form.oneTimeCostCents > 0 ? form.startMonth.slice(0, 7) + "-01" : null} />}</div>
-        </> : <p className="py-6 text-sm" style={{ color: "var(--ink-muted)" }}>Select at least one goal before generating.</p>}
-      </Card>
-
-      <Card title="Where Each Month’s Money Goes" subtitle="Monthly contribution by goal before and after the event">
-        <MoneyFlowChart analysis={analysis} context={context} />
-      </Card>
-    </div>
+  return <section aria-label="Where Each Month’s Money Goes" className="border-t pt-4" style={{ borderColor: "var(--border)" }}>
+    <Card title="Where Each Month’s Money Goes" subtitle="Monthly contribution by goal before and after the event">
+      <MoneyFlowChart analysis={analysis} context={context} />
+    </Card>
   </section>;
 }

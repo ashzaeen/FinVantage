@@ -407,7 +407,7 @@ export function LifeSimulatorClient() {
         </Card>
 
         <div className="min-w-0 space-y-5">
-          {analysis && generatedForm && <LifeSimulatorCharts context={context} form={generatedForm} analysis={analysis} />}
+          {analysis && generatedForm && <LifeSimulatorCharts context={context} analysis={analysis} />}
 
           <section aria-labelledby="funded-heading" className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 id="funded-heading" className="font-poppins text-lg font-bold" style={{ color: "var(--ink)" }}>When Each Goal Gets Funded</h2><p className="mt-1 text-xs" style={{ color: "var(--ink-muted)" }}>{generatedForm ? `Generated for ${generatedEventName}` : "Results appear after Generate"}</p></div><span className="rounded-full px-3 py-1.5 text-xs font-semibold tabular-nums" style={{ color: "#176b5a", background: "#e5f3ed" }}>{analysis ? `${analysis.goals.filter((goal) => goal.included).length} goals compared` : `${context.goals.length} goals`}</span></div>

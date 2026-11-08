@@ -2,11 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
-import { formatUsd, type QuarterlyReport } from "@finvantage/contracts";
+import { CircleDollarSign, PiggyBank, TrendingDown, Wallet } from "lucide-react";
+import { formatUsd, type InvestmentsOverview, type QuarterlyReport, type SpendingCategory, type SpendingSummary } from "@finvantage/contracts";
 import { ProbabilityRange } from "@/components/finance/ProbabilityRange";
 import { Card } from "@/components/ui/Card";
 import { api, API_TOKEN, API_URL, currentToken } from "@/lib/api";
 import { QuarterlyReportCharts } from "./QuarterlyReportCharts";
+
+/** Same icon and color palette as the Overview page's stat cards, so the two pages read as one system. */
+const SUMMARY_STAT_STYLE = [
+  { label: "Net Worth", icon: <Wallet size={22} strokeWidth={2} aria-hidden="true" />, iconBg: "#fff5e6", iconColor: "#ff9900", cardBg: "#f0edff" },
+  { label: "Monthly Income", icon: <CircleDollarSign size={22} strokeWidth={2} aria-hidden="true" />, iconBg: "#e8f3ff", iconColor: "#2979ff", cardBg: "#eaf4ff" },
+  { label: "Monthly Spending", icon: <TrendingDown size={22} strokeWidth={2} aria-hidden="true" />, iconBg: "#ffecee", iconColor: "#ff4d6d", cardBg: "#fff1ef" },
+  { label: "Monthly Savings", icon: <PiggyBank size={22} strokeWidth={2} aria-hidden="true" />, iconBg: "#e6faf4", iconColor: "#00c48c", cardBg: "#edf8f1" },
+] as const;
 
 function ReportSection({
   title,
@@ -36,10 +45,25 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
   const [showCharts, setShowCharts] = useState(true);
   const [chartsLoading, setChartsLoading] = useState(false);
   const [chartsError, setChartsError] = useState<string | null>(null);
+  const [investments, setInvestments] = useState<InvestmentsOverview | null>(null);
+  const [investmentsError, setInvestmentsError] = useState<string | null>(null);
+  const [currentSpending, setCurrentSpending] = useState<{ summary: SpendingSummary; categories: SpendingCategory[] } | null>(null);
   // The PDF link is a plain download, so it carries the signed-in user's token in the URL.
   const [pdfToken, setPdfToken] = useState(API_TOKEN);
   useEffect(() => {
     void currentToken().then(setPdfToken);
+  }, []);
+  useEffect(() => {
+    void Promise.all([api.getSpendingSummary(), api.listSpendingCategories()]).then(([summary, categories]) => {
+      setCurrentSpending({ summary, categories });
+    }).catch(() => {
+      setCurrentSpending(null);
+    });
+  }, []);
+  useEffect(() => {
+    void api.getInvestments().then(setInvestments).catch((caught) => {
+      setInvestmentsError(caught instanceof Error ? caught.message : "Could not load investment data.");
+    });
   }, []);
   const latest = reports.find((report) => report.id === selectedReportId) ?? reports[0] ?? null;
 
@@ -154,23 +178,27 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          ["Net worth", formatUsd(latest.visuals.summary.netWorthCents)],
-          ["Monthly income", formatUsd(latest.visuals.summary.monthlyIncomeCents)],
-          ["Monthly spending", formatUsd(latest.visuals.summary.monthlySpendingCents)],
-          ["Monthly savings", formatUsd(latest.visuals.summary.monthlySavingsCents)],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-line bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_8px_30px_-4px_rgba(84,74,247,0.08)]">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</span>
-            <p className="mt-3 text-right font-poppins text-2xl font-bold tabular-nums text-ink">{value}</p>
-            <p className="mt-1 text-right text-xs text-muted">
-              {latest.visuals.dataSource === "bank" ? "From your linked banks" : "Saved planning figure"}
-            </p>
-          </div>
-        ))}
+          formatUsd(latest.visuals.summary.netWorthCents),
+          formatUsd(latest.visuals.summary.monthlyIncomeCents),
+          formatUsd(latest.visuals.summary.monthlySpendingCents),
+          formatUsd(latest.visuals.summary.monthlySavingsCents),
+        ].map((value, index) => {
+          const style = SUMMARY_STAT_STYLE[index]!;
+          return (
+            <div key={style.label} className="rounded-2xl border border-line p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_8px_30px_-4px_rgba(84,74,247,0.08)]" style={{ backgroundColor: style.cardBg }}>
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: style.iconBg, color: style.iconColor }}>{style.icon}</span>
+              <span className="mt-3 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{style.label}</span>
+              <p className="mt-1 text-right font-poppins text-2xl font-bold tabular-nums text-ink">{value}</p>
+              <p className="mt-1 text-right text-xs text-muted">
+                {latest.visuals.dataSource === "bank" ? "From your linked banks" : "Saved planning figure"}
+              </p>
+            </div>
+          );
+        })}
       </div>
 
       {showCharts && (
-        <QuarterlyReportCharts reports={[latest]} loading={chartsLoading} error={chartsError} />
+        <QuarterlyReportCharts reports={[latest]} loading={chartsLoading} error={chartsError} investments={investments} investmentsError={investmentsError} currentSpending={currentSpending} />
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
