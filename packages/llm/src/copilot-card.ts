@@ -130,6 +130,9 @@ export function cardFigures(context: CopilotContext, metrics: CopilotMetrics): R
   const leftCents = metrics.debtPayment?.checkingAfterCents ?? metrics.liquidBufferAfterCents;
   const cashOutCents = metrics.debtPayment?.paidCents ?? (leftCents !== null ? context.priceCents : 0);
   const cushionApplies = leftCents !== null && leftCents + cashOutCents >= metrics.bufferTargetCents;
+  // What checking holds before paying: the bank's available balance, which can be lower than the
+  // current balance the dashboard shows while charges are pending. Shown so the two can be matched.
+  if (leftCents !== null) f.checkingBefore = formatUsd(leftCents + cashOutCents);
   if ((f.checkingAfter || f.checkingShort) && cushionApplies) f.bufferTarget = formatUsd(metrics.bufferTargetCents);
   // How far under the cushion, computed here so a model never has to subtract.
   if (f.checkingAfter && cushionApplies && leftCents !== null && leftCents < metrics.bufferTargetCents) {
@@ -196,6 +199,7 @@ function keyFigures(metrics: CopilotMetrics, f: Record<string, string>): Copilot
   if (f.debtPaid) figures.push({ label: "You're paying", value: f.debtPaid });
   if (f.debtRate) figures.push({ label: "Card interest rate", value: f.debtRate });
   if (f.debtFreed) figures.push({ label: "Freed up each month", value: f.debtFreed });
+  if (f.checkingBefore) figures.push({ label: "Available in checking", value: f.checkingBefore });
   if (f.checkingAfter) figures.push({ label: "Left in checking", value: f.checkingAfter });
   if (f.checkingShort) figures.push({ label: "Short in checking", value: f.checkingShort });
   if (f.transferAmount && metrics.transfer) {

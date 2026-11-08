@@ -171,6 +171,9 @@ test("checking already under the cushion: cards don't mention the cushion or a b
     assert.doesNotMatch(text, /undefined|cushion|2,500|2,412/, text);
   }
   assert.match(laptopShort.smartMove, /Move \$1,399 from your Plaid Money Market to checking first, so checking covers it/);
+  // The available balance the math used ($100), so it can be matched to the bank's figures.
+  assert.deepEqual(laptopShort.keyFigures[0], { label: "Available in checking", value: "$100" });
+  assert.deepEqual(cord.keyFigures[0], { label: "Available in checking", value: "$100" });
 });
 
 test("a purchase bigger than checking says how short, never a negative balance", () => {
