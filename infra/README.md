@@ -54,6 +54,7 @@ From the repo root, with the Vercel CLI (`npx vercel@65.2.0 ...`):
    - `finvantage-api`: Root Directory `apps/api`, Framework **Other**. Env vars for Production and Preview:
      - `WEB_ORIGIN` = `https://finvantage-web-ten.vercel.app,http://localhost:3000`
      - `DEMO_API_TOKEN` = `demo-token`
+     - `REPORT_OUTPUT_DIR` = `/tmp/finvantage-reports` (Vercel functions can only write under `/tmp`)
    - `finvantage-web`: Root Directory `apps/web`, Framework **Next.js**. Env vars:
      - `NEXT_PUBLIC_API_URL` = `https://finvantage-api.vercel.app`
      - `NEXT_PUBLIC_DEMO_TOKEN` = `demo-token`
@@ -86,6 +87,8 @@ The build adds the API origin to `host_permissions` automatically. Load `apps/ex
 
 ## Known limits on Vercel
 
+- **Report PDFs live in one instance's `/tmp`.** A PDF download that lands on a different instance than the one that generated the report gets a 404. This lasts until PDFs are stored in MongoDB or blob storage.
+- **Files the API bundle reads at runtime** (pdfkit's font data, the Poppins fonts) are copied next to the bundle by `scripts/build-vercel.mjs`. A new dependency that reads its own files from disk needs the same treatment, or the API crashes on Vercel while working locally.
 - **Memory stores reset.** Data lives in each function instance until the Spacetime and Mongo stores land, so saved data can vanish or differ between requests. This is fine for the demo profile.
 - **Live updates through SSE are unreliable.** A Copilot event published on one function instance never reaches a dashboard connected to another. Sprint 5 moves live updates to Spacetime subscriptions. Locally, SSE works.
 - **SSE streams end** when they reach the function's maximum duration. The browser's `EventSource` reconnects by itself.
