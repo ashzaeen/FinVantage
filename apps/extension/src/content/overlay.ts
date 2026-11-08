@@ -182,7 +182,9 @@ const SERIOUS = new Set(["at risk", "unlikely", "out of reach"]);
  * at risk or worse, or costs more than checking holds; a milder hit (still likely, a short delay,
  * a goal that was already struggling slipping a little, a dip under the cushion) is amber.
  */
-export function toneFor(metrics: Pick<CopilotMetrics, "verdict" | "headline" | "liquidBufferAfterCents">): Tone {
+export function toneFor(
+  metrics: Pick<CopilotMetrics, "verdict" | "headline" | "liquidBufferAfterCents"> & Partial<Pick<CopilotMetrics, "transfer">>,
+): Tone {
   if (metrics.verdict === "good") return "ok";
   if (metrics.verdict !== "caution") return "info";
   const h = metrics.headline;
@@ -190,13 +192,15 @@ export function toneFor(metrics: Pick<CopilotMetrics, "verdict" | "headline" | "
     h.kind === "out_of_reach" ||
     // Red only when this purchase moves a goal into trouble, not when it was already there.
     (h.kind !== "gain" && h.statusAfter !== null && h.statusAfter !== h.statusBefore && SERIOUS.has(h.statusAfter)) ||
-    (metrics.liquidBufferAfterCents !== null && metrics.liquidBufferAfterCents < 0);
+    // Short in checking, unless moving spare savings in covers it.
+    (metrics.liquidBufferAfterCents !== null &&
+      metrics.liquidBufferAfterCents + (metrics.transfer?.amountCents ?? 0) < 0);
   return serious ? "danger" : "warn";
 }
 
 export function showCard(
   card: CopilotCard,
-  metrics: Pick<CopilotMetrics, "verdict" | "headline" | "liquidBufferAfterCents">,
+  metrics: Pick<CopilotMetrics, "verdict" | "headline" | "liquidBufferAfterCents" | "transfer">,
   openUrl: string,
   handlers: OverlayHandlers,
   options: { open?: boolean } = {},

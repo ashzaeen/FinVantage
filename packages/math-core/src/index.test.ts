@@ -27,6 +27,7 @@ import {
   rankAlternatives,
   safeRentThreshold,
   spareChecking,
+  spareSavings,
   splitPlan,
 } from "./index";
 
@@ -67,6 +68,7 @@ const snapshot: FinancialSnapshot = {
   bufferTargetCents: 250_000,
 };
 
+// Goals that use all of the sample savings ($18,500), so only spare checking is spare.
 const emergency: Goal = {
   id: "g1",
   userId: "u",
@@ -78,6 +80,9 @@ const emergency: Goal = {
   flexibility: "non_negotiable",
   linkedAccountId: null,
 };
+
+// Goals that use all of the sample savings ($18,500), so only spare checking is spare.
+const savingsAllUsed: Goal[] = [{ ...emergency, currentCents: 1_850_000 }];
 
 const impact = (over: Partial<GoalImpact>): GoalImpact => ({
   goalId: "g",
@@ -91,7 +96,7 @@ const impact = (over: Partial<GoalImpact>): GoalImpact => ({
 });
 
 test("rent replaces the current housing payment", () => {
-  const p = purchaseForSimulator(snapshot, { pageType: "rental", itemType: "rent_monthly", priceCents: 195_000, merchant: "x" });
+  const p = purchaseForSimulator(snapshot, { pageType: "rental", itemType: "rent_monthly", priceCents: 195_000, merchant: "x" }, savingsAllUsed);
   assert.deepEqual(p, { amountCents: 0, monthlyCents: 195_000 - 46_500 });
 });
 
@@ -101,7 +106,7 @@ test("safe rent keeps non-negotiable goals on schedule, rounded down to $50", ()
 });
 
 test("split plan pays checking down to the buffer and clears the promo card in time", () => {
-  const plan = splitPlan(snapshot, 149_900)!;
+  const plan = splitPlan(snapshot, 149_900, savingsAllUsed)!;
   assert.equal(plan.fromCheckingCents, 90_000);
   assert.equal(plan.onPromoCardCents, 59_900);
   assert.equal(plan.monthlyPaymentCents, 6_000);
@@ -109,18 +114,18 @@ test("split plan pays checking down to the buffer and clears the promo card in t
 });
 
 test("no split plan when checking covers it above the buffer", () => {
-  assert.equal(splitPlan(snapshot, 50_000), null);
+  assert.equal(splitPlan(snapshot, 50_000, savingsAllUsed), null);
 });
 
 test("vehicle financing includes interest", () => {
   assert.ok(loanPayment(2_800_000, 0.07, 60) > 2_800_000 / 60);
-  const m = computeCopilotMetrics(snapshot, { pageType: "vehicle_financing", itemType: "vehicle", priceCents: 2_800_000, merchant: "x" }, []);
+  const m = computeCopilotMetrics(snapshot, { pageType: "vehicle_financing", itemType: "vehicle", priceCents: 2_800_000, merchant: "x" }, [], savingsAllUsed);
   assert.ok(m.totalCostOfOwnershipCents! > 2_800_000);
   assert.ok(m.debtToIncomeAfter! > m.debtToIncomeBefore!);
 });
 
 test("fields that do not apply are null", () => {
-  const m = computeCopilotMetrics(snapshot, { pageType: "checkout", itemType: "retail_purchase", priceCents: 149_900, merchant: "x" }, []);
+  const m = computeCopilotMetrics(snapshot, { pageType: "checkout", itemType: "retail_purchase", priceCents: 149_900, merchant: "x" }, [], savingsAllUsed);
   assert.equal(m.safeRentThresholdCents, null);
   assert.equal(m.vehicle, null);
   assert.equal(m.fixedCostRatioBefore, null);
@@ -176,7 +181,7 @@ test("a minimum-only payment is a nudge, not a good move", () => {
   assert.equal(plan.isMinimumOnly, true);
   assert.equal(plan.canPayInFull, true);
   assert.equal(plan.remainingAnnualInterestCents, 19_000);
-  const m = computeCopilotMetrics(snapshot, { ...cardPayment, priceCents: 3_500 }, []);
+  const m = computeCopilotMetrics(snapshot, { ...cardPayment, priceCents: 3_500 }, [], savingsAllUsed);
   assert.equal(m.verdict, "neutral");
 });
 
@@ -186,16 +191,16 @@ test("paying more than the balance only counts the balance", () => {
 
 test("the simulator sees money back each month, and only the cash beyond spare checking", () => {
   // $3,400 checking - $2,500 cushion = $900 spare covers the $860 payment: no goal savings used.
-  assert.deepEqual(purchaseForSimulator(snapshot, cardPayment), { amountCents: 0, monthlyCents: -3_500 });
+  assert.deepEqual(purchaseForSimulator(snapshot, cardPayment, savingsAllUsed), { amountCents: 0, monthlyCents: -3_500 });
   const tight = { ...snapshot, bufferTargetCents: 300_000 }; // $400 spare
-  assert.deepEqual(purchaseForSimulator(tight, cardPayment), { amountCents: 46_000, monthlyCents: -3_500 });
+  assert.deepEqual(purchaseForSimulator(tight, cardPayment, savingsAllUsed), { amountCents: 46_000, monthlyCents: -3_500 });
 });
 
 test("a purchase spends spare checking first; only the rest reaches goal savings", () => {
   const laptop = { pageType: "checkout" as const, itemType: "retail_purchase" as const, priceCents: 149_900, merchant: "x" };
-  assert.deepEqual(purchaseForSimulator(snapshot, laptop), { amountCents: 59_900, monthlyCents: 0 });
+  assert.deepEqual(purchaseForSimulator(snapshot, laptop, savingsAllUsed), { amountCents: 59_900, monthlyCents: 0 });
   const flush = { ...snapshot, accounts: snapshot.accounts.map((a) => (a.type === "checking" ? { ...a, balanceCents: 1_500_000 } : a)) };
-  assert.deepEqual(purchaseForSimulator(flush, laptop), { amountCents: 0, monthlyCents: 0 });
+  assert.deepEqual(purchaseForSimulator(flush, laptop, savingsAllUsed), { amountCents: 0, monthlyCents: 0 });
 });
 
 test("spendable checking uses the bank's available balance when it reports one", () => {
@@ -206,10 +211,10 @@ test("spendable checking uses the bank's available balance when it reports one",
 
 test("the 0% split is offered only if it fits the card's credit and the monthly budget", () => {
   const promoWith = (over: object) => ({ ...snapshot, accounts: snapshot.accounts.map((a) => (a.annualRate === 0 && a.type === "credit_card" ? { ...a, ...over } : a)) });
-  assert.ok(splitPlan(snapshot, 149_900), "baseline: the split works");
-  assert.equal(splitPlan(promoWith({ availableBalanceCents: 50_000 }), 149_900), null, "$500 of credit can't take $599");
-  assert.ok(splitPlan(promoWith({ availableBalanceCents: 60_000 }), 149_900), "$600 of credit can");
-  assert.equal(splitPlan({ ...snapshot, monthlySavingsCents: 5_000 }, 149_900), null, "a payment above monthly savings isn't a plan");
+  assert.ok(splitPlan(snapshot, 149_900, savingsAllUsed), "baseline: the split works");
+  assert.equal(splitPlan(promoWith({ availableBalanceCents: 50_000 }), 149_900, savingsAllUsed), null, "$500 of credit can't take $599");
+  assert.ok(splitPlan(promoWith({ availableBalanceCents: 60_000 }), 149_900, savingsAllUsed), "$600 of credit can");
+  assert.equal(splitPlan({ ...snapshot, monthlySavingsCents: 5_000 }, 149_900, savingsAllUsed), null, "a payment above monthly savings isn't a plan");
 });
 
 test("alternatives rank the 23% card above investing above savings", () => {
@@ -218,14 +223,14 @@ test("alternatives rank the 23% card above investing above savings", () => {
 });
 
 test("paying off a high-rate card is a good move", () => {
-  const m = computeCopilotMetrics(snapshot, cardPayment, []);
+  const m = computeCopilotMetrics(snapshot, cardPayment, [], savingsAllUsed);
   assert.equal(m.verdict, "good");
   assert.equal(m.liquidBufferAfterCents, null);
 });
 
 test("an affordable checkout is good; one that breaks the cushion is caution", () => {
-  const small = computeCopilotMetrics(snapshot, { pageType: "checkout", itemType: "retail_purchase", priceCents: 12_900, merchant: "x" }, []);
-  const big = computeCopilotMetrics(snapshot, { pageType: "checkout", itemType: "retail_purchase", priceCents: 149_900, merchant: "x" }, []);
+  const small = computeCopilotMetrics(snapshot, { pageType: "checkout", itemType: "retail_purchase", priceCents: 12_900, merchant: "x" }, [], savingsAllUsed);
+  const big = computeCopilotMetrics(snapshot, { pageType: "checkout", itemType: "retail_purchase", priceCents: 149_900, merchant: "x" }, [], savingsAllUsed);
   assert.equal(small.verdict, "good");
   assert.equal(big.verdict, "caution");
 });
@@ -252,3 +257,44 @@ test("goal status turns a likelihood range into a plain word", async () => {
   assert.equal(goalStatus(0.25, 0.51), "unlikely");
   assert.equal(goalStatus(0, 0.05), "out of reach");
 });
+
+// A bank-linked person like Plaid Sandbox's: little in checking, a lot in savings no goal uses.
+const savingsRich: FinancialSnapshot = {
+  ...snapshot,
+  accounts: [
+    account({ id: "chk", type: "checking", balanceCents: 11_000, availableBalanceCents: 10_000 }),
+    account({ id: "mm", type: "savings", subtype: "money market", name: "Plaid Money Market", balanceCents: 4_320_000 }),
+    account({ id: "hsa", type: "savings", subtype: "hsa", name: "Plaid HSA", balanceCents: 600_900 }),
+    account({ id: "card", type: "credit_card", name: "Plaid Credit Card", balanceCents: 41_000, annualRate: 0.125, minimumPaymentCents: 2_000 }),
+  ],
+};
+const laptop = { pageType: "checkout" as const, itemType: "retail_purchase" as const, priceCents: 149_900, merchant: "x" };
+
+test("savings no goal uses count as spare; an HSA and goal savings don't", () => {
+  assert.equal(spareSavings(savingsRich, [emergency]), 4_320_000 - 1_200_000, "money market minus the goal's savings, no HSA");
+  assert.equal(spareSavings(snapshot, savingsAllUsed), 0);
+});
+
+test("checking can't cover it but spare savings can: move money in first, and it's good", () => {
+  const m = computeCopilotMetrics(savingsRich, laptop, [], [emergency]);
+  // $100 available - $1,499 = -$1,399; back to the $2,500 cushion takes $3,899.
+  assert.deepEqual(m.transfer, { fromAccountName: "Plaid Money Market", amountCents: 389_900 });
+  assert.equal(m.splitPlan, null, "savings beat borrowing, even at 0%");
+  assert.equal(m.verdict, "good");
+  assert.deepEqual(purchaseForSimulator(savingsRich, laptop, [emergency]), { amountCents: 0, monthlyCents: 0 });
+});
+
+test("the demo-like profile, whose goals use all its savings, gets no transfer", () => {
+  const m = computeCopilotMetrics(snapshot, laptop, [], savingsAllUsed);
+  assert.equal(m.transfer, null);
+  assert.ok(m.splitPlan, "the 0% split still applies");
+  assert.equal(m.verdict, "caution");
+});
+
+test("a card payment bigger than checking suggests moving spare savings in first", () => {
+  const payment = { pageType: "debt_payment" as const, itemType: "credit_card_payment" as const, priceCents: 41_000, merchant: "x" };
+  const m = computeCopilotMetrics(savingsRich, payment, [], [emergency]);
+  assert.equal(m.transfer?.fromAccountName, "Plaid Money Market");
+  assert.equal(m.transfer?.amountCents, 281_000, "$100 - $410 = -$310; back to $2,500 takes $2,810");
+});
+

@@ -30,6 +30,7 @@ const metrics: CopilotMetrics = {
   currentHousingCents: null,
   monthlyChangeCents: null,
   vehicle: null,
+  transfer: null,
   splitPlan: {
     fromCheckingCents: 90_000,
     onPromoCardCents: 59_900,
@@ -144,6 +145,20 @@ test("how far under the cushion is a math figure, so a model never has to subtra
   // Any other subtraction is still rejected.
   const wrong: LlmClient = { ...underBy, generate: async (request) => (await underBy.generate(request)).replace("$599 under", "$600 under") };
   assert.equal((await generateCopilotCard(wrong, context, noSplit)).source, "template");
+});
+
+test("short in checking but with spare savings: the card says to move money in first", () => {
+  const card = templateCard({ ...context, priceCents: 149_900 }, {
+    ...metrics,
+    verdict: "good",
+    headline: { ...metrics.headline, kind: "none", goalName: null, statusBefore: null, statusAfter: null },
+    liquidBufferAfterCents: -139_900,
+    splitPlan: null,
+    transfer: { fromAccountName: "Plaid Money Market", amountCents: 389_900 },
+  });
+  assert.match(card.tradeOff, /Checking alone is \$1,399 short, but you have savings/);
+  assert.match(card.smartMove, /Move \$3,899 from your Plaid Money Market to checking first/);
+  assert.ok(wordCount(cardText(card)) <= MAX_CARD_WORDS);
 });
 
 test("a purchase bigger than checking says how short, never a negative balance", () => {

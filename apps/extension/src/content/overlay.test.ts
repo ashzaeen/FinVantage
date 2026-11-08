@@ -34,6 +34,12 @@ test("a purchase bigger than checking is a red warning", () => {
   assert.equal(toneFor(caution({ statusAfter: "likely" }, -29_900)), "danger");
 });
 
+test("short in checking but covered by moving spare savings in is not red", () => {
+  const short = caution({ statusAfter: "likely" }, -139_900);
+  assert.equal(toneFor({ ...short, transfer: { fromAccountName: "Money Market", amountCents: 389_900 } }), "warn");
+  assert.equal(toneFor({ ...short, transfer: { fromAccountName: "Money Market", amountCents: 50_000 } }), "danger", "not enough to cover it");
+});
+
 test("a goal that was already struggling and slips a little is amber, not red", () => {
   // The demo's House down payment: unlikely before and after, pushed back 2 weeks by a laptop.
   assert.equal(toneFor(caution({ kind: "delay", delayMonths: 0.5, statusBefore: "unlikely", statusAfter: "unlikely" })), "warn");

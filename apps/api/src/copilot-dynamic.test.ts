@@ -20,7 +20,7 @@ function copilotFor(source: DemoProfileSource, context: CopilotContext = laptop)
   const accounts = source.bank.flatMap((item) => mapItemSnapshot(item, source.user.id, source.accountDetails).accounts);
   const snapshot = buildSnapshot(source.user, accounts, source.income, TODAY);
   const inputs = { snapshot, goals: source.goals, lifeEvents: source.lifeEvents, whatIf: null };
-  const metrics = computeCopilotMetrics(snapshot, context, evaluatePurchase(inputs, purchaseForSimulator(snapshot, context)), source.goals);
+  const metrics = computeCopilotMetrics(snapshot, context, evaluatePurchase(inputs, purchaseForSimulator(snapshot, context, source.goals)), source.goals);
   return { metrics, card: templateCard(context, metrics) };
 }
 

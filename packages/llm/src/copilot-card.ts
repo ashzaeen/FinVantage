@@ -124,6 +124,7 @@ export function cardFigures(context: CopilotContext, metrics: CopilotMetrics): R
   // The cushion only means something next to what checking would be left at. Without that
   // figure, a model would pair the cushion with rent or a car loan, which the math never said.
   if (f.checkingAfter || f.checkingShort) f.bufferTarget = formatUsd(metrics.bufferTargetCents);
+  if (metrics.transfer) f.transferAmount = formatUsd(metrics.transfer.amountCents);
   // How far under the cushion, computed here so a model never has to subtract.
   const leftCents = metrics.debtPayment?.checkingAfterCents ?? metrics.liquidBufferAfterCents;
   if (f.checkingAfter && leftCents !== null && leftCents < metrics.bufferTargetCents) {
@@ -192,6 +193,9 @@ function keyFigures(metrics: CopilotMetrics, f: Record<string, string>): Copilot
   if (f.debtFreed) figures.push({ label: "Freed up each month", value: f.debtFreed });
   if (f.checkingAfter) figures.push({ label: "Left in checking", value: f.checkingAfter });
   if (f.checkingShort) figures.push({ label: "Short in checking", value: f.checkingShort });
+  if (f.transferAmount && metrics.transfer) {
+    figures.push({ label: `Move from ${metrics.transfer.fromAccountName}`, value: f.transferAmount });
+  }
   if (f.bufferTarget) figures.push({ label: "Your safety cushion", value: f.bufferTarget });
   if (f.fixedCostsBefore && f.fixedCostsAfter) {
     figures.push({ label: "Income going to bills", value: `${f.fixedCostsBefore} → ${f.fixedCostsAfter}` });
@@ -254,8 +258,14 @@ export function templateCard(context: CopilotContext, metrics: CopilotMetrics): 
       return {
         ...base,
         impact: h.kind === "gain" ? headlineSentence(h, f, "This purchase") : "This fits your plan: your goals stay on track.",
-        tradeOff: `You'd still have ${f.checkingAfter} in checking, more than your ${f.bufferTarget} safety cushion.`,
-        smartMove: cardIsCostly
+        tradeOff: metrics.transfer
+          ? f.checkingShort
+            ? `Checking alone is ${f.checkingShort} short, but you have savings you aren't using for a goal.`
+            : `It would leave ${f.checkingAfter} in checking, under your ${f.bufferTarget} safety cushion, but you have spare savings.`
+          : `You'd still have ${f.checkingAfter} in checking, more than your ${f.bufferTarget} safety cushion.`,
+        smartMove: metrics.transfer
+          ? `Move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking first. That keeps your ${f.bufferTarget} safety cushion.`
+          : cardIsCostly
           ? `Pay from checking, not your ${top.label}. That card charges ${f.topDebtRate} interest if you carry a balance.`
           : "If you planned for it, enjoy it.",
       };
@@ -270,6 +280,8 @@ export function templateCard(context: CopilotContext, metrics: CopilotMetrics): 
     // option or waiting instead. A split protects the cushion, not the goal.
     if (goalBeyondFinancing(h)) {
       smartMove = `A cheaper option, or waiting a few months, protects your ${h.goalName!}. Splitting the cost wouldn't.`;
+    } else if (metrics.transfer) {
+      smartMove = `Move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking first, so you keep your ${f.bufferTarget} safety cushion.`;
     } else if (metrics.splitPlan && f.splitOnCard) {
       smartMove = `Pay ${f.splitFromChecking} now and put ${f.splitOnCard} on your ${metrics.splitPlan.promoCardName} (${f.splitMonthly}/month). You keep your safety cushion and pay no interest.`;
     } else if (underBuffer) {
@@ -345,7 +357,9 @@ function debtCard(
   }
 
   let smartMove: string;
-  if (f.checkingShort) {
+  if (metrics.transfer) {
+    smartMove = `Move ${f.transferAmount} from your ${metrics.transfer.fromAccountName} to checking first, so you keep your ${f.bufferTarget} safety cushion.`;
+  } else if (f.checkingShort) {
     smartMove = `Checking would be ${f.checkingShort} short. Pay what you can now and the rest on payday.`;
   } else if (underBuffer) {
     smartMove = `It drops checking to ${f.checkingAfter}, below your ${f.bufferTarget} safety cushion. Splitting it across two paydays avoids that.`;
@@ -390,6 +404,7 @@ const SYSTEM_PROMPT = [
   "tradeOff: one sentence on the cost, using the given figures.",
   "smartMove: one sentence with a concrete next step the reader could take. If a split plan is given, describe it. If none is given, never suggest putting the cost on a card or financing it.",
   "If `figures.checkingShort` is given, the reader doesn't have enough in checking: say they'd be that amount short. Never write a negative dollar amount.",
+  "If `transferFrom` is given, the reader has savings no goal is using: the next step is moving `figures.transferAmount` from that account to checking first. Prefer it over any card or financing.",
   "Plain words only, like you'd text a friend. Short sentences. Call `bufferTarget` the reader's \"safety cushion\" (money they keep in checking), and mention it only when `figures.checkingAfter` is given. `checkingAfter` is what would be left in checking; the cushion is the amount they like to keep. Never call one by the other's name. If `figures.underCushionBy` is given, that is how far below the cushion they'd be. Say \"bills\" for fixed costs and \"debt payments\" for debt-to-income. Never use: buffer, liquidity, fixed costs, debt-to-income, allocate, financial health, optimize, leverage.",
   "Copy figures exactly as given, including symbols. Never calculate, round, invent, or alter a number. Do not mention any number that is not in `figures`.",
   "Tone: direct and warm, like a friend who is good with money. Make the goal feel real, but never shame or lecture. Suggest, never instruct.",
@@ -444,6 +459,7 @@ export async function generateCopilotCard(
     debtAccount: metrics.debtPayment?.accountName ?? null,
     figures,
     splitPlanCard: figures.splitOnCard ? (metrics.splitPlan?.promoCardName ?? null) : null,
+    transferFrom: metrics.transfer?.fromAccountName ?? null,
     exampleCard: { impact: fallback.impact, tradeOff: fallback.tradeOff, smartMove: fallback.smartMove },
   });
 
@@ -479,6 +495,7 @@ export async function generateCopilotCard(
   // Names can contain digits ("0% Promo Card"), so they count as allowed text too.
   const names = [
     figures.splitOnCard ? metrics.splitPlan?.promoCardName : undefined,
+    metrics.transfer?.fromAccountName,
     metrics.debtPayment?.accountName,
     h.goalName,
     ...metrics.alternatives.map((a) => a.label),

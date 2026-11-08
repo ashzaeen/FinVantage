@@ -14,7 +14,7 @@ export function registerCopilotRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     if (!inputs) return { status: "no_data" as const };
 
     // Order matters: simulator, then math core, then LLM. Words come last.
-    const goalImpacts = evaluatePurchase(inputs, purchaseForSimulator(inputs.snapshot, body));
+    const goalImpacts = evaluatePurchase(inputs, purchaseForSimulator(inputs.snapshot, body, inputs.goals));
     const metrics = computeCopilotMetrics(inputs.snapshot, body, goalImpacts, inputs.goals);
     // Gemini writes cards only for the listed merchants (COPILOT_GEMINI_MERCHANTS), so the
     // free-tier quota goes to live sites. The rest get the template card with no model call.
