@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Cents, Id, IsoDate } from "./common";
 
-export const LifeEventType = z.enum(["child", "house_purchase", "job_change", "move"]);
+export const LifeEventType = z.enum(["child", "house_purchase", "job_change", "move", "wedding", "custom"]);
 export type LifeEventType = z.infer<typeof LifeEventType>;
 
 export const LIFE_EVENT_LABEL: Record<LifeEventType, string> = {
@@ -9,6 +9,8 @@ export const LIFE_EVENT_LABEL: Record<LifeEventType, string> = {
   house_purchase: "Buying a house",
   job_change: "Changing jobs",
   move: "Moving",
+  wedding: "Getting married",
+  custom: "A life change",
 };
 
 /** The form and the free-text parser both produce this, so the simulator never cares which ran. */

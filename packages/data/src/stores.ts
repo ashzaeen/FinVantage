@@ -8,6 +8,7 @@ import type {
   EmailScheduleLogEntry,
   Goal,
   LifeEvent,
+  LifeScenario,
   NewAccount,
   NewGoal,
   QuarterlyReport,
@@ -75,6 +76,13 @@ export interface LedgerStore {
 export interface DocumentStore {
   listLifeEvents(userId: string): Promise<LifeEvent[]>;
   saveLifeEvent(event: LifeEvent): Promise<LifeEvent>;
+  /** False if the user has no such event. Used to undo a confirmed life scenario. */
+  deleteLifeEvent(userId: string, id: string): Promise<boolean>;
+  /** Newest first. */
+  listLifeScenarios(userId: string): Promise<LifeScenario[]>;
+  saveLifeScenario(scenario: LifeScenario): Promise<LifeScenario>;
+  getLifeScenario(userId: string, id: string): Promise<LifeScenario | null>;
+  deleteLifeScenario(userId: string, id: string): Promise<boolean>;
   saveSimulationRun(run: SimulationRun): Promise<SimulationRun>;
   getSimulationRun(userId: string, id: string): Promise<SimulationRun | null>;
   /** Newest first. */

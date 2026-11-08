@@ -30,17 +30,11 @@ function icon(tone: Tone): HTMLElement {
 const STYLES = `
   :host { all: initial; }
   .wrap {
-    --surface: #fbfaf7; --raised: #ffffff; --border: #e4e1d8; --ink: #1d1d1b; --muted: #57554f;
-    --accent: #2563a8; --good: #2c7a4b; --warn: #a8550b; --danger: #b3392f; --track: #ece9e1;
+    --surface: #f8f9fe; --raised: #ffffff; --border: #edf0f7; --ink: #16192c; --muted: #626981;
+    --accent: #544af7; --good: #008f68; --warn: #a85d00; --danger: #d63857; --track: #e9ebf3;
     position: fixed; right: 16px; bottom: 16px; z-index: 2147483647;
-    color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink); font: 15px/1.5 "Roboto", "Segoe UI", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
-  }
-  @media (prefers-color-scheme: dark) {
-    .wrap {
-      --surface: #161614; --raised: #1f1f1c; --border: #35342f; --ink: #f4f2ec; --muted: #b9b6ad;
-      --accent: #8dbbed; --good: #7fd19f; --warn: #f2b25c; --danger: #f08b80; --track: #2c2b27;
-    }
   }
   * { box-sizing: border-box; font: inherit; color: inherit; margin: 0; }
   .wrap[data-tone="danger"] { --tone: var(--danger); }
@@ -66,8 +60,8 @@ const STYLES = `
 
   .card {
     width: min(380px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto;
-    background: var(--raised); border: 1px solid var(--border); border-top: 5px solid var(--tone);
-    border-radius: 14px; box-shadow: 0 10px 34px rgb(0 0 0 / 0.2); animation: open 200ms ease-out;
+    background: var(--raised); border: 1px solid var(--border); border-top: 4px solid var(--tone);
+    border-radius: 14px; box-shadow: 0 8px 28px rgb(22 25 44 / 0.18); animation: open 200ms ease-out;
   }
   .top { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 0 18px; }
   .verdict { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--tone); }
@@ -78,6 +72,7 @@ const STYLES = `
   .close:hover { background: var(--surface); color: var(--ink); }
 
   .headline { padding: 8px 18px 0; font-size: 19px; line-height: 1.3; font-weight: 650; letter-spacing: -0.01em; }
+  .verdict, .headline { font-family: "Poppins", "Roboto", system-ui, sans-serif; }
 
   .goal { margin: 14px 18px 0; padding: 12px 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); }
   .goal-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -104,7 +99,6 @@ const STYLES = `
     display: inline-block; text-decoration: none; background: var(--accent); color: #fff;
     padding: 10px 16px; border-radius: 10px; font-weight: 650; font-size: 15px;
   }
-  @media (prefers-color-scheme: dark) { .primary { color: #10233a; } }
   .link { border: 0; background: none; padding: 0; cursor: pointer; color: var(--muted); font-size: 14px; text-decoration: underline; text-underline-offset: 2px; }
   .link:hover { color: var(--ink); }
   .note { padding: 0 18px 14px; font-size: 12px; color: var(--muted); }
@@ -269,7 +263,7 @@ export function showCard(
     parts.push(list);
   }
 
-  const open = el("a", "See the full picture", "primary");
+  const open = el("a", "Compare With All Goals", "primary");
   open.href = openUrl;
   open.target = "_blank";
   open.rel = "noopener";

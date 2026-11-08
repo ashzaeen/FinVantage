@@ -5,6 +5,7 @@ import {
   EmailSchedule,
   EmailScheduleLogEntry,
   LifeEvent,
+  LifeScenario,
   QuarterlyReport,
   Recommendation,
   SimulationRun,
@@ -34,6 +35,7 @@ class MongoDocumentStore implements DocumentStore {
       await this.client.connect();
       await Promise.all([
         this.db.collection("life_events").createIndex({ userId: 1, createdAt: -1 }),
+        this.db.collection("life_scenarios").createIndex({ userId: 1, createdAt: -1 }),
         this.db.collection("simulation_runs").createIndex({ userId: 1, createdAt: -1 }),
         this.db.collection("copilot_events").createIndex({ userId: 1, createdAt: -1 }),
         this.db.collection("recommendations").createIndex({ userId: 1, createdAt: -1 }),
@@ -75,6 +77,33 @@ class MongoDocumentStore implements DocumentStore {
   async saveLifeEvent(event: LifeEvent) {
     await this.save("life_events", event);
     return event;
+  }
+
+  async deleteLifeEvent(userId: string, id: string) {
+    await this.ready();
+    const result = await this.db.collection("life_events").deleteOne({ userId, id });
+    return result.deletedCount > 0;
+  }
+
+  async listLifeScenarios(userId: string) {
+    return LifeScenario.array().parse(await this.list("life_scenarios", userId));
+  }
+
+  async saveLifeScenario(scenario: LifeScenario) {
+    await this.save("life_scenarios", scenario);
+    return scenario;
+  }
+
+  async getLifeScenario(userId: string, id: string) {
+    await this.ready();
+    const value = await this.db.collection("life_scenarios").findOne({ userId, id });
+    return value ? LifeScenario.parse(value) : null;
+  }
+
+  async deleteLifeScenario(userId: string, id: string) {
+    await this.ready();
+    const result = await this.db.collection("life_scenarios").deleteOne({ userId, id });
+    return result.deletedCount > 0;
   }
 
   async saveSimulationRun(run: SimulationRun) {

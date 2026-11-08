@@ -40,7 +40,8 @@
       "targetDate": "2027-06-01",
       "priorityRank": 2,
       "flexibility": "flexible",
-      "linkedAccountId": "acc_savings"
+      "linkedAccountId": "acc_savings",
+      "kind": "trip"
     },
     {
       "id": "goal_house",

@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { z } from "zod";
-import type { SimulationInputs, SimulationRequest, SimulationRun, WhatIf } from "@finvantage/contracts";
+import type { LifeEventPreviewRequest, SimulationInputs, SimulationRequest, SimulationRun, WhatIf } from "@finvantage/contracts";
 import { buildSnapshot } from "@finvantage/data";
-import { simulate } from "@finvantage/simulator";
+import { diffOutcomes, simulate } from "@finvantage/simulator";
 import type { AppDeps } from "./deps";
 import { HttpError } from "./mount";
 import { averageCashFlow, monthlyCashFlow, monthsBefore } from "./reporting/cashflow";
@@ -72,4 +72,64 @@ export async function runSimulation(
     deps.live.publish(userId, { type: "simulation.updated", runId: run.id });
   }
   return run;
+}
+
+/** Compare an unsaved event with the same live inputs, seed, and goal funding order. */
+export async function previewLifeEvent(
+  deps: AppDeps,
+  userId: string,
+  request: z.output<typeof LifeEventPreviewRequest>,
+) {
+  const inputs = await loadInputs(deps, userId, request.whatIf ?? null);
+  if (!inputs) throw new HttpError(404, "no_data", "Load the demo profile first.");
+
+  const options = { seed: request.seed, paths: request.paths };
+  const before = simulate(inputs, options);
+  const previewEvent = {
+    ...request.event,
+    id: "__life_event_preview__",
+    userId,
+  };
+  const after = simulate({
+    ...inputs,
+    lifeEvents: [...inputs.lifeEvents, previewEvent],
+  }, options);
+  const goalChanges = diffOutcomes(inputs.goals, before, after);
+  const goalDetails = goalChanges.map((change) => {
+    const low = change.probabilityLowDelta;
+    const high = change.probabilityHighDelta;
+    const direction = low === 0 && high === 0
+      ? "unchanged"
+      : low <= 0 && high <= 0
+        ? "less_likely"
+        : low >= 0 && high >= 0
+          ? "more_likely"
+          : "mixed";
+    return {
+      goalId: change.goalId,
+      direction,
+      lowChangePercentagePoints: Math.round(low * 1000) / 10,
+      highChangePercentagePoints: Math.round(high * 1000) / 10,
+    } as const;
+  });
+  const monthlySavingsBeforeCents = inputs.snapshot.monthlySavingsCents + (inputs.whatIf?.monthlySavingsDeltaCents ?? 0);
+
+  return {
+    before,
+    after,
+    goalChanges,
+    analysis: {
+      monthlySavingsBeforeCents,
+      monthlySavingsDuringEventCents: request.event.recurrence === "recurring"
+        ? monthlySavingsBeforeCents + request.event.dollarImpactCents
+        : null,
+      oneTimeEventImpactCents: request.event.recurrence === "one_time" ? request.event.dollarImpactCents : null,
+      goalsLessLikely: goalDetails.filter((goal) => goal.direction === "less_likely").length,
+      goalsMoreLikely: goalDetails.filter((goal) => goal.direction === "more_likely").length,
+      goalsMixed: goalDetails.filter((goal) => goal.direction === "mixed").length,
+      goalsUnchanged: goalDetails.filter((goal) => goal.direction === "unchanged").length,
+      goalsDelayed: goalChanges.filter((goal) => (goal.delayMonths ?? 0) > 0).length,
+      goalDetails,
+    },
+  };
 }

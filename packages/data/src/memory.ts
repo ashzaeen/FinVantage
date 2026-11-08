@@ -9,6 +9,7 @@ import {
   type Goal,
   type GoalStatus,
   type LifeEvent,
+  type LifeScenario,
   type NewGoal,
   type QuarterlyReport,
   type Recommendation,
@@ -246,6 +247,7 @@ export class MemoryLedgerStore implements LedgerStore {
 
 export class MemoryDocumentStore implements DocumentStore {
   private lifeEvents: LifeEvent[] = [];
+  private lifeScenarios: LifeScenario[] = [];
   private runs: SimulationRun[] = [];
   private copilotEvents: CopilotEvent[] = [];
   private recommendations: Recommendation[] = [];
@@ -260,6 +262,35 @@ export class MemoryDocumentStore implements DocumentStore {
   async saveLifeEvent(event: LifeEvent) {
     this.lifeEvents.push(event);
     return event;
+  }
+
+  async deleteLifeEvent(userId: string, id: string) {
+    const index = this.lifeEvents.findIndex((e) => e.userId === userId && e.id === id);
+    if (index < 0) return false;
+    this.lifeEvents.splice(index, 1);
+    return true;
+  }
+
+  async listLifeScenarios(userId: string) {
+    return this.lifeScenarios.filter((s) => s.userId === userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async saveLifeScenario(scenario: LifeScenario) {
+    const index = this.lifeScenarios.findIndex((s) => s.id === scenario.id && s.userId === scenario.userId);
+    if (index >= 0) this.lifeScenarios[index] = scenario;
+    else this.lifeScenarios.push(scenario);
+    return scenario;
+  }
+
+  async getLifeScenario(userId: string, id: string) {
+    return this.lifeScenarios.find((s) => s.userId === userId && s.id === id) ?? null;
+  }
+
+  async deleteLifeScenario(userId: string, id: string) {
+    const index = this.lifeScenarios.findIndex((s) => s.userId === userId && s.id === id);
+    if (index < 0) return false;
+    this.lifeScenarios.splice(index, 1);
+    return true;
   }
 
   async saveSimulationRun(run: SimulationRun) {
