@@ -15,12 +15,28 @@ import { registerProfileRoutes } from "./routes/profile";
 import { registerSimulationRoutes } from "./routes/simulations";
 import { registerTransactionRoutes } from "./routes/transactions";
 
+/**
+ * `WEB_ORIGIN` is a comma-separated list. An entry may use `*` for one subdomain label, such as
+ * `https://finvantage-web-*.vercel.app`, so Vercel preview deployments can call the API.
+ */
+export function originMatcher(list: string): (origin: string) => boolean {
+  const patterns = list
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const escaped = entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[a-z0-9-]+");
+      return new RegExp(`^${escaped}$`, "i");
+    });
+  return (origin) => patterns.some((pattern) => pattern.test(origin));
+}
+
 export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   const app = new Hono<AppEnv>();
-  const webOrigin = env.WEB_ORIGIN ?? "http://localhost:3000";
+  const allowOrigin = originMatcher(env.WEB_ORIGIN ?? "http://localhost:3000");
   const demoToken = env.DEMO_API_TOKEN ?? "demo-token";
 
-  app.use("*", cors({ origin: webOrigin }));
+  app.use("*", cors({ origin: (origin) => (allowOrigin(origin) ? origin : null) }));
   app.get("/health", (c) => c.json({ ok: true, llm: deps.llm.provider, live: deps.live.transport }));
 
   // STUB(platform): one shared demo token maps to the demo user. EventSource cannot set headers,

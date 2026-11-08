@@ -1,0 +1,10 @@
+# Uploaded by `vercel deploy` from the repo root. Keep the upload small.
+*.pdf
+docs/
+infra/
+apps/extension/dist/
+**/.next/
+**/.vercel/
+**/node_modules/
+.env
+.env.*
