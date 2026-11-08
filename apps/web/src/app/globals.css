@@ -70,6 +70,26 @@
   /* Budget bars: the lighter bar behind spending shows the projected month end */
   --budget-projected:      #cbc7fc;
   --budget-projected-over: #ffc2ca;
+
+  /* Landing page v2. Distinct names, not a redefinition of --accent/--ink/etc. above, so this
+     never reskins the dashboard. All checked against WCAG AA (4.5:1) on their stated backgrounds. */
+  --landing-primary:        #4F46E5;
+  --landing-primary-hover:  #4338CA;
+  --landing-primary-dark:   #3730A3;
+  --landing-tint-50:        #EEF2FF;
+  --landing-tint-100:       #E0E7FF;
+  --landing-tint-200:       #C7D2FE;
+  --landing-text:           #111827;
+  --landing-text-secondary: #4B5563;
+  --landing-text-muted:     #6B7280;
+  --landing-border:         #E5E7EB;
+  --landing-border-subtle:  #EEF0F4;
+  --landing-section-bg:     #F7F7FB;
+  --landing-dark-bg:        #111827;
+  --landing-warning-bg:     #FFF7ED;
+  --landing-warning-text:   #9A3412;
+  --landing-severe-bg:      #FEF2F2;
+  --landing-severe-text:    #991B1B;
 }
 
 @theme inline {
@@ -201,6 +221,42 @@ p, span, label, input, button, table, td, th,
   transform: scale(1.06);
 }
 .advisor-range:focus-visible { outline: none; }
+
+/* Same technique as .advisor-range, in the landing page's own primary color. The track stays
+ * visually thin; PurchaseDemo.tsx wraps this in a 44px-tall flex container for the touch target. */
+.landing-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--landing-primary) 0 var(--fill, 0%), var(--landing-tint-100) var(--fill, 0%) 100%);
+  cursor: pointer;
+}
+.landing-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: white;
+  border: 2px solid var(--landing-primary);
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+  transition: box-shadow 150ms, transform 150ms;
+}
+.landing-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: white;
+  border: 2px solid var(--landing-primary);
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+}
+.landing-range:hover::-webkit-slider-thumb,
+.landing-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 6px rgba(79, 70, 229, 0.15);
+  transform: scale(1.06);
+}
+.landing-range:focus-visible { outline: 2px solid var(--landing-primary); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
   .advisor-visual-enter, .advisor-visual-progress { animation: none; }
