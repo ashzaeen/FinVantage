@@ -179,6 +179,18 @@ export const routes = {
     path: "/v1/copilot/events",
     response: z.array(CopilotEvent),
   }),
+  /** Removes one Copilot event from the user's activity feed. */
+  deleteCopilotEvent: route({
+    method: "DELETE",
+    path: "/v1/copilot/events/:id",
+    response: z.object({ deleted: z.literal(true) }),
+  }),
+  /** Removes all of the user's Copilot events. Returns how many were removed. */
+  clearCopilotEvents: route({
+    method: "DELETE",
+    path: "/v1/copilot/events",
+    response: z.object({ deleted: z.number().int().nonnegative() }),
+  }),
 
   // Agents
   getAdvice: route({

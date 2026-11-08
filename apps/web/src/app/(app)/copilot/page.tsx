@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { api } from "@/lib/api";
 import { CopilotFeed } from "./CopilotFeed";
+import { InstallExtension } from "./InstallExtension";
 
 export default async function CopilotPage() {
   const events = await api.listCopilotEvents();
@@ -8,7 +9,10 @@ export default async function CopilotPage() {
   return (
     <>
       <PageHeader title="Copilot activity" tier="P0" prd="6" />
-      <CopilotFeed initial={events} />
+      <div className="space-y-6">
+        <InstallExtension />
+        <CopilotFeed initial={events} />
+      </div>
     </>
   );
 }

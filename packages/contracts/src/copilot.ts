@@ -63,6 +63,20 @@ export const CopilotMetrics = z.object({
     .object({ fromAccountName: z.string(), amountCents: Cents })
     .nullable()
     .default(null),
+  /**
+   * Checkout: how big the purchase is next to the user's money. Shares are fractions (0.5 = half);
+   * null when there is no income or no spare cash to compare with. `big` makes an affordable
+   * purchase "neutral" (worth a look) instead of "good".
+   */
+  purchaseSize: z
+    .object({ monthlyIncomeShare: z.number().nullable(), spareCashShare: z.number().nullable(), big: z.boolean() })
+    .nullable()
+    .default(null),
+  /** Checkout: the highest-rate card or personal loan above the assumed investing return, to pay first. */
+  payFirst: z
+    .object({ accountName: z.string(), balanceCents: Cents, annualRate: z.number() })
+    .nullable()
+    .default(null),
   /** Checkout: pay part from checking down to the buffer, the rest on a 0% promo card. */
   splitPlan: z
     .object({

@@ -548,4 +548,18 @@ test("the income summary totals deposits by month and source, and leaves out tra
   assert.ok(Math.abs(income.categories.reduce((sum, c) => sum + c.share, 0) - 1) < 1e-9);
   assert.ok(income.recent.every((t) => t.amountCents > 0 && t.category === "income"));
   assert.ok(income.recent.length <= 10);
+
+test("Copilot events can be deleted one at a time or cleared, only the user's own", async () => {
+  const { client } = setup();
+  const first = await client.evaluateCopilot({ body: rental });
+  const second = await client.evaluateCopilot({ body: { ...rental, priceCents: 150_000 } });
+  assert.ok(first.status === "ok" && second.status === "ok");
+  if (first.status !== "ok" || second.status !== "ok") return;
+
+  assert.deepEqual(await client.deleteCopilotEvent({ params: { id: first.eventId } }), { deleted: true });
+  assert.deepEqual((await client.listCopilotEvents()).map((e) => e.id), [second.eventId]);
+  await assert.rejects(client.deleteCopilotEvent({ params: { id: first.eventId } }), /No such Copilot event/);
+
+  assert.deepEqual(await client.clearCopilotEvents(), { deleted: 1 });
+  assert.deepEqual(await client.listCopilotEvents(), []);
 });

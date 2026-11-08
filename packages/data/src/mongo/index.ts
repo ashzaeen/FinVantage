@@ -113,6 +113,18 @@ class MongoDocumentStore implements DocumentStore {
     return CopilotEvent.array().parse(await this.list("copilot_events", userId, range));
   }
 
+  async deleteCopilotEvent(userId: string, id: string) {
+    await this.ready();
+    const result = await this.db.collection("copilot_events").deleteOne({ userId, id });
+    return result.deletedCount > 0;
+  }
+
+  async clearCopilotEvents(userId: string) {
+    await this.ready();
+    const result = await this.db.collection("copilot_events").deleteMany({ userId });
+    return result.deletedCount;
+  }
+
   async saveRecommendation(recommendation: Recommendation) {
     await this.save("recommendations", recommendation);
     return recommendation;

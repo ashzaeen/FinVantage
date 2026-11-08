@@ -22,6 +22,7 @@ import {
   computeCopilotMetrics,
   debtPaymentPlan,
   loanPayment,
+  payFirstDebt,
   pickHeadline,
   purchaseForSimulator,
   rankAlternatives,
@@ -314,3 +315,34 @@ test("a purchase that drops checking below the cushion still restores it", () =>
   assert.equal(m.verdict, "good", "the transfer keeps the cushion");
 });
 
+
+test("a big purchase the person can afford is worth a look, not an automatic yes", () => {
+  // Plaid Sandbox's $4,799 MacBook Pro: covered by spare savings, but 77% of a month's income.
+  const macbook = { ...laptop, priceCents: 479_900 };
+  const m = computeCopilotMetrics(savingsRich, macbook, [], [emergency]);
+  assert.equal(m.verdict, "neutral");
+  assert.ok(m.purchaseSize?.big);
+  assert.equal(Math.round((m.purchaseSize?.monthlyIncomeShare ?? 0) * 100), 77);
+  assert.ok(m.transfer, "still says where the money can come from");
+});
+
+test("a small purchase stays good, even with a card balance", () => {
+  const tv = { ...laptop, priceCents: 51_999 };
+  const m = computeCopilotMetrics(savingsRich, tv, [], [emergency]);
+  assert.equal(m.verdict, "good");
+  assert.equal(m.purchaseSize?.big, false);
+});
+
+test("high-interest debt to pay first: the highest-rate card or personal loan above 7%", () => {
+  assert.deepEqual(payFirstDebt(savingsRich), { accountName: "Plaid Credit Card", balanceCents: 41_000, annualRate: 0.125 });
+  assert.equal(payFirstDebt(snapshot)?.accountName, "Cash Rewards Card");
+  const lowRate = { ...snapshot, accounts: snapshot.accounts.filter((a) => a.type !== "credit_card") };
+  assert.equal(payFirstDebt(lowRate), null, "a 6.25% mortgage isn't paid first");
+});
+
+test("the demo profile's purchases keep their verdicts", () => {
+  for (const price of [1_500, 149_900, 329_900]) {
+    const m = computeCopilotMetrics(snapshot, { ...laptop, priceCents: price }, [], savingsAllUsed);
+    assert.notEqual(m.verdict, "neutral", `$${price / 100}`);
+  }
+});

@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const dist = join(root, "dist");
+// EXTENSION_OUT_DIR lets the web app package its own copy without touching the dev build.
+const dist = process.env.EXTENSION_OUT_DIR ? resolve(process.env.EXTENSION_OUT_DIR) : join(root, "dist");
 const watch = process.argv.includes("--watch");
 const MOCK_PORT = 4100;
 
