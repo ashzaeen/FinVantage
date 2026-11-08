@@ -38,6 +38,10 @@ page -> content/detect.ts -> content/index.ts -> background.ts -> API
 - Keep `host_permissions` and `matches` to the listed domains. Add production URLs only when deployed.
 - Everything baked into the bundle is public, so no real secrets.
 
+## Installing it
+
+Anyone can install it from the dashboard's **Copilot** tab: "Download extension", unzip, then Load unpacked in `chrome://extensions` with Developer mode on. The web app's build packages it (`apps/web/scripts/bundle-extension.mjs`, which sets `EXTENSION_OUT_DIR`), pointed at that dashboard's API and origin, so the live download talks to the live site.
+
 ## Working on it
 
 ```bash

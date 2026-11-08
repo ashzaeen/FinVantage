@@ -11,3 +11,5 @@ next-env.d.ts
 coverage/
 .vercel
 dist-live/
+# Built by apps/web/scripts/bundle-extension.mjs on every web build.
+apps/web/public/finvantage-copilot.zip
