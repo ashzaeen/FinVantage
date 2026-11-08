@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatPercent, formatUsd, parentCategoryId, type SpendingBreakdownRow, type SpendingCategory } from "@finvantage/contracts";
 import { CategoryIcon } from "@/components/spending/CategoryIcon";
 import { Card } from "@/components/ui/Card";
@@ -24,6 +24,44 @@ interface Slice {
   cents: number;
   /** Whether anything sits under it to drill into. */
   hasChildren: boolean;
+}
+
+/** The ring sweeps in like a Recharts pie (the Investments page): 1.5 seconds, after a short pause. */
+const SWEEP_MS = 1500;
+const SWEEP_DELAY_MS = 400;
+const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+
+/** 0 to 1 over the sweep, restarting whenever `key` changes. Always ends at 1. */
+function useSweep(key: string): number {
+  const [progress, setProgress] = useState(1);
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setProgress(1);
+      return;
+    }
+    let frame = 0;
+    setProgress(0);
+    const delay = setTimeout(() => {
+      const start = performance.now();
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - start) / SWEEP_MS);
+        setProgress(easeInOut(t));
+        if (t < 1) frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
+    }, SWEEP_DELAY_MS);
+    // Animation frames pause in background tabs; always finish drawn.
+    const settle = setTimeout(() => {
+      cancelAnimationFrame(frame);
+      setProgress(1);
+    }, SWEEP_DELAY_MS + SWEEP_MS + 100);
+    return () => {
+      clearTimeout(delay);
+      clearTimeout(settle);
+      cancelAnimationFrame(frame);
+    };
+  }, [key]);
+  return progress;
 }
 
 const point = (radius: number, angle: number) => [CENTER + radius * Math.sin(angle), CENTER - radius * Math.cos(angle)] as const;
@@ -71,6 +109,8 @@ export function CategoryPie({
 }) {
   const [path, setPath] = useState<string[]>([]);
   const [hovered, setHovered] = useState<string | null>(null);
+  // Restarts on each drill-down, like a fresh chart.
+  const sweep = useSweep(path.join("/"));
 
   const labelOf = useMemo(() => new Map(categories.map((c) => [c.id, c.label])), [categories]);
 
@@ -147,11 +187,12 @@ export function CategoryPie({
       ) : (
         <div className="grid items-center gap-4 sm:grid-cols-[minmax(170px,0.9fr)_1.1fr]">
           <div className="relative mx-auto aspect-square w-full max-w-[230px]">
-            {/* `key` restarts the entrance each time the level changes. */}
-            <svg key={path.join("/")} viewBox={`0 0 ${SIZE} ${SIZE}`} className="category-pie h-full w-full overflow-visible" role="img" aria-label={title}>
-              {/* The coloured slices lift on hover but ignore the mouse. */}
+            <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-full w-full overflow-visible" role="img" aria-label={title}>
+              {/* The coloured slices lift on hover but ignore the mouse. They sweep in clockwise from the top. */}
               {arcs.map(({ slice, color, start, end, mid }) => {
                 const lifted = hovered === slice.id;
+                const shownEnd = Math.min(end, sweep * Math.PI * 2);
+                if (shownEnd <= start) return null;
                 return (
                   <g
                     key={slice.id}
@@ -163,7 +204,7 @@ export function CategoryPie({
                       opacity: hovered && !lifted ? 0.55 : 1,
                     }}
                   >
-                    <path d={arcPath(start, end)} fill={color} fillRule="evenodd" stroke="#ffffff" strokeWidth={2} />
+                    <path d={arcPath(start, shownEnd)} fill={color} fillRule="evenodd" stroke="#ffffff" strokeWidth={2} />
                   </g>
                 );
               })}
@@ -215,11 +256,6 @@ export function CategoryPie({
           </ul>
         </div>
       )}
-      <style>{`
-        @keyframes category-pie-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
-        .category-pie { animation: category-pie-in 220ms ease-out; transform-origin: 50% 50%; }
-        @media (prefers-reduced-motion: reduce) { .category-pie { animation: none; } }
-      `}</style>
     </Card>
   );
 }

@@ -30,7 +30,7 @@ function CreditIcon({ kind }: { kind: "check" | "arrow" | "clock" | "search" | "
 function Factor({ title, detail, icon, tone, value }: { title: string; detail: string; icon: "check" | "arrow" | "clock" | "search" | "percent"; tone: "good" | "attention" | "neutral"; value?: string }) {
   const color = tone === "good" ? "#0b8f69" : tone === "attention" ? "#c47708" : "#544af7";
   return (
-    <div className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: "var(--surface-inset)" }}>
+    <div className="tile-lift flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: "var(--surface-inset)" }}>
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs" style={{ color, backgroundColor: `${color}12` }}><CreditIcon kind={icon} /></span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>{title}</p>
@@ -104,15 +104,15 @@ export default async function CreditPage() {
             <ScoreGauge score={credit.score} />
             <ScoreChart history={credit.history} />
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <div className="rounded-xl p-2.5" style={{ background: "var(--surface-inset)" }}>
+              <div className="tile-lift rounded-xl p-2.5" style={{ background: "var(--surface-inset)" }}>
                 <p className="text-[10px]" style={{ color: "var(--ink-muted)" }}>Card Debt</p>
                 <p className="mt-0.5 text-sm font-bold tabular-nums" style={{ color: "var(--critical, #d7465d)" }}>{formatUsd(totalBalance)}</p>
               </div>
-              <div className="rounded-xl p-2.5" style={{ background: "var(--surface-inset)" }}>
+              <div className="tile-lift rounded-xl p-2.5" style={{ background: "var(--surface-inset)" }}>
                 <p className="text-[10px]" style={{ color: "var(--ink-muted)" }}>Credit Limit</p>
                 <p className="mt-0.5 text-sm font-bold tabular-nums" style={{ color: "var(--ink)" }}>{formatUsd(totalLimit)}</p>
               </div>
-              <div className="rounded-xl p-2.5" style={{ background: "var(--surface-inset)" }}>
+              <div className="tile-lift rounded-xl p-2.5" style={{ background: "var(--surface-inset)" }}>
                 <p className="text-[10px]" style={{ color: "var(--ink-muted)" }}>Utilization</p>
                 <p className="mt-0.5 text-sm font-bold tabular-nums" style={{ color: "var(--ink)" }}>{totalLimit > 0 ? `${Math.round((totalBalance / totalLimit) * 100)}%` : "N/A"}</p>
               </div>

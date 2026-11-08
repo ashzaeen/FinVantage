@@ -17,7 +17,7 @@ export default async function SettingsPage() {
     <>
       <PageHeader title="Settings" tier="P0" prd="9" />
       <div className="space-y-4">
-        <Card title="Spending Organization">
+        <Card lift={false} title="Spending Organization">
           <p className="mb-3 text-sm text-muted">
             Create your own categories and set rules that sort matching purchases automatically.
           </p>

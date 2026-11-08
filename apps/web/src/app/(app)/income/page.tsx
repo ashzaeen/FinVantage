@@ -1,6 +1,8 @@
+import type { CSSProperties, ReactNode } from "react";
 import { formatPercent, formatUsd, type IncomeSummary, type SpendingCategory } from "@finvantage/contracts";
 import { CategoryPie } from "@/components/spending/CategoryPie";
 import { Card } from "@/components/ui/Card";
+import { CountUp } from "@/components/ui/CountUp";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { api } from "@/lib/api";
 
@@ -26,9 +28,9 @@ function debtBand(ratio: number) {
   return { label: "High", color: "var(--critical)" };
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
+function MiniStat({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="rounded-2xl p-3" style={{ background: "var(--surface-inset)" }}>
+    <div className="tile-lift rounded-2xl p-3" style={{ background: "var(--surface-inset)" }}>
       <p className="text-xs" style={{ color: "var(--ink-muted)" }}>{label}</p>
       <p className="mt-0.5 text-base font-bold tabular-nums" style={{ color: "var(--ink)" }}>{value}</p>
     </div>
@@ -43,12 +45,12 @@ function ExpectedIncome({ income }: { income: IncomeSummary }) {
     <Card title="Expected Income">
       {expected > 0 ? (
         <>
-          <p className="font-poppins text-3xl font-bold tabular-nums" style={{ color: "var(--ink)" }}>{formatUsd(expected)}</p>
+          <p className="font-poppins text-3xl font-bold tabular-nums" style={{ color: "var(--ink)" }}><CountUp value={expected} /></p>
           <p className="mt-1 text-sm" style={{ color: "var(--ink-secondary)" }}>
             Expected each month. {formatUsd(income.thisMonthCents)} received in {monthName(income.month, "long")} so far.
           </p>
           <div className="mt-3 h-3 overflow-hidden rounded-full" style={{ background: "var(--surface-inset)" }}>
-            <div className="h-full rounded-full" style={{ width: `${reached * 100}%`, background: ACCENT }} />
+            <div className="meter-fill h-full rounded-full" style={{ width: `${reached * 100}%`, background: ACCENT }} />
           </div>
           <p className="mt-1.5 text-xs" style={{ color: "var(--ink-muted)" }}>{formatPercent(reached)} received</p>
         </>
@@ -58,9 +60,9 @@ function ExpectedIncome({ income }: { income: IncomeSummary }) {
         </p>
       )}
       <div className="mt-4 grid grid-cols-3 gap-2">
-        <MiniStat label="Last Month" value={formatUsd(income.lastMonthCents)} />
-        <MiniStat label="3-Month Average" value={formatUsd(income.averageMonthlyCents)} />
-        <MiniStat label="Year to Date" value={formatUsd(income.yearToDateCents)} />
+        <MiniStat label="Last Month" value={<CountUp value={income.lastMonthCents} />} />
+        <MiniStat label="3-Month Average" value={<CountUp value={income.averageMonthlyCents} />} />
+        <MiniStat label="Year to Date" value={<CountUp value={income.yearToDateCents} />} />
       </div>
       {income.lastMonthCents > 0 && (
         <p className="mt-3 text-xs" style={{ color: diff >= 0 ? "#00a37a" : "var(--critical)" }}>
@@ -91,17 +93,17 @@ function TrendBars({ trend }: { trend: IncomeSummary["trend"] }) {
   return (
     <Card title="Income vs Spending">
       <div className="flex h-44 items-end gap-3" role="img" aria-label="Income and spending for each of the last six months">
-        {trend.map((row) => (
-          <div key={row.month} className="flex h-full flex-1 flex-col justify-end gap-1">
+        {trend.map((row, i) => (
+          <div key={row.month} className="flex h-full flex-1 flex-col justify-end gap-1" style={{ "--i": i } as CSSProperties}>
             <div className="flex flex-1 items-end justify-center gap-1">
               <div
                 title={`Income ${formatUsd(row.incomeCents)}`}
-                className="w-full max-w-6 rounded-t-md"
+                className="bar-grow w-full max-w-6 rounded-t-md"
                 style={{ height: `${(row.incomeCents / max) * 100}%`, minHeight: row.incomeCents ? 3 : 0, background: ACCENT }}
               />
               <div
                 title={`Spending ${formatUsd(row.spendingCents)}`}
-                className="w-full max-w-6 rounded-t-md"
+                className="bar-grow w-full max-w-6 rounded-t-md"
                 style={{ height: `${(row.spendingCents / max) * 100}%`, minHeight: row.spendingCents ? 3 : 0, background: "#c9cdf5" }}
               />
             </div>
@@ -132,7 +134,7 @@ function DebtRatio({ income }: { income: IncomeSummary }) {
             {formatUsd(monthlyDebtCents)} a month goes to debt payments, out of {formatUsd(monthlyIncomeCents)} of monthly income.
           </p>
           <div className="relative mt-4 h-3 rounded-full" style={{ background: "var(--surface-inset)" }}>
-            <div className="h-full rounded-full" style={{ width: `${Math.min(1, ratio / 0.6) * 100}%`, background: band.color }} />
+            <div className="meter-fill h-full rounded-full" style={{ width: `${Math.min(1, ratio / 0.6) * 100}%`, background: band.color }} />
             <i className="absolute -top-1 h-5 w-px" style={{ left: `${(0.36 / 0.6) * 100}%`, background: "var(--ink-muted)" }} />
             <i className="absolute -top-1 h-5 w-px" style={{ left: `${(0.43 / 0.6) * 100}%`, background: "var(--ink-muted)" }} />
           </div>
@@ -155,8 +157,8 @@ function RecentDeposits({ income }: { income: IncomeSummary }) {
         <p className="text-sm" style={{ color: "var(--ink-muted)" }}>No deposits yet.</p>
       ) : (
         <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
-          {income.recent.map((t) => (
-            <li key={t.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+          {income.recent.map((t, i) => (
+            <li key={t.id} className="row-cascade flex items-center justify-between gap-3 py-2.5 text-sm" style={{ "--i": i } as CSSProperties}>
               <span className="min-w-0 truncate" style={{ color: "var(--ink)" }}>{t.merchant}</span>
               <span className="shrink-0 text-xs" style={{ color: "var(--ink-muted)" }}>{dayName(t.date)}</span>
               <span className="w-24 shrink-0 text-right font-bold tabular-nums" style={{ color: "var(--ink)" }}>+{formatUsd(t.amountCents)}</span>
@@ -196,7 +198,7 @@ export default async function IncomePage() {
   return (
     <>
       <PageHeader title="Income" />
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="page-cascade grid gap-5 md:grid-cols-2">
         <ExpectedIncome income={income} />
         <IncomePie income={income} categories={categories} />
         <TrendBars trend={income.trend} />

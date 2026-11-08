@@ -33,6 +33,11 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
 - Put `MockedBadge` beside any mocked value.
 - Use token classes such as `bg-raised` and `text-muted`, not raw colors. Add new tokens to both the light and dark blocks in `globals.css`.
 - Layouts must work down to phone width.
+- **Interaction and motion, the same on every tab:**
+  - Cards lift on hover like the Accounts tiles. `Card` does it by default; pass `lift={false}` for forms and controls. Anything else that reads as a card gets the `card-lift` class.
+  - Small tiles and rows inside a card (stat tiles, list rows, holdings) get `tile-lift`, a lighter version.
+  - Pages open with motion: wrap the page's grid in `page-cascade` (or a lone panel in `page-cascade-single`), give list rows `row-cascade` with `--i` set to their index, count headline figures up with `CountUp` from `@/components/ui/CountUp`, and fill bars and meters with `meter-fill` or `bar-grow`. Recharts charts animate by default; leave `isAnimationActive` on.
+  - Everything respects `prefers-reduced-motion`. The classes live at the end of `src/app/globals.css`.
 - **Title Case for interface labels.** Headings, page titles, buttons, links, tabs, nav items, badges, form labels and card titles use Title Case: "Try the Demo", "Create Your Account", "Life Events". Keep a, an, the, and, but, or, nor, for, so, yet, as, at, by, in, of, on, to and up lowercase unless they come first or last. Body copy, descriptions, helper text and error messages stay as normal sentences. Brand names keep their own casing (FinVantage, GitHub).
 - Dashboard pages are dynamic through `export const dynamic` in `(app)/layout.tsx`, because `no-store` alone no longer keeps them dynamic under `next build --webpack`. They need the API running, and `(app)/error.tsx` handles it being down. The landing page stays static and loads its preview in the browser.
 - The landing hero embeds `LoginForm`, and "Try the demo" opens `/app` signed out, so the API client sends the demo token. After sign-in, `nextPath()` goes to `?next=` or else `/app`.

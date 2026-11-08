@@ -7,6 +7,7 @@ export function Card({
   action,
   children,
   noPad = false,
+  lift = true,
 }: {
   title?: string;
   subtitle?: string;
@@ -14,10 +15,12 @@ export function Card({
   action?: ReactNode;
   children: ReactNode;
   noPad?: boolean;
+  /** Rise on hover, like the Accounts tiles. Turn off for forms and controls. */
+  lift?: boolean;
 }) {
   return (
     <section
-      className={`rounded-3xl bg-white border border-[#edf0f7] ${noPad ? "" : "p-6"} ${className}`}
+      className={`rounded-3xl bg-white border border-[#edf0f7] ${noPad ? "" : "p-6"} ${lift ? "card-lift" : ""} ${className}`}
       style={{
         boxShadow: "0 2px 12px 0 rgba(22, 25, 44, 0.03)",
       }}

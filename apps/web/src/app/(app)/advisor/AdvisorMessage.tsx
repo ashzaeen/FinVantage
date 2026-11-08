@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, type ReactNode } from "react";
-import { Calculator, Globe, ShieldCheck } from "lucide-react";
+import { Calculator, Globe, ShieldCheck, Sparkles } from "lucide-react";
 import type { AdvisorAttachment, AdvisorMessage as Message } from "@finvantage/contracts";
 import { MockedBadge } from "@/components/ui/MockedBadge";
 import { GoalDraftCard } from "./GoalDraftCard";
@@ -84,16 +84,19 @@ export function AdvisorMessage({ message }: { message: Message }) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[90%] whitespace-pre-wrap rounded-3xl rounded-br-md bg-accent px-4 py-3 text-sm leading-6 text-white sm:max-w-[75%]">
+        <div className="max-w-[90%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent px-4 py-3 text-sm leading-6 text-white shadow-[0_4px_14px_-4px_rgba(84,74,247,0.45)] sm:max-w-[75%]">
           {message.content}
         </div>
       </div>
     );
   }
   return (
-    <div className="flex justify-start">
-      <div className={`w-full space-y-3 ${message.attachments.some((a) => a.kind === "visual") ? "max-w-full sm:max-w-[44rem]" : "max-w-[95%] sm:max-w-[80%]"}`}>
-        <div className="rounded-3xl rounded-bl-md border border-line bg-card px-4 py-3 text-sm leading-6 text-ink shadow-sm">
+    <div className="flex items-start justify-start gap-3">
+      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent" aria-hidden>
+        <Sparkles size={15} />
+      </span>
+      <div className={`min-w-0 w-full space-y-3 ${message.attachments.some((a) => a.kind === "visual") ? "max-w-full sm:max-w-[56rem]" : "max-w-[95%] sm:max-w-[80%]"}`}>
+        <div className="rounded-2xl rounded-tl-md bg-inset px-4 py-3 text-sm leading-6 text-ink">
           {message.source === "fallback" && (
             <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-warning-bg px-2.5 py-0.5 text-xs font-medium text-warning">
               <ShieldCheck size={13} aria-hidden /> Safe Answer

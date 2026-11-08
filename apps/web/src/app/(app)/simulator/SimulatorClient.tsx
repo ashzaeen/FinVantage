@@ -76,7 +76,7 @@ export function SimulatorClient({ goals, lifeEvents }: { goals: Goal[]; lifeEven
 
   return (
     <div className="grid gap-6 lg:grid-cols-[20rem_1fr]">
-      <Card title="What if" subtitle="Model adjustments to savings and events">
+      <Card lift={false} title="What if" subtitle="Model adjustments to savings and events">
         <div className="space-y-6 pt-1">
           <Slider
             label="Monthly savings delta"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, type FormEvent } from "react";
+import { useMemo, useState, useCallback, type FormEvent, type CSSProperties } from "react";
 import { formatUsd, type Account, type CurrencyCode, type SpendingCategory, type Transaction } from "@finvantage/contracts";
 import { api } from "@/lib/api";
 
@@ -91,7 +91,7 @@ function MerchantAvatar({ name }: { name: string }) {
 }
 
 function StatusBadge({ positive }: { positive: boolean }) {
-  return <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: positive ? "var(--good-bg)" : "var(--critical-bg)", color: positive ? "var(--good)" : "var(--critical)" }}>{positive ? "Income" : "Expense"}</span>;
+  return <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" style={{ background: positive ? "var(--good-bg)" : "var(--critical-bg)", color: positive ? "var(--good)" : "var(--critical)" }}>{positive ? "Income" : "Expense"}</span>;
 }
 
 const CURRENCIES: CurrencyCode[] = ["USD", "EUR", "GBP", "CAD", "AUD", "CHF", "INR", "MXN"];
@@ -156,7 +156,7 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
   }
 
   return <>
-    <section className="w-full">
+    <section className="page-cascade-single w-full">
     <div className="flex flex-col gap-3 border-b border-[#edf0f7] px-1 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div><h2 className="font-poppins text-base font-bold text-[#16192c]">All transactions</h2><p aria-live="polite" className="mt-0.5 text-xs text-[#8d94a8]">Showing {filtered.length} of {transactions.length} loaded</p></div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -176,9 +176,9 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
         <label><span className="sr-only">Filter transaction category</span><select value={category} onChange={(event) => setCategory(event.target.value)} className="w-full rounded-xl border border-[#e6e9f2] bg-white px-3 py-2.5 text-sm text-[#4a4f68] outline-none focus:border-[#544af7] sm:w-auto"><option value="all">All categories</option>{categories.map((value) => <option key={value} value={value}>{label(value)}</option>)}</select></label>
       </div>
     </div>
-    <div className="hidden grid-cols-[minmax(0,1fr)_150px_130px_100px] gap-4 border-b border-[#edf0f7] bg-[#fafbfe] py-3 text-xs font-semibold uppercase tracking-wide text-[#8d94a8] sm:grid"><span>Merchant</span><span>Date</span><span className="text-right">Amount</span><span className="text-right">Type</span></div>
-    {filtered.length ? <ul className="divide-y divide-[#edf0f7]">{filtered.map((tx) => <li key={tx.id}>
-      <button type="button" onClick={() => { setEditing(tx); setEditCategory(tx.subcategory ?? tx.category); setIsCreating(false); setSaveError(""); }} aria-label={`Edit transaction from ${tx.merchant}`} className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3.5 text-left transition-colors hover:bg-[#fafbfe] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#544af7] sm:grid-cols-[minmax(0,1fr)_150px_130px_100px] sm:gap-4">
+    <div className="hidden grid-cols-[minmax(0,1fr)_150px_130px_100px] gap-4 border-b border-[#edf0f7] bg-[#fafbfe] px-5 py-3 text-xs font-semibold uppercase tracking-wide text-[#8d94a8] sm:grid"><span>Merchant</span><span>Date</span><span className="text-right">Amount</span><span className="text-right">Type</span></div>
+    {filtered.length ? <ul className="divide-y divide-[#edf0f7]">{filtered.map((tx, i) => <li key={tx.id} className="row-cascade tile-lift rounded-xl bg-white" style={{ "--i": i } as CSSProperties}>
+      <button type="button" onClick={() => { setEditing(tx); setEditCategory(tx.subcategory ?? tx.category); setIsCreating(false); setSaveError(""); }} aria-label={`Edit transaction from ${tx.merchant}`} className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-xl px-4 py-3.5 text-left sm:px-5 transition-colors hover:bg-[#fafbfe] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#544af7] sm:grid-cols-[minmax(0,1fr)_150px_130px_100px] sm:gap-4">
       <span className="flex min-w-0 items-center gap-3"><MerchantAvatar name={tx.merchant} /><span className="min-w-0"><span className="block truncate text-sm font-semibold text-[#16192c]">{tx.merchant}</span><span className="block truncate text-xs text-[#8d94a8]">{label(tx.subcategory ?? tx.category)}{tx.isRecurring ? " · Recurring" : ""}</span></span></span>
       <span className="col-start-1 pl-12 text-xs text-[#8d94a8] sm:col-auto sm:pl-0">{new Date(`${tx.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
       <span className="row-start-1 text-right text-sm font-semibold tabular-nums sm:row-auto" style={{ color: tx.amountCents < 0 ? "var(--critical)" : "var(--good)" }}>{formatCurrency(tx.originalAmountCents ?? tx.amountCents, tx.originalAmountCents == null ? "USD" : tx.currency)}{tx.currency !== "USD" && <span className="mt-0.5 block text-[11px] font-normal text-[#8d94a8]">{formatUsd(tx.amountCents)} equivalent</span>}</span>

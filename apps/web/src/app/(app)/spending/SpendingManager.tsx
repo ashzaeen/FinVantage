@@ -193,8 +193,8 @@ export function BudgetsPanel({ budgets, categories }: { budgets: Budget[]; categ
                 style={{ background: "var(--border)" }}
                 title={`Spent ${formatUsd(b.spentCents)}, projected ${formatUsd(b.projectedCents)} by month end`}
               >
-                <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${projectedWidth}%`, background: projectedColor }} />
-                <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${width}%`, background: color }} />
+                <div className="meter-fill absolute inset-y-0 left-0 rounded-full" style={{ width: `${projectedWidth}%`, background: projectedColor }} />
+                <div className="meter-fill absolute inset-y-0 left-0 rounded-full" style={{ width: `${width}%`, background: color }} />
               </div>
               <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
                 <span>

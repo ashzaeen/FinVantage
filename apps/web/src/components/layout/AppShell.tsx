@@ -322,7 +322,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* ── Main Content Area ────────────────────────────────────────── */}
       <main className={`flex-1 min-w-0 md:pt-0 pt-16 ${pathname === "/advisor" ? "h-dvh min-h-0 overflow-hidden" : ""}`}>
-        <div className={pathname === "/advisor" ? "h-full w-full" : "max-w-[1360px] mx-auto px-6 py-8 md:px-10 md:py-9"}>
+        {/* The Advisor fills the screen with a tight frame, so the chat and its widgets get the room. */}
+        <div className={pathname === "/advisor" ? "flex h-full w-full flex-col px-3 py-3 sm:px-4 md:px-5 md:py-4" : "max-w-[1360px] mx-auto px-6 py-8 md:px-10 md:py-9"}>
           {children}
         </div>
       </main>

@@ -206,3 +206,49 @@ p, span, label, input, button, table, td, th,
   from { opacity: 0; transform: translateY(-6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── Page opening animations (Transactions, Goals, Spending, Income) ───────── */
+
+/* Uses `translate`, not `transform`, so it combines with the hover lift once it has played. */
+@keyframes page-rise {
+  from { opacity: 0; translate: 0 12px; }
+  to   { opacity: 1; translate: 0 0; }
+}
+/* Each direct child rises in a beat after the one before. */
+.page-cascade > * { animation: page-rise 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.page-cascade > *:nth-child(1) { animation-delay: 40ms; }
+.page-cascade > *:nth-child(2) { animation-delay: 110ms; }
+.page-cascade > *:nth-child(3) { animation-delay: 180ms; }
+.page-cascade > *:nth-child(4) { animation-delay: 250ms; }
+.page-cascade > *:nth-child(5) { animation-delay: 320ms; }
+.page-cascade > *:nth-child(6) { animation-delay: 390ms; }
+.page-cascade > *:nth-child(n + 7) { animation-delay: 450ms; }
+
+/* A single panel that rises in on its own. */
+.page-cascade-single { animation: page-rise 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: 40ms; }
+
+/* List rows: set --i on each row for its place in the cascade. */
+.row-cascade { animation: page-rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(min(var(--i, 0), 14) * 35ms + 120ms); }
+
+@keyframes bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.bar-grow { transform-origin: bottom; animation: bar-grow 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 60ms + 200ms); }
+
+@keyframes meter-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.meter-fill { transform-origin: left; animation: meter-fill 1100ms cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 50ms + 250ms); }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .page-cascade > *, .page-cascade-single, .row-cascade, .bar-grow, .meter-fill { animation: none; }
+}
+
+/* ─── Hover lift: the Accounts tile interaction, everywhere ──────────────────
+   .card-lift  for panels and cards (the Card component applies it by default).
+   .tile-lift  for small tiles and rows inside a card: a lighter version.
+   !important wins over cards' inline resting shadow. */
+.card-lift { transition: transform 200ms ease, box-shadow 200ms ease; }
+.card-lift:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(84, 74, 247, 0.09) !important; }
+.tile-lift { transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease; }
+.tile-lift:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(84, 74, 247, 0.08); }
+@media (prefers-reduced-motion: reduce) {
+  .card-lift:hover, .tile-lift:hover { transform: none; }
+}

@@ -77,7 +77,7 @@ export function LifeEventEntry({ goals }: { goals: Goal[] }) {
 
   if (draft) {
     return (
-      <Card title="Confirm this event">
+      <Card lift={false} title="Confirm this event">
         <div className="rounded-xl p-4 space-y-3" style={{ background: "var(--surface-inset)" }}>
           <div>
             <p className="text-xs font-medium" style={{ color: "var(--ink-muted)" }}>Event type</p>
@@ -105,7 +105,7 @@ export function LifeEventEntry({ goals }: { goals: Goal[] }) {
   }
 
   return (
-    <Card title="Log an event" subtitle="Add a life event that affects your financial plan">
+    <Card lift={false} title="Log an event" subtitle="Add a life event that affects your financial plan">
       <form onSubmit={submitForm} className="space-y-4">
         <label className="block">
           <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--ink-muted)" }}>

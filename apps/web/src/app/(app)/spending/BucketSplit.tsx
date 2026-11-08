@@ -123,7 +123,7 @@ export function BucketSplit({ initial }: { initial: BucketSummary }) {
                   </span>
                 </div>
                 <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
-                  <div className="h-2.5 rounded-full" style={{ width: `${width}%`, background: over ? "var(--critical)" : "var(--accent)" }} />
+                  <div className="meter-fill h-2.5 rounded-full" style={{ width: `${width}%`, background: over ? "var(--critical)" : "var(--accent)" }} />
                 </div>
                 <p className="mt-1 flex justify-between text-xs" style={{ color: "var(--ink-muted)" }}>
                   <span>{BUCKET_HINT[row.bucket]}</span>

@@ -1,3 +1,11 @@
+/*
+ * Investments: match the other tabs' interactions when this page is built out.
+ * - Panels use `Card`, which lifts on hover by default (the Accounts tile feel).
+ * - Small tiles and rows inside a card (holdings, allocation rows, stat tiles) get `tile-lift`.
+ * - Opening: wrap the page's grid in `page-cascade`, count headline figures up with `CountUp`,
+ *   and let charts draw in (Recharts does by default; keep `isAnimationActive` on).
+ * See "Interaction and motion" in apps/web/AGENTS.md.
+ */
 import { formatUsd } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
 import { MockedBadge } from "@/components/ui/MockedBadge";

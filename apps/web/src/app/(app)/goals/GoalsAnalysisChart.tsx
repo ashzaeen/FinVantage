@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 type GoalCount = { label: string; count: number; color: string };
 
 export function GoalsAnalysisChart({ data }: { data: GoalCount[] }) {
-  return <section className="rounded-3xl border border-[#edf0f7] bg-white p-6 shadow-[0_2px_12px_rgba(22,25,44,0.03)]">
+  return <section className="page-cascade-single rounded-3xl border border-[#edf0f7] bg-white p-6 shadow-[0_2px_12px_rgba(22,25,44,0.03)]">
     <div><h2 className="font-poppins text-base font-bold text-[#16192c]">Goals by status</h2><p className="mt-1 text-xs text-[#8d94a8]">Number of goals in each stage</p></div>
     <div className="mt-5 h-72 min-w-0">
       <ResponsiveContainer width="100%" height="100%"><BarChart data={data} margin={{ top: 12, right: 18, bottom: 4, left: 0 }}>

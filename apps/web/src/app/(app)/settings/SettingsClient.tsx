@@ -24,7 +24,7 @@ export function SettingsClient({ user: initial }: { user: User }) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Card title="Copilot">
+      <Card lift={false} title="Copilot">
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -34,7 +34,7 @@ export function SettingsClient({ user: initial }: { user: User }) {
           Show cards on shopping and listing pages
         </label>
       </Card>
-      <Card title="Demo data">
+      <Card lift={false} title="Demo data">
         <button className="rounded bg-accent px-3 py-1.5 text-sm text-surface" onClick={loadDemo}>
           Reload demo profile
         </button>

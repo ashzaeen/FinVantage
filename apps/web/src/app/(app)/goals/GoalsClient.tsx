@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { ProbabilityRange } from "@/components/finance/ProbabilityRange";
 import { Card } from "@/components/ui/Card";
 import { GoalsAnalysisChart } from "./GoalsAnalysisChart";
+import { CountUp } from "@/components/ui/CountUp";
 
 function priorityLabel(priorityRank: number) {
   if (priorityRank === 1) return "High";
@@ -46,13 +47,13 @@ function GoalCard({ goal, outcome, onOpen, draggable = false, onDragStart, onDra
       </div>
       <div className="mt-3 flex items-end justify-between gap-2">
         <div>
-          <p className="text-2xl font-bold tabular-nums" style={{ color: "var(--ink)" }}>{formatUsd(goal.currentCents)}</p>
+          <p className="text-2xl font-bold tabular-nums" style={{ color: "var(--ink)" }}><CountUp value={goal.currentCents} /></p>
           <p className="text-xs" style={{ color: "var(--ink-muted)" }}>of {formatUsd(goal.targetCents)} goal</p>
         </div>
-        <span className="text-lg font-bold" style={{ color: "var(--accent)" }}>{Math.round(progress)}%</span>
+        <span className="text-lg font-bold" style={{ color: "var(--accent)" }}><CountUp value={Math.round(progress) / 100} format="percent" /></span>
       </div>
       <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
-        <div className="h-2.5 rounded-full transition-all" style={{ width: `${progress}%`, background: "linear-gradient(90deg, var(--accent) 0%, #818cf8 100%)" }} />
+        <div className="meter-fill h-2.5 rounded-full transition-all" style={{ width: `${progress}%`, background: "linear-gradient(90deg, var(--accent) 0%, #818cf8 100%)" }} />
       </div>
       <p className="mt-2.5 text-xs" style={{ color: "var(--ink-muted)" }}>
         Target date: <strong style={{ color: "var(--ink)" }}>{goal.targetDate}</strong>
@@ -203,7 +204,7 @@ export function GoalsClient({ goals, outcomes, accounts }: { goals: Goal[]; outc
 
     {view === "analysis" ? <GoalsAnalysisChart data={analysisData} /> : view === "board" ? <>
       <p className="mb-3 text-xs text-[#8d94a8]">Drag a goal card anywhere into another column, choose “Move to” for a quick status change, or select Manage to edit all details.</p>
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="page-cascade grid gap-4 xl:grid-cols-3">
       {GOAL_STATUSES.map((column) => {
         const columnGoals = goals.filter((goal) => goalStatus(goal) === column.id);
         const isDragTarget = dragOverColumn === column.id;
@@ -212,14 +213,14 @@ export function GoalsClient({ goals, outcomes, accounts }: { goals: Goal[]; outc
             <div><h3 id={`goal-column-${column.id}`} className="flex items-center gap-2 font-poppins text-sm font-bold text-[#16192c]"><span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: column.accent }} />{column.label}</h3><p className="mt-1 pl-4 text-[11px] text-[#8d94a8]">{column.hint}</p></div>
             <div className="flex items-center gap-2"><span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-2 text-xs font-semibold text-[#626981]">{columnGoals.length}</span><button type="button" onClick={() => openCreateGoal(column.id)} aria-label={`Add a goal to ${column.label}`} className="rounded-lg px-2 py-1 text-sm font-semibold text-[#544af7] hover:bg-white">+ Add</button></div>
           </header>
-          <div className="space-y-3">
+          <div className="page-cascade space-y-3">
             {columnGoals.map((goal) => <GoalCard key={goal.id} goal={goal} outcome={outcomes.find((outcome) => outcome.goalId === goal.id)} draggable moving={movingGoalId === goal.id} onMove={(status) => { void moveGoal(goal.id, status); }} onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", goal.id); }} onDragEnd={() => setDragOverColumn(null)} onOpen={() => { setError(""); setFeedback(""); setConfirmDelete(false); setSelectedGoal(goal); }} />)}
             {!columnGoals.length && <p className="rounded-xl border border-dashed border-[#d9ddec] bg-white/70 px-3 py-6 text-center text-xs text-[#8d94a8]">Drop a goal here or use + Add in this column.</p>}
           </div>
         </section>;
       })}
       </div>
-    </> : <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+    </> : <div className="page-cascade grid gap-5 md:grid-cols-2 lg:grid-cols-3">
       {goals.map((goal) => <GoalCard key={goal.id} goal={goal} outcome={outcomes.find((outcome) => outcome.goalId === goal.id)} onOpen={() => { setError(""); setConfirmDelete(false); setSelectedGoal(goal); }} />)}
       <button type="button" onClick={() => openCreateGoal()} className="flex min-h-64 flex-col items-center justify-center rounded-3xl border-2 border-dashed border-[#d9ddec] bg-white p-8 text-center transition hover:border-[#544af7] hover:bg-[#fafaff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eef1fc] text-2xl font-semibold text-[#544af7]">+</span>
