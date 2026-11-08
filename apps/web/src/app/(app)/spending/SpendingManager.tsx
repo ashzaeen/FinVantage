@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
@@ -268,8 +269,8 @@ export function CategoryManager({ categories }: { categories: SpendingCategory[]
             onClick={() => toggle(c.id)}
             aria-expanded={kids.length ? expanded : undefined}
             aria-label={kids.length ? `${expanded ? "Collapse" : "Expand"} ${c.label}` : undefined}
-            className="w-4 text-xs"
-            style={{ color: "var(--ink-muted)", visibility: kids.length ? "visible" : "hidden" }}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border"
+            style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--ink)", visibility: kids.length ? "visible" : "hidden" }}
           >
             {expanded ? "▾" : "▸"}
           </button>
@@ -294,7 +295,7 @@ export function CategoryManager({ categories }: { categories: SpendingCategory[]
             </select>
           )}
           {depth < MAX_CATEGORY_DEPTH && (
-            <button type="button" onClick={() => { setAction({ kind: "add", id: c.id }); setName(""); }} className={quietCls} style={{ color: "var(--accent)" }}>Add</button>
+            <button type="button" onClick={() => { setAction({ kind: "add", id: c.id }); setName(""); }} className={quietCls} style={{ color: "var(--accent)" }}>Add Subcategory</button>
           )}
           <button type="button" onClick={() => { setAction({ kind: "rename", id: c.id }); setName(c.label); }} className={quietCls} style={{ color: "var(--ink-secondary)" }}>Rename</button>
           <button type="button" disabled={busy} onClick={() => run(() => api.updateSpendingCategory({ params: { id: c.id }, body: { hidden: !c.hidden } }), "Could not change the category.")} className={quietCls} style={{ color: "var(--ink-secondary)" }}>
