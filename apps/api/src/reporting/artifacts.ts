@@ -10,6 +10,7 @@ import {
   type QuarterlyReport,
   type ReportVisuals,
 } from "@finvantage/contracts";
+import type { DocumentStore } from "@finvantage/data";
 
 const COLORS = {
   ink: "#20204A",
@@ -682,9 +683,38 @@ class ResendMailClient implements MailClient {
   }
 }
 
-export function createPdfStore(env: NodeJS.ProcessEnv, now: () => string): PdfStore {
+/**
+ * Renders to a local file (on Vercel, /tmp), then keeps the bytes in the document store so every
+ * server instance can serve the download. Older reports with no stored copy fall back to the file.
+ */
+class StoredPdfStore implements PdfStore {
+  constructor(
+    private readonly local: LocalPdfStore,
+    private readonly docs: Pick<DocumentStore, "saveReportPdf" | "getReportPdf">,
+  ) {}
+
+  pathFor(report: QuarterlyReport) {
+    return this.local.pathFor(report);
+  }
+
+  async generate(report: QuarterlyReport) {
+    const result = await this.local.generate(report);
+    await this.docs.saveReportPdf(report.userId, report.id, await this.local.read(report));
+    return result;
+  }
+
+  async read(report: QuarterlyReport) {
+    return (await this.docs.getReportPdf(report.userId, report.id)) ?? this.local.read(report);
+  }
+}
+
+export function createPdfStore(
+  env: NodeJS.ProcessEnv,
+  now: () => string,
+  docs: Pick<DocumentStore, "saveReportPdf" | "getReportPdf">,
+): PdfStore {
   const root = path.resolve(env.REPORT_OUTPUT_DIR ?? path.join(process.cwd(), "data", "reports"));
-  return new LocalPdfStore(root, now);
+  return new StoredPdfStore(new LocalPdfStore(root, now), docs);
 }
 
 export function createMailClient(env: NodeJS.ProcessEnv): MailClient {

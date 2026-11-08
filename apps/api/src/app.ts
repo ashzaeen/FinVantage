@@ -38,6 +38,12 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   const demoToken = env.DEMO_API_TOKEN ?? "demo-token";
 
   app.use("*", cors({ origin: (origin) => (allowOrigin(origin) ? origin : null) }));
+  // Live pushes are sent in the background; finish them before answering, because a serverless
+  // function can be frozen as soon as it responds.
+  app.use("*", async (_c, next) => {
+    await next();
+    await deps.live.flush();
+  });
   app.get("/health", (c) => c.json({ ok: true, llm: deps.llm.provider, live: deps.live.transport }));
 
   // Sign-up, log-in, and the public key. No token needed.

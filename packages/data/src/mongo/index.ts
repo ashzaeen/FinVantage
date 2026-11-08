@@ -8,7 +8,7 @@ import {
   SimulationRun,
   type CopilotAction,
 } from "@finvantage/contracts";
-import { MongoClient, type Document } from "mongodb";
+import { Binary, MongoClient, type Document } from "mongodb";
 import type { DocumentStore, TimeRange } from "../stores";
 
 function rangeFilter(range?: TimeRange): Document {
@@ -42,6 +42,7 @@ class MongoDocumentStore implements DocumentStore {
           .collection("email_schedules")
           .createIndex({ enabled: 1, nextScheduledAt: 1, leaseExpiresAt: 1 }),
         this.db.collection("email_schedule_logs").createIndex({ id: 1 }, { unique: true }),
+        this.db.collection("report_pdfs").createIndex({ userId: 1, reportId: 1 }, { unique: true }),
       ]);
     })();
     return this.initialized;
@@ -119,6 +120,20 @@ class MongoDocumentStore implements DocumentStore {
 
   async listRecommendations(userId: string, range?: TimeRange) {
     return Recommendation.array().parse(await this.list("recommendations", userId, range));
+  }
+
+  async saveReportPdf(userId: string, reportId: string, pdf: Buffer) {
+    await this.ready();
+    // Report PDFs are tens of KB, far under MongoDB's 16 MB document limit, so no GridFS.
+    await this.db
+      .collection("report_pdfs")
+      .replaceOne({ userId, reportId }, { userId, reportId, pdf: new Binary(pdf), savedAt: new Date() }, { upsert: true });
+  }
+
+  async getReportPdf(userId: string, reportId: string) {
+    await this.ready();
+    const doc = await this.db.collection("report_pdfs").findOne({ userId, reportId });
+    return doc?.pdf instanceof Binary ? Buffer.from(doc.pdf.buffer) : null;
   }
 
   async saveReport(report: QuarterlyReport) {

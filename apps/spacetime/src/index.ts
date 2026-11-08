@@ -25,6 +25,13 @@ import { schema, table, t, SenderError, type Infer, type InferSchema, type Reduc
 
 const admin = table({ name: "admin" }, { identity: t.identity().primaryKey() });
 
+/**
+ * Token issuers whose users may connect from the browser. A connection with a JWT from one of
+ * these gets its identity linked to the token's `sub`, which is the FinVantage user id. The API's
+ * issuer is added once with `trust_issuer`.
+ */
+const trustedIssuer = table({ name: "trusted_issuer" }, { issuer: t.string().primaryKey() });
+
 /** Maps a signed-in browser's Spacetime identity to a FinVantage user id. */
 const userIdentity = table(
   { name: "user_identity" },
@@ -354,6 +361,7 @@ const holding = table(
 
 const spacetimedb = schema({
   admin,
+  trustedIssuer,
   userIdentity,
   credential,
   liveEvent,
@@ -485,6 +493,29 @@ function deleteItem(ctx: Ctx, itemId: string) {
 
 export const init = spacetimedb.init((ctx) => {
   ctx.db.admin.insert({ identity: ctx.sender });
+});
+
+/**
+ * A browser connecting with a FinVantage sign-in token: SpacetimeDB has already checked the
+ * token's signature against the issuer's published keys. If the issuer is trusted, remember which
+ * user this identity belongs to, so views can show them their own rows.
+ */
+export const onConnect = spacetimedb.clientConnected((ctx) => {
+  const jwt = ctx.senderAuth.jwt;
+  if (!jwt || !ctx.db.trustedIssuer.issuer.find(jwt.issuer)) return;
+  const row = { identity: ctx.sender, userId: jwt.subject };
+  if (ctx.db.userIdentity.identity.find(ctx.sender)) ctx.db.userIdentity.identity.update(row);
+  else ctx.db.userIdentity.insert(row);
+});
+
+export const trustIssuer = spacetimedb.reducer({ issuer: t.string() }, (ctx, { issuer }) => {
+  requireAdmin(ctx);
+  if (!ctx.db.trustedIssuer.issuer.find(issuer)) ctx.db.trustedIssuer.insert({ issuer });
+});
+
+export const untrustIssuer = spacetimedb.reducer({ issuer: t.string() }, (ctx, { issuer }) => {
+  requireAdmin(ctx);
+  ctx.db.trustedIssuer.issuer.delete(issuer);
 });
 
 export const addAdmin = spacetimedb.reducer({ identity: t.identity() }, (ctx, { identity }) => {
@@ -837,6 +868,19 @@ export const applyBankUpdate = spacetimedb.reducer(
 );
 
 // ── Live events ──────────────────────────────────────────────────────────────
+
+/**
+ * The signed-in browser's own live events, newest last. This is the only thing browsers subscribe
+ * to: an anonymous connection, or one from an untrusted issuer, sees nothing.
+ */
+export const myLiveEvent = spacetimedb.view(
+  { name: "my_live_event", public: true },
+  t.array(liveEvent.rowType),
+  (ctx) => {
+    const link = ctx.db.userIdentity.identity.find(ctx.sender);
+    return link ? [...ctx.db.liveEvent.userId.filter(link.userId)] : [];
+  },
+);
 
 export const publishLiveEvent = spacetimedb.reducer(
   { userId: t.string(), payload: t.string() },

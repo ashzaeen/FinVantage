@@ -46,13 +46,14 @@ export interface AppDeps {
 /** Every stub-or-real switch happens here, from env. See .env.example. */
 export function createDeps(env: NodeJS.ProcessEnv = process.env): AppDeps {
   const now = () => new Date().toISOString();
+  const stores = createStores(env);
   return {
-    ...createStores(env),
+    ...stores,
     llm: createLlmClient(env),
     live: createLiveBus(env),
     bank: createBankProvider(env),
     mail: createMailClient(env),
-    pdf: createPdfStore(env, now),
+    pdf: createPdfStore(env, now, stores.docs),
     auth: createAuth({ privateJwk: requiredInProduction(env, "AUTH_PRIVATE_JWK"), issuer: env.AUTH_ISSUER }),
     credentials: env.SPACETIME_TOKEN
       ? new SpacetimeCredentialStore({

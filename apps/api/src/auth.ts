@@ -1,4 +1,5 @@
 import {
+  calculateJwkThumbprint,
   exportJWK,
   generateKeyPair,
   importJWK,
@@ -33,7 +34,6 @@ export interface Auth {
 export const DEFAULT_ISSUER = "https://finvantage-api.vercel.app";
 export const AUDIENCE = "finvantage";
 const TOKEN_LIFETIME = "7d";
-const KEY_ID = "finvantage-1";
 
 export function createAuth(options: {
   /** A private RSA JWK as JSON. Omit to generate a throwaway key (local dev and tests only). */
@@ -42,21 +42,23 @@ export function createAuth(options: {
 }): Auth {
   const issuer = (options.issuer ?? DEFAULT_ISSUER).replace(/\/$/, "");
   // Keys load on first use, so createDeps can stay synchronous.
-  let keys: Promise<{ privateKey: CryptoKey; publicKey: CryptoKey; publicJwk: JWK }> | null = null;
+  let keys: Promise<{ privateKey: CryptoKey; publicKey: CryptoKey; publicJwk: JWK; kid: string }> | null = null;
   const loadKeys = () => (keys ??= loadKeyPair(options.privateJwk));
 
   return {
     issuer,
     audience: AUDIENCE,
-    issue: async (user) =>
-      new SignJWT({ name: user.name ?? undefined, email: user.email ?? undefined })
-        .setProtectedHeader({ alg: "RS256", kid: KEY_ID, typ: "JWT" })
+    issue: async (user) => {
+      const { privateKey, kid } = await loadKeys();
+      return new SignJWT({ name: user.name ?? undefined, email: user.email ?? undefined })
+        .setProtectedHeader({ alg: "RS256", kid, typ: "JWT" })
         .setIssuer(issuer)
         .setAudience(AUDIENCE)
         .setSubject(user.userId)
         .setIssuedAt()
         .setExpirationTime(TOKEN_LIFETIME)
-        .sign((await loadKeys()).privateKey),
+        .sign(privateKey);
+    },
     verify: async (token) => {
       try {
         const { payload } = await jwtVerify(token, (await loadKeys()).publicKey, {
@@ -86,8 +88,10 @@ async function loadKeyPair(privateJwk: string | undefined) {
     privateKey = pair.privateKey;
     source = await exportJWK(pair.publicKey);
   }
-  // Only the public parts (n, e) are ever published.
-  const publicJwk: JWK = { kty: "RSA", n: source.n, e: source.e, kid: KEY_ID, alg: "RS256", use: "sig" };
+  // Only the public parts (n, e) are ever published. The key id is the key's own thumbprint, so a
+  // new key gets a new id and verifiers that cache keys (SpacetimeDB does) know to fetch it.
+  const kid = await calculateJwkThumbprint({ kty: "RSA", n: source.n!, e: source.e! });
+  const publicJwk: JWK = { kty: "RSA", n: source.n, e: source.e, kid, alg: "RS256", use: "sig" };
   const publicKey = (await importJWK(publicJwk, "RS256")) as CryptoKey;
-  return { privateKey, publicKey, publicJwk };
+  return { privateKey, publicKey, publicJwk, kid };
 }
