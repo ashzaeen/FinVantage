@@ -27,7 +27,7 @@ App types: Account, Transaction     packages/contracts           (what routes, m
 2. **Mapper.** `mapItemSnapshot` turns Plaid objects into the app's types. It handles every Plaid convention:
    - Flips the sign and converts dollars to integer cents.
    - Maps Plaid's type and subtype to the seven `AccountType`s.
-   - Takes rates, minimum payments, and due dates from liabilities. A promotional `special` APR beats the purchase APR.
+   - Takes rates, minimum payments, and due dates from liabilities. A card uses its purchase APR; a promotional `special` APR replaces it only when the user has entered when the promo ends (Plaid gives no end date, and the special rate may cover only part of the balance).
    - Categorizes by rules from Plaid's category (`categoryFor`).
    - Flags a transaction as recurring when it's in an active stream.
 3. **App types.** `Account` and `Transaction` in `@finvantage/contracts`. Fields are only ever added, so the code that uses them stays stable.

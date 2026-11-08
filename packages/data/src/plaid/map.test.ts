@@ -75,7 +75,7 @@ test("rates, minimum payments, and due dates come from user details, then liabil
   assert.equal(byId.acc_card!.minimumPaymentCents, 3500);
   assert.equal(byId.acc_card!.nextPaymentDueOn, "2026-11-20");
   assert.equal(byId.acc_card!.creditLimitCents, 500000);
-  // A promotional ("special") APR wins over the purchase APR. The end date is user-entered.
+  // A promotional ("special") APR wins over the purchase APR when the user entered its end date.
   assert.equal(byId.acc_promo!.annualRate, 0);
   assert.equal(byId.acc_promo!.promoRateEndsOn, "2027-09-30");
   // Mortgage terms from Plaid's mortgage liability.
@@ -139,3 +139,35 @@ test("transactions on accounts the app can't place are dropped with the account"
   });
   assert.deepEqual(mapItemSnapshot(item, "u"), { accounts: [], transactions: [] });
 });
+
+test("a card's 0% special APR without a known end date doesn't hide its purchase APR", () => {
+  // Plaid Sandbox's "Plaid Credit Card", 2026-11-08: 0% special on $1,000, 12.5% on purchases.
+  const item = PlaidItemSnapshot.parse({
+    ...loadDemoProfileSource().bank[0]!,
+    liabilities: {
+      credit: [
+        {
+          account_id: "acc_card",
+          aprs: [
+            { apr_type: "balance_transfer_apr", apr_percentage: 15.24, balance_subject_to_apr: 1562.32 },
+            { apr_type: "cash_apr", apr_percentage: 27.95, balance_subject_to_apr: 56.22 },
+            { apr_type: "purchase_apr", apr_percentage: 12.5, balance_subject_to_apr: 157.01 },
+            { apr_type: "special", apr_percentage: 0, balance_subject_to_apr: 1000 },
+          ],
+          is_overdue: false,
+          last_payment_amount: null,
+          last_payment_date: null,
+          last_statement_balance: 410,
+          minimum_payment_amount: 20,
+          next_payment_due_date: null,
+        },
+      ],
+      mortgage: [],
+      student: [],
+    },
+  });
+  const card = (details = {}) => mapItemSnapshot(item, "u", details).accounts.find((a) => a.id === "acc_card")!;
+  assert.equal(card().annualRate, 0.125, "no promo end date: the purchase APR");
+  assert.equal(card({ acc_card: { promoRateEndsOn: "2027-06-30" } }).annualRate, 0, "with an end date: the promo rate");
+});
+
