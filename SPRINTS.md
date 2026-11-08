@@ -156,6 +156,21 @@ Notes:
 - The demo profile's built-in banks have status `demo` and are left out of the linked list.
 - Plaid omits `iso_currency_code` in places, so it is optional in every schema. APR type and security type are plain strings, so a new Plaid value can't break a sync.
 
+## Sprint 9: Reports on the user's bank data (done 2026-11-08)
+
+Once a user links a bank, the linked bank replaces their demo copy everywhere (`preferLinkedBanks`, built by the Copilot owner). This sprint makes quarterly reports follow it. Without a linked bank, reports run on the demo copy as before.
+
+- [x] `visuals.dataSource` is `"bank"` or `"demo"`. The web report and the PDF say which: "Based on your linked bank accounts", or "Based on sample data", with a link to Accounts
+- [x] On bank data, the monthly breakdown, the spending trend, and the summary's income, spending and savings come from the quarter's transactions (`apps/api/src/reporting/cashflow.ts`). Transfers between the user's own accounts don't count as income or spending
+- [x] Simulation runs saved before the bank was linked describe the demo copy, so reports skip them
+- [x] A quarter with no saved simulation no longer fails with 409. The report uses the newest saved run, or runs one now, and shows "Goal outlook as of <date>" (`visuals.outlookAsOf`). The previous quarter needs its own run, so a first bank report has no comparison
+- [x] Simulations for a linked user take monthly income, spending and savings from the last three months of bank transactions, counting only months with both income and spending. The profile's figures remain the fallback when there is no such month (the synthetic bank has none). The Copilot keeps the profile's figures for now
+- [x] Tests: a linked user's report with no saved runs; demo-era runs skipped after linking; cash-flow math
+
+Notes:
+- Net worth for a past quarter is today's balances. Balance snapshots aren't recorded on sync yet.
+- Category names in a report's monthly breakdown are now labels ("Dining Out"), not ids.
+
 ## Report PDFs in MongoDB
 
 - [x] `DocumentStore.saveReportPdf` / `getReportPdf` (memory, and a `report_pdfs` collection in Mongo). A PDF still renders to a local file, and its bytes are then saved, so any instance can serve the download

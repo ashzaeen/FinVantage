@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { formatUsd, type QuarterlyReport } from "@finvantage/contracts";
 import { ProbabilityRange } from "@/components/finance/ProbabilityRange";
@@ -127,6 +128,21 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
 
       {error && <p className="rounded-xl bg-critical-bg p-3 text-sm text-critical">{error}</p>}
 
+      <p className="text-sm text-muted">
+        {latest.visuals.dataSource === "bank" ? (
+          "Based on your linked bank accounts."
+        ) : (
+          <>
+            Based on sample data.{" "}
+            <Link href="/accounts" className="font-semibold text-accent hover:underline">
+              Link a bank
+            </Link>{" "}
+            to use your own.
+          </>
+        )}
+        {latest.visuals.outlookAsOf && ` Goal outlook as of ${latest.visuals.outlookAsOf}.`}
+      </p>
+
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ["Net worth", formatUsd(latest.visuals.summary.netWorthCents)],
@@ -137,7 +153,9 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
           <div key={label} className="rounded-2xl border border-line bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_8px_30px_-4px_rgba(84,74,247,0.08)]">
             <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</span>
             <p className="mt-3 text-right font-poppins text-2xl font-bold tabular-nums text-ink">{value}</p>
-            <p className="mt-1 text-right text-xs text-muted">Saved planning figure</p>
+            <p className="mt-1 text-right text-xs text-muted">
+              {latest.visuals.dataSource === "bank" ? "From your linked banks" : "Saved planning figure"}
+            </p>
           </div>
         ))}
       </div>

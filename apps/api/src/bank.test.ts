@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { randomBytes } from "node:crypto";
-import { ApiError, createApiClient } from "@finvantage/contracts";
+import { ApiError, createApiClient, isLiability } from "@finvantage/contracts";
 import { decryptToken, encryptToken } from "@finvantage/data";
 import { createApp } from "./app";
 import { createDeps } from "./deps";
+import { averageCashFlow, monthlyCashFlow, monthsBefore } from "./reporting/cashflow";
 
 // No Plaid keys in tests, so the synthetic provider stands in for Plaid with the same flow.
 async function signedIn() {
@@ -111,4 +112,54 @@ test("merchant rules apply to bank-synced transactions, and a hand-made choice b
   await client.createCategoryRule({ body: { merchantContains: second!.merchant, categoryId: "giving.donations", applyToPast: false } });
   const kept = (await client.listTransactions({ query: { limit: 500 } })).find((t) => t.id === second!.id);
   assert.equal(kept?.category, "travel");
+});
+
+test("a linked user's report runs on their bank, even with no saved simulation", async () => {
+  const { client, deps, user } = await signedIn();
+  const item = await client.linkSandboxBank();
+
+  // The synthetic bank's history: paychecks in October 2026, spending in November.
+  const report = await client.generateReport({ body: { quarter: "2026-Q4", email: false } });
+  assert.equal(report.visuals.dataSource, "bank");
+  assert.equal(report.visuals.outlookAsOf, deps.today());
+
+  // The run made for the report was simulated on the bank's accounts and cash flow.
+  const [run] = await deps.docs.listSimulationRuns(user.id);
+  assert.ok(run);
+  assert.ok(run.inputs.snapshot.accounts.every((a) => a.id.startsWith(`${item.itemId}__`)));
+  const transactions = await client.listTransactions({ query: { limit: 500 } });
+  const expected = monthlyCashFlow(transactions, ["2026-10", "2026-11", "2026-12"]);
+  assert.deepEqual(
+    report.visuals.monthlyBreakdown.map((m) => [m.monthKey, m.incomeCents, m.spendingCents]),
+    expected.map((m) => [m.monthKey, m.incomeCents, m.spendingCents]),
+  );
+  assert.ok(expected[0]!.incomeCents > 0 && expected[1]!.spendingCents > 0);
+  // The snapshot's cash flow comes from the bank's last three months, not the profile's estimate.
+  const flow = averageCashFlow(monthlyCashFlow(transactions, monthsBefore(deps.today().slice(0, 7), 3)), { complete: true });
+  const income = await deps.ledger.getIncomeProfile(user.id);
+  assert.equal(run.inputs.snapshot.monthlyIncomeCents, flow ? flow.incomeCents : income!.monthlyIncomeCents);
+
+  const accounts = await client.listAccounts();
+  const netWorth = accounts.reduce((sum, a) => sum + (isLiability(a.type) ? -a.balanceCents : a.balanceCents), 0);
+  assert.equal(report.visuals.summary.netWorthCents, netWorth);
+  assert.equal(report.pdf.status, "ready");
+});
+
+test("once a bank is linked, reports skip simulations made on the demo copy", async () => {
+  const { client, deps, user } = await signedIn();
+  await client.loadDemoProfile(); // saves three backdated runs on the demo copy
+  const demoRuns = new Set((await deps.docs.listSimulationRuns(user.id)).map((r) => r.id));
+  assert.equal(demoRuns.size, 3);
+
+  const before = await client.generateReport({ body: { email: false } });
+  assert.equal(before.visuals.dataSource, "demo");
+  assert.equal(before.visuals.outlookAsOf, null);
+  assert.ok(before.evidence.some((e) => demoRuns.has(e.sourceId)));
+
+  await client.linkSandboxBank();
+  const after = await client.generateReport({ body: { email: false } });
+  assert.equal(after.visuals.dataSource, "bank");
+  assert.ok(after.visuals.outlookAsOf);
+  assert.equal(after.previousQuarter, null);
+  assert.ok(after.evidence.every((e) => !demoRuns.has(e.sourceId)));
 });

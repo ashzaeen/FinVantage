@@ -212,7 +212,7 @@ export function registerAgentRoutes(app: Hono<AppEnv>, deps: AppDeps) {
   mount(app, deps, routes.generateReport, async ({ userId, body }) => {
     let input;
     try {
-      input = await buildQuarterlyEvidence(deps, userId, body.quarter);
+      input = await buildQuarterlyEvidence(deps, userId, body.quarter, { fallbackRun: true });
     } catch (error) {
       if (error instanceof InsufficientQuarterDataError) {
         throw new HttpError(409, "insufficient_quarter_data", error.message);

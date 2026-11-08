@@ -57,6 +57,15 @@ function pageBackground(document: PDFKit.PDFDocument) {
   document.save().rect(0, 0, 612, 792).fill(COLORS.page).restore();
 }
 
+/** Where the report's figures come from, shown under its title (also on the web page). */
+export function reportSourceLine(report: Pick<QuarterlyReport, "visuals">): string {
+  const source =
+    report.visuals.dataSource === "bank"
+      ? "Based on your linked bank accounts."
+      : "Based on sample data. Link a bank on Accounts to use your own.";
+  return report.visuals.outlookAsOf ? `${source} Goal outlook as of ${report.visuals.outlookAsOf}.` : source;
+}
+
 function header(
   document: PDFKit.PDFDocument,
   title: string,
@@ -384,6 +393,7 @@ class LocalPdfStore implements PdfStore {
         ? `Compared with ${report.previousQuarter}\nGenerated ${report.createdAt.slice(0, 10)}`
         : `Single-quarter baseline\nGenerated ${report.createdAt.slice(0, 10)}`,
     );
+    document.font("Poppins").fontSize(8).fillColor("#E8E7FF").text(printable(reportSourceLine(report)), 36, 80, { width: 410 });
     const summary = report.visuals.summary;
     kpi(document, 36, "NET WORTH", formatUsd(summary.netWorthCents), COLORS.purple);
     kpi(document, 173, "MONTHLY INCOME", formatUsd(summary.monthlyIncomeCents), COLORS.blue);
@@ -401,12 +411,22 @@ class LocalPdfStore implements PdfStore {
     if (hasComparison) goalBars(document, report.visuals.goalComparisons, 322, 252);
     else currentGoalBars(document, report.visuals.goalPathways, 322, 252);
     card(document, 36, 456, 540, 270, "Monthly spending trend", COLORS.green);
-    document.fillColor(COLORS.muted).font("Poppins").fontSize(7).text("Source: stored simulation snapshots", 50, 486);
+    document.fillColor(COLORS.muted).font("Poppins").fontSize(7).text(
+      report.visuals.dataSource === "bank" ? "Source: your linked bank transactions" : "Source: stored simulation snapshots",
+      50,
+      486,
+    );
     spendingLine(document, report.visuals.spendingTrend, 76, 518, 460, 142);
 
     let pathwayY = 118;
     document.addPage();
-    header(document, "Goal pathways", "Simulator median path with uncertainty band");
+    header(
+      document,
+      "Goal pathways",
+      report.visuals.outlookAsOf
+        ? `Simulated ${report.visuals.outlookAsOf}, median path with uncertainty band`
+        : "Simulator median path with uncertainty band",
+    );
     for (const [goalIndex, goal] of report.visuals.goalPathways.entries()) {
       if (pathwayY + 186 > 742) {
         document.addPage();

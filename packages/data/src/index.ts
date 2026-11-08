@@ -12,7 +12,7 @@ export * from "./profile";
 export * from "./bank";
 export * from "./plaid/schema";
 export * from "./plaid/map";
-export { preferLinkedBanks } from "./linked-banks";
+export { isDemoCopy, preferLinkedBanks } from "./linked-banks";
 export * from "./plaid/spacetime-rows";
 export * from "./plaid/client";
 export * from "./bank-tokens";
