@@ -17,7 +17,7 @@ function useOpenRow() {
 function MarketsCard({ data }: { data: InvestmentsOverview }) {
   const { openKey, flip } = useOpenRow();
   return (
-    <Card title="Markets" action={<MockedBadge />} className="invest-rise invest-rise-5">
+    <Card title="Markets" action={data.priceSource === "sample" ? <MockedBadge /> : undefined} className="invest-rise invest-rise-5">
       <ul className="-mx-2">
         {data.markets.map((market) => {
           const open = openKey === market.symbol;
@@ -62,7 +62,7 @@ function TopMoversCard({ data, watchlist }: { data: InvestmentsOverview; watchli
   const movers: MarketQuote[] = filter === "gainers" ? data.topGainers : filter === "losers" ? data.topLosers : data.topMovers;
 
   return (
-    <Card title="Top Movers" action={<MockedBadge />} className="invest-rise invest-rise-5">
+    <Card title="Top Movers" action={data.priceSource === "sample" ? <MockedBadge /> : undefined} className="invest-rise invest-rise-5">
       <Pills options={MOVER_FILTERS} value={filter} onChange={setFilter} label="Filter Top Movers" compact />
       {movers.length === 0 && <p className="py-6 text-center text-sm text-muted">Nothing moved this way in the last session.</p>}
       <ul key={filter} className="-mx-2 mt-2">
@@ -103,8 +103,9 @@ function TopMoversCard({ data, watchlist }: { data: InvestmentsOverview; watchli
 
 /* ── Market News, and the reader that slides in over the page ──────────── */
 
-function NewsReader({ articles, index, onNavigate, onClose }: {
+function NewsReader({ articles, index, live, onNavigate, onClose }: {
   articles: NewsHeadline[];
+  live: boolean;
   index: number;
   onNavigate: (index: number) => void;
   onClose: () => void;
@@ -136,7 +137,7 @@ function NewsReader({ articles, index, onNavigate, onClose }: {
     >
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between gap-3 border-b border-line px-6 py-4">
-          <MockedBadge />
+          {live ? <span /> : <MockedBadge />}
           <button type="button" aria-label="Close Article" onClick={onClose} className="h-9 w-9 rounded-full text-muted transition-colors hover:bg-inset hover:text-ink">
             <span aria-hidden="true">✕</span>
           </button>
@@ -151,7 +152,7 @@ function NewsReader({ articles, index, onNavigate, onClose }: {
             <a href={article.url} target="_blank" rel="noreferrer" className="mt-6 inline-flex rounded-full bg-accent px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--accent-hover)]">
               Read at Source
             </a>
-          ) : (
+          ) : live ? null : (
             <p className="mt-6 rounded-xl bg-inset p-3 text-xs leading-5 text-muted">This is a sample article written for the demo. Live stories will open from their original source.</p>
           )}
         </div>
@@ -165,10 +166,10 @@ function NewsReader({ articles, index, onNavigate, onClose }: {
   );
 }
 
-function NewsCard({ news }: { news: NewsHeadline[] }) {
+function NewsCard({ news, live }: { news: NewsHeadline[]; live: boolean }) {
   const [reading, setReading] = useState<number | null>(null);
   return (
-    <Card title="Market News" action={<MockedBadge />} className="invest-rise invest-rise-5">
+    <Card title="Market News" action={live ? undefined : <MockedBadge />} className="invest-rise invest-rise-5">
       <ul className="-mx-2">
         {news.map((headline, index) => (
           <li key={headline.id} className="border-t border-line first:border-t-0">
@@ -182,7 +183,7 @@ function NewsCard({ news }: { news: NewsHeadline[] }) {
           </li>
         ))}
       </ul>
-      {reading !== null && <NewsReader articles={news} index={reading} onNavigate={setReading} onClose={() => setReading(null)} />}
+      {reading !== null && <NewsReader articles={news} index={reading} live={live} onNavigate={setReading} onClose={() => setReading(null)} />}
     </Card>
   );
 }
@@ -192,7 +193,7 @@ export function MarketTiles({ data, watchlist }: { data: InvestmentsOverview; wa
     <section aria-label="Market Overview" className="grid gap-5 md:grid-cols-3">
       <MarketsCard data={data} />
       <TopMoversCard data={data} watchlist={watchlist} />
-      <NewsCard news={data.news} />
+      <NewsCard news={data.news} live={data.priceSource === "live"} />
     </section>
   );
 }

@@ -10,16 +10,16 @@ The investment view: holdings, allocation, and a comparison against a benchmark.
 
 `GET /v1/investments` drives `/portfolio`: an All view plus one per account (Roth IRA, 401(k), Brokerage), each with tiles, chart ranges, allocation and holdings, then a Watchlist, Markets, Top Movers and Market News. The figures are computed in `packages/math-core/src/investments.ts`. The contract forces `mocked: true`, and the page must keep showing `MockedBadge`.
 
-Positions come from the demo fixture. Prices, history, statistics and headlines come from `SampleMarketData` in `packages/data/src/market.ts`, which matches the fixture's close prices so each view adds up to its balance on the Accounts page.
+Positions come from the demo fixture. Prices, history, dividends and news come from Alpaca, and market cap and P/E from Financial Modeling Prep, through `LiveMarketData` in `packages/data/src/market-live.ts`. `createMarketData` in `apps/api/src/deps.ts` picks it when `ALPACA_API_KEY_ID` and `ALPACA_API_SECRET_KEY` are set (`FMP_API_KEY` is optional). Without the keys, or if the feed fails before any good snapshot, `SampleMarketData` in `market.ts` supplies made-up prices that match the fixture's close prices, and the page says so. With live prices, a view's total no longer matches its balance on the Accounts page, because the demo balances are fixed.
 
 ## Still to do
 
 Tagged `STUB(portfolio)`:
 
-1. Add a real market feed behind `MarketDataProvider` and choose it in `apps/api/src/deps.ts`. The plan is Alpaca for prices and history and Finnhub for market cap, P/E and news. Confirm Alpaca's movers and news endpoints with a real request. Keep keys on the server, and fall back to the last good prices so the page never goes blank.
+1. Done 2026-11-08: the live feed (Alpaca, plus FMP in place of Finnhub). Top Movers ranks the page's own symbols rather than Alpaca's movers screener, which lists penny stocks and warrants.
 2. Read positions from the ledger's `holding` and `security` data, so linked accounts appear. `demoInvestments` reads the fixture for every user today.
 3. Move the Watchlist from browser storage to a store, and search symbols through the feed instead of the sample list.
-4. Fill `NewsHeadline.body` and `url` from the news feed, so the reader shows real stories and links to their source.
+4. Done 2026-11-08: `NewsHeadline.body` and `url` come from Alpaca's news (Benzinga and others).
 
 ## Done means
 

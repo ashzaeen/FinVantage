@@ -1,7 +1,7 @@
 import {
   createBankProvider,
+  createMarketData,
   createStores,
-  SampleMarketData,
   type BankDataProvider,
   type BankTokenStore,
   type DocumentStore,
@@ -29,7 +29,7 @@ export interface AppDeps {
   llm: LlmClient;
   live: LiveBus;
   bank: BankDataProvider;
-  /** Prices and market news for the Investments page. Sample data until a real feed is wired in. */
+  /** Prices and market news for the Investments page: Alpaca and FMP when their keys are set, else sample data. */
   market: MarketDataProvider;
   /** Plaid access tokens, encrypted at rest. Never returned to clients. */
   bankTokens: BankTokenStore;
@@ -61,8 +61,7 @@ export function createDeps(env: NodeJS.ProcessEnv = process.env): AppDeps {
     llm: createLlmClient(env),
     live: createLiveBus(env),
     bank: createBankProvider(env),
-    // STUB(portfolio): choose the real market feed here, from env, once its keys exist.
-    market: new SampleMarketData(),
+    market: createMarketData(env),
     mail: createMailClient(env),
     pdf: createPdfStore(env, now, stores.docs),
     auth: createAuth({ privateJwk: requiredInProduction(env, "AUTH_PRIVATE_JWK"), issuer: env.AUTH_ISSUER }),

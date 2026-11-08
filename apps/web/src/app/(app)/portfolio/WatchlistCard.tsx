@@ -92,7 +92,7 @@ function AddSymbol({ options, onAdd }: { options: WatchlistItem[]; onAdd: (symbo
   );
 }
 
-export function WatchlistCard({ watchlist, dates }: { watchlist: Watchlist; dates: string[] }) {
+export function WatchlistCard({ watchlist, dates, live }: { watchlist: Watchlist; dates: string[]; live: boolean }) {
   const { sorted, sort, toggle } = useSortedRows(watchlist.items, COLUMNS, { key: "symbol", desc: false });
   const [openSymbol, setOpenSymbol] = useState<string | null>(null);
   const flip = (symbol: string) => setOpenSymbol((current) => (current === symbol ? null : symbol));
@@ -102,7 +102,7 @@ export function WatchlistCard({ watchlist, dates }: { watchlist: Watchlist; date
       title="Watchlist"
       subtitle="Symbols you want to keep an eye on"
       className="invest-rise invest-rise-5 relative z-10"
-      action={<div className="flex items-center gap-2"><span className="hidden sm:inline"><MockedBadge /></span><AddSymbol options={watchlist.available} onAdd={watchlist.add} /></div>}
+      action={<div className="flex items-center gap-2">{!live && <span className="hidden sm:inline"><MockedBadge /></span>}<AddSymbol options={watchlist.available} onAdd={watchlist.add} /></div>}
     >
       {sorted.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted">Your Watchlist is empty. Add a symbol to start following it.</p>

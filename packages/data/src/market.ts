@@ -2,10 +2,10 @@
  * Market data for the Investments page, behind one interface so a real feed can replace the
  * sample one in `apps/api/src/deps.ts` without touching the math, the route, or the page.
  *
- * STUB(portfolio): every price, statistic and headline below is made up, and the same inputs
- * always give the same output. Prices for symbols in the demo profile match its `close_price`, so
- * the Investments page adds up to the balances on the Accounts page. Replace with Alpaca and
- * Finnhub. Weekends are skipped, but market holidays are not.
+ * `SampleMarketData` is the fallback: every price, statistic and headline is made up, and the same
+ * inputs always give the same output. Prices for symbols in the demo profile match its
+ * `close_price`, so the Investments page adds up to the balances on the Accounts page. Weekends are
+ * skipped, but market holidays are not. The live feed is `LiveMarketData` in `market-live.ts`.
  */
 import { INVESTMENT_RANGES, type AssetClass, type InvestmentRange, type MarketSecurity, type MarketSeries, type MarketSnapshot, type NewsHeadline } from "@finvantage/contracts";
 
@@ -48,13 +48,18 @@ const SAMPLE_SYMBOLS: SampleSymbol[] = [
   { symbol: "ETH", name: "Ethereum", assetClass: "crypto", priceCents: 340_000, beta: 1.2, ownVolatility: 0.035, dividendYield: 0, marketCapCents: 410 * B, peRatio: null },
 ];
 
-const INDEXES = [
+/** The symbols the page knows, for the live feed too. Funds have no market cap or P/E. */
+export const MARKET_SYMBOLS: ReadonlyArray<{ symbol: string; name: string; assetClass: AssetClass; fund: boolean }> = SAMPLE_SYMBOLS.map(
+  (s) => ({ symbol: s.symbol, name: s.name, assetClass: s.assetClass, fund: s.assetClass !== "crypto" && s.marketCapCents === null }),
+);
+
+export const INDEXES = [
   { label: "S&P 500", symbol: "SPY" },
   { label: "Nasdaq 100", symbol: "QQQ" },
   { label: "Dow Jones", symbol: "DIA" },
 ];
 
-const DEFAULT_WATCHLIST = ["GOOGL", "AMZN", "ETH"];
+export const DEFAULT_WATCHLIST = ["GOOGL", "AMZN", "ETH"];
 
 /** Placeholder stories for the reader. They describe no real event and quote no real source. */
 const SAMPLE_ARTICLES: Array<{ title: string; body: string[] }> = [
@@ -100,8 +105,8 @@ const MARKET_VOLATILITY = 0.008;
 /** A mildly positive latest session, so Top Movers shows gainers and losers and fits the sample headlines. */
 const LAST_SESSION_MARKET_MOVE = 0.005;
 const DAILY_DRIFT = 0.0004;
-const ONE_DAY_TIMES = Array.from({ length: 27 }, (_, i) => clock(9 * 60 + 30 + i * 15));
-const ONE_WEEK_TIMES = Array.from({ length: 7 }, (_, i) => clock(10 * 60 + i * 60));
+export const ONE_DAY_TIMES = Array.from({ length: 27 }, (_, i) => clock(9 * 60 + 30 + i * 15));
+export const ONE_WEEK_TIMES = Array.from({ length: 7 }, (_, i) => clock(10 * 60 + i * 60));
 
 function clock(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
@@ -144,7 +149,7 @@ function sessionsEndingAt(today: string, count: number): string[] {
   return sessions;
 }
 
-function marketStatusAt(now: string): "open" | "closed" {
+export function marketStatusAt(now: string): "open" | "closed" {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     weekday: "short",
@@ -170,10 +175,35 @@ function bridge(start: number, end: number, steps: number, volatility: number, r
 }
 
 /** Evenly thinned, always keeping the first and last points. */
-function thinned(indexes: number[]): number[] {
+export function thinned(indexes: number[]): number[] {
   if (indexes.length <= MAX_DAILY_POINTS) return indexes;
   const step = (indexes.length - 1) / (MAX_DAILY_POINTS - 1);
   return Array.from({ length: MAX_DAILY_POINTS }, (_, i) => indexes[Math.round(i * step)]!);
+}
+
+/**
+ * The ranges drawn from daily closes. `closes[symbol][i]` is the close on `sessions[i]`, oldest
+ * first, and every list is the same length. Short histories give shorter ranges.
+ */
+export function dailyRanges(sessions: string[], closes: Record<string, number[]>, today: string): Record<"1M" | "3M" | "YTD" | "1Y" | "ALL", MarketSeries> {
+  const dailySeries = (indexes: number[]): MarketSeries => ({
+    labels: indexes.map((i) => sessions[i]!),
+    pricesCents: Object.fromEntries(Object.entries(closes).map(([symbol, path]) => [symbol, indexes.map((i) => path[i]!)])),
+  });
+  const last = sessions.length - 1;
+  const lastSessions = (count: number) => {
+    const span = Math.min(count, last);
+    return Array.from({ length: span + 1 }, (_, i) => last - span + i);
+  };
+  const found = sessions.findIndex((date) => date >= `${today.slice(0, 4)}-01-01`);
+  const yearStart = Math.max(0, Math.min(found === -1 ? last - 1 : found, last - 1));
+  return {
+    "1M": dailySeries(lastSessions(SESSIONS["1M"])),
+    "3M": dailySeries(lastSessions(SESSIONS["3M"])),
+    YTD: dailySeries(thinned(Array.from({ length: last - yearStart + 1 }, (_, i) => yearStart + i))),
+    "1Y": dailySeries(thinned(lastSessions(SESSIONS["1Y"]))),
+    ALL: dailySeries(thinned(sessions.map((_, i) => i))),
+  };
 }
 
 interface SampleHistory {
@@ -201,13 +231,7 @@ function buildHistory(today: string): SampleHistory {
     closes[sample.symbol] = path.map(Math.round);
   }
 
-  const dailySeries = (indexes: number[]): MarketSeries => ({
-    labels: indexes.map((i) => sessions[i]!),
-    pricesCents: Object.fromEntries(Object.entries(closes).map(([symbol, path]) => [symbol, indexes.map((i) => path[i]!)])),
-  });
   const last = sessions.length - 1;
-  const lastSessions = (count: number) => Array.from({ length: count + 1 }, (_, i) => last - count + i);
-  const yearStart = sessions.findIndex((date) => date >= `${today.slice(0, 4)}-01-01`);
 
   const pathsFor = (build: (sample: SampleSymbol, path: number[], random: () => number) => number[]) =>
     Object.fromEntries(
@@ -241,11 +265,7 @@ function buildHistory(today: string): SampleHistory {
     series: {
       "1D": oneDay,
       "1W": oneWeek,
-      "1M": dailySeries(lastSessions(SESSIONS["1M"])),
-      "3M": dailySeries(lastSessions(SESSIONS["3M"])),
-      YTD: dailySeries(thinned(Array.from({ length: Math.max(2, sessions.length - yearStart) }, (_, i) => Math.min(yearStart, last - 1) + i))),
-      "1Y": dailySeries(thinned(lastSessions(SESSIONS["1Y"]))),
-      ALL: dailySeries(thinned(sessions.map((_, i) => i))),
+      ...dailyRanges(sessions, closes, today),
     } satisfies Record<(typeof INVESTMENT_RANGES)[number], MarketSeries>,
   };
 }

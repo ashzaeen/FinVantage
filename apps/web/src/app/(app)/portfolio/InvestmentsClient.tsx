@@ -49,7 +49,11 @@ export function InvestmentsClient({ data }: { data: InvestmentsOverview }) {
         <span className="rounded-full bg-inset px-3 py-1 font-semibold text-ink-secondary">
           {data.marketStatus === "open" ? "Market Open" : "Market Closed"}
         </span>
-        <span className="text-muted">Sample prices from the {shortDate(data.pricesAsOf)} close. Share counts are demo data.</span>
+        <span className="text-muted">
+          {data.priceSource === "live"
+            ? `Live prices from Alpaca (IEX), ${data.marketStatus === "open" ? "updated each minute" : `as of the ${shortDate(data.pricesAsOf)} close`}. Market cap and P/E from FMP. Share counts are demo data.`
+            : `Sample prices from the ${shortDate(data.pricesAsOf)} close. Share counts are demo data.`}
+        </span>
       </div>
 
       <main className="space-y-4 pb-8">
@@ -89,7 +93,7 @@ export function InvestmentsClient({ data }: { data: InvestmentsOverview }) {
         </div>
 
         <HoldingsCard view={view} dates={data.sparklineDates} watchlist={watchlist} />
-        <WatchlistCard watchlist={watchlist} dates={data.sparklineDates} />
+        <WatchlistCard watchlist={watchlist} dates={data.sparklineDates} live={data.priceSource === "live"} />
         <MarketTiles data={data} watchlist={watchlist} />
       </main>
     </>

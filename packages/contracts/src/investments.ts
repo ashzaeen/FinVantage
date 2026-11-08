@@ -121,10 +121,17 @@ export const NewsHeadline = z.object({
 });
 export type NewsHeadline = z.infer<typeof NewsHeadline>;
 
-/** Share counts are demo data and prices are sample data, so `mocked` stays a literal. */
+/**
+ * Where prices, history and news came from: `live` is Alpaca (with FMP for market cap and P/E),
+ * `sample` is the made-up fallback.
+ */
+export const PriceSource = z.enum(["sample", "live"]);
+export type PriceSource = z.infer<typeof PriceSource>;
+
+/** Share counts are demo data even when prices are live, so `mocked` stays a literal. */
 export const InvestmentsOverview = z.object({
   mocked: z.literal(true),
-  priceSource: z.enum(["sample"]),
+  priceSource: PriceSource,
   marketStatus: z.enum(["open", "closed"]),
   pricesAsOf: IsoDate,
   /** `views[0]` is always the All view. */
@@ -179,7 +186,7 @@ export interface MarketSeries {
 }
 
 export interface MarketSnapshot {
-  source: "sample";
+  source: PriceSource;
   marketStatus: "open" | "closed";
   pricesAsOf: string;
   securities: Record<string, MarketSecurity>;
