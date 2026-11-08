@@ -1,5 +1,5 @@
 import {
-  Baby, BedDouble, Bike, BookOpen, Briefcase, Building2, Bitcoin, CalendarClock, Car, CarTaxiFront, CircleEllipsis,
+  Baby, BedDouble, Bike, BookOpen, Briefcase, Building2, Bitcoin, CalendarClock, Car, CarTaxiFront, CircleEllipsis, CircleHelp,
   Clapperboard, Coffee, CreditCard, Cigarette, Dices, Droplets, Dumbbell, Eye, Fuel, Gamepad2, Gift, GraduationCap,
   Hammer, HandCoins, HandHeart, HeartHandshake, HeartPulse, Home, KeyRound, Landmark, Laptop, Lock, Milestone, Music,
   Package, PawPrint, PenLine, Pill, PiggyBank, Plane, Receipt, Sandwich, Scissors, ShieldCheck, Shirt, ShoppingBag,
@@ -46,7 +46,7 @@ const ICONS: Record<string, LucideIcon> = {
   home_pets: Sofa, "home_pets.furniture": Sofa, "home_pets.hardware": Hammer, "home_pets.security": Lock,
   "home_pets.pet_supplies": PawPrint, "home_pets.vet": PawPrint, "home_pets.other": Sofa,
   giving: HandHeart, "giving.donations": HandHeart,
-  other_spending: CircleEllipsis,
+  other_spending: CircleEllipsis, unknown: CircleHelp,
   // Savings
   savings_investing: PiggyBank, "savings_investing.savings": PiggyBank, "savings_investing.investments": TrendingUp,
   "savings_investing.crypto": Bitcoin,

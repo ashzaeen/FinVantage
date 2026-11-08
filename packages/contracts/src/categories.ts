@@ -124,6 +124,7 @@ export const DEFAULT_SPENDING_CATEGORIES: readonly SpendingCategoryDef[] = [
   { id: "giving", label: "Giving", bucket: "wants", parentId: null },
   { id: "giving.donations", label: "Donations", bucket: "wants", parentId: "giving" },
   { id: "other_spending", label: "Other", bucket: "wants", parentId: null },
+  { id: "unknown", label: "Unknown", bucket: "wants", parentId: null },
   { id: "savings_investing", label: "Savings & Investing", bucket: "savings", parentId: null },
   { id: "savings_investing.savings", label: "Savings", bucket: "savings", parentId: "savings_investing" },
   { id: "savings_investing.investments", label: "Investments & Retirement", bucket: "savings", parentId: "savings_investing" },
@@ -404,13 +405,22 @@ export function topCategoryId(id: string): string {
   return id.split(".")[0]!;
 }
 
+/** The category of a merchant Plaid cannot place. Users can fix it by hand or with a rule. */
+export const UNKNOWN_CATEGORY_ID = "unknown";
+
 /** Plaid's category as FinVantage's top-level category and most specific subcategory. */
 export function categorizePlaid(
   pfc: { primary: string; detailed: string } | null,
-): { category: string | null; subcategory: string | null } {
+): { category: string; subcategory: string | null } {
   const id = pfc ? (PLAID_DETAILED_CATEGORY[pfc.detailed] ?? PLAID_PRIMARY_CATEGORY[pfc.primary]) : undefined;
-  if (!id) return { category: null, subcategory: null };
+  if (!id) return { category: UNKNOWN_CATEGORY_ID, subcategory: null };
   return { category: topCategoryId(id), subcategory: id.includes(".") ? id : null };
+}
+
+/** What Plaid alone would say for a stored detailed category, which is all a transaction keeps of it. */
+export function categorizePlaidDetailed(detailed: string | null): { category: string; subcategory: string | null } {
+  const primary = Object.keys(PLAID_PRIMARY_CATEGORY).sort((a, b) => b.length - a.length).find((k) => detailed?.startsWith(`${k}_`));
+  return categorizePlaid(detailed && primary ? { primary, detailed } : null);
 }
 
 /** The display name for a category or subcategory id. Unknown ids are shown as they are. */

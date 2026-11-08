@@ -93,3 +93,22 @@ test("access tokens are encrypted, bound to their item, and tamper-evident", () 
   raw[raw.length - 1] ^= 1;
   assert.throws(() => decryptToken(key, "item_1", raw.toString("base64")), "tampered ciphertext");
 });
+
+test("merchant rules apply to bank-synced transactions, and a hand-made choice beats a rule", async () => {
+  const { client } = await signedIn();
+  await client.linkSandboxBank();
+  const [first, second] = (await client.listTransactions({ query: { limit: 500 } })).filter((t) => t.amountCents < 0);
+  const plaidChoice = first!.category;
+
+  // A rule written after the sync still shapes what the user sees, with no "apply to past".
+  await client.createCategoryRule({ body: { merchantContains: first!.merchant, categoryId: "giving.donations" } });
+  const ruled = (await client.listTransactions({ query: { limit: 500 } })).find((t) => t.id === first!.id);
+  assert.equal(ruled?.subcategory, "giving.donations");
+  assert.notEqual(plaidChoice, "giving", "the test needs a transaction Plaid put elsewhere");
+
+  // Moving a transaction by hand wins over a rule that would match it.
+  await client.recategorizeTransaction({ params: { id: second!.id }, body: { categoryId: "travel" } });
+  await client.createCategoryRule({ body: { merchantContains: second!.merchant, categoryId: "giving.donations", applyToPast: false } });
+  const kept = (await client.listTransactions({ query: { limit: 500 } })).find((t) => t.id === second!.id);
+  assert.equal(kept?.category, "travel");
+});

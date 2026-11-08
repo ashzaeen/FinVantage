@@ -9,6 +9,7 @@ import {
 } from "@finvantage/data";
 import { createLiveBus, type LiveBus } from "@finvantage/live";
 import { createLlmClient, type LlmClient } from "@finvantage/llm";
+import { withCategoryRules } from "./spending/rules-ledger";
 import { createAuth, type Auth } from "./auth";
 import { MemoryCredentialStore, SpacetimeCredentialStore, type CredentialStore } from "./credentials";
 import {
@@ -52,6 +53,7 @@ export function createDeps(env: NodeJS.ProcessEnv = process.env): AppDeps {
   const stores = createStores(env);
   return {
     ...stores,
+    ledger: withCategoryRules(stores.ledger, stores.spending),
     llm: createLlmClient(env),
     live: createLiveBus(env),
     bank: createBankProvider(env),
