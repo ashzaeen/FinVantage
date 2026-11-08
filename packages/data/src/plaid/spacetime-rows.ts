@@ -12,7 +12,7 @@ import { toCents } from "./map";
 import type { PlaidItemSnapshot, PlaidLiabilities, PlaidRecurringStream } from "./schema";
 
 type Wire = { [key: string]: unknown };
-const opt = <T>(value: T | null | undefined) => (value === null || value === undefined ? { none: [] } : { some: value });
+export const opt = <T>(value: T | null | undefined) => (value === null || value === undefined ? { none: [] } : { some: value });
 const optCents = (dollars: number | null | undefined) => opt(dollars === null || dollars === undefined ? null : toCents(dollars));
 
 /** camelCase keys to snake_case, recursively. Option wrappers ({ some } / { none }) pass through. */
@@ -99,14 +99,15 @@ const streamRow = (s: PlaidRecurringStream, direction: "inflow" | "outflow", use
 });
 
 /** One Plaid Item as a `BankItemLoad` for the `load_profile` reducer (camelCase, options wrapped). */
-export function bankItemLoad(snapshot: PlaidItemSnapshot, userId: string): Wire {
+/** `status` is "good" for a linked bank, or "demo" for the demo profile's built-in banks. */
+export function bankItemLoad(snapshot: PlaidItemSnapshot, userId: string, status = "good"): Wire {
   return {
     item: {
       itemId: snapshot.item.item_id,
       institutionId: opt(snapshot.item.institution_id),
       institutionName: snapshot.item.institution_name,
       transactionsCursor: opt(snapshot.transactions_cursor),
-      status: "good",
+      status,
     },
     accounts: snapshot.accounts.map((a) => ({
       accountId: a.account_id,
@@ -194,8 +195,9 @@ export function loadProfileArgs(source: DemoProfileSource): unknown[] {
       priorityRank: g.priorityRank,
       flexibility: g.flexibility,
       linkedAccountId: opt(g.linkedAccountId),
+      status: opt(g.status),
     })),
-    source.bank.map((item) => bankItemLoad(item, userId)),
+    source.bank.map((item) => bankItemLoad(item, userId, "demo")),
     Object.entries(source.accountDetails).map(([accountId, d]) => ({
       accountId,
       userId,

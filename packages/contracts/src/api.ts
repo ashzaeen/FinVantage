@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Account, CreateTransaction, NetWorth, NewAccount, NewTransaction, Transaction } from "./account";
+import { Account, BankItemSummary, CreateTransaction, NetWorth, NewAccount, NewTransaction, Transaction } from "./account";
 import {
   EmailSchedule,
   EmailScheduleLogEntry,
@@ -250,17 +250,31 @@ export const routes = {
   getPortfolio: route({ method: "GET", path: "/v1/portfolio", response: Portfolio }),
   getCreditScore: route({ method: "GET", path: "/v1/credit-score", response: CreditScore }),
 
-  // Bank linking (P2)
+  // Bank linking through Plaid. Signed-in users only: the shared demo user can't link a bank.
   createBankLinkToken: route({
     method: "POST",
     path: "/v1/bank/link-token",
     response: z.object({ linkToken: z.string() }),
   }),
+  /** Plaid Link's onSuccess public token. Links the bank and runs the first sync. */
   exchangeBankToken: route({
     method: "POST",
     path: "/v1/bank/exchange",
-    body: z.object({ publicToken: z.string() }),
-    response: z.object({ accounts: z.array(Account) }),
+    body: z.object({ publicToken: z.string().min(1) }),
+    response: BankItemSummary,
+  }),
+  /** Sandbox only: links Plaid's test bank without the Link screen. 404 outside sandbox. */
+  linkSandboxBank: route({
+    method: "POST",
+    path: "/v1/bank/sandbox-link",
+    response: BankItemSummary,
+  }),
+  listBankItems: route({ method: "GET", path: "/v1/bank/items", response: z.array(BankItemSummary) }),
+  syncBankItem: route({ method: "POST", path: "/v1/bank/items/:id/sync", response: BankItemSummary }),
+  removeBankItem: route({
+    method: "DELETE",
+    path: "/v1/bank/items/:id",
+    response: z.object({ deleted: z.literal(true) }),
   }),
 } as const;
 

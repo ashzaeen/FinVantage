@@ -119,6 +119,16 @@ export const CreateTransaction = NewTransaction.extend({
 });
 export type CreateTransaction = z.infer<typeof CreateTransaction>;
 
+/** One linked bank login (a Plaid Item), as the app shows it. Access tokens never leave the server. */
+export const BankItemSummary = z.object({
+  itemId: Id,
+  institutionName: z.string(),
+  /** "good", or why it needs attention, such as "login_required". */
+  status: z.string(),
+  accountCount: z.number().int().nonnegative(),
+});
+export type BankItemSummary = z.infer<typeof BankItemSummary>;
+
 /** An account's balance on one day. Saved on each bank sync; net worth history is built from these. */
 export const BalanceSnapshot = z.object({
   accountId: Id,

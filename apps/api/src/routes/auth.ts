@@ -7,21 +7,39 @@ import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
 
 /**
- * Makes sure a signed-in user has a profile in the ledger. While the ledger is in memory, each
- * Vercel instance does this on the user's first request to it: a copy of the demo profile,
- * renamed to them.
+ * Makes sure a signed-in user has a profile in the ledger: on their first request ever, a copy
+ * of the demo profile, renamed to them. Returns the profile when it had to look, or null when this
+ * instance already knew the user exists.
  */
-export async function ensureProfile(deps: AppDeps, user: SignedInUser): Promise<User> {
+export async function ensureProfile(deps: AppDeps, user: SignedInUser): Promise<User | null> {
+  // Once a user has a profile they keep it, so each instance checks the store only once per user.
+  const known = knownUsers.get(deps) ?? new Set<string>();
+  knownUsers.set(deps, known);
+  if (known.has(user.userId)) return null;
   const existing = await deps.ledger.getUser(user.userId);
-  if (existing) return existing;
+  if (existing) {
+    known.add(user.userId);
+    return existing;
+  }
   await deps.ledger.loadDemoProfile(user.userId);
   const profile = await deps.ledger.getUser(user.userId);
   if (!profile) throw new Error(`Demo profile did not load for ${user.userId}.`);
-  return deps.ledger.saveUser({
+  const saved = await deps.ledger.saveUser({
     ...profile,
     displayName: user.name ?? user.email ?? profile.displayName,
     email: user.email ?? profile.email,
   });
+  known.add(user.userId);
+  return saved;
+}
+
+const knownUsers = new WeakMap<AppDeps, Set<string>>();
+
+/** The user's profile, creating it on first sign-in. */
+async function profileOf(deps: AppDeps, user: SignedInUser): Promise<User> {
+  const profile = (await ensureProfile(deps, user)) ?? (await deps.ledger.getUser(user.userId));
+  if (!profile) throw new Error(`No profile for ${user.userId}.`);
+  return profile;
 }
 
 const BAD_LOGIN = "Wrong email or password.";
@@ -41,7 +59,7 @@ export function registerAuthRoutes(app: Hono<AppEnv>, deps: AppDeps) {
       if (error instanceof EmailTakenError) throw new HttpError(409, "email_taken", error.message);
       throw error;
     }
-    return { token: await deps.auth.issue(user), user: await ensureProfile(deps, user) };
+    return { token: await deps.auth.issue(user), user: await profileOf(deps, user) };
   });
 
   mount(app, deps, routes.logIn, async ({ body }) => {
@@ -60,7 +78,7 @@ export function registerAuthRoutes(app: Hono<AppEnv>, deps: AppDeps) {
       name: known?.displayName ?? null,
       email: credential.email,
     };
-    return { token: await deps.auth.issue(user), user: await ensureProfile(deps, user) };
+    return { token: await deps.auth.issue(user), user: await profileOf(deps, user) };
   });
 
   // OpenID discovery, so SpacetimeDB (and anyone else) can check our tokens with the public key.

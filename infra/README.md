@@ -57,6 +57,8 @@ From the repo root, with the Vercel CLI (`npx vercel@65.2.0 ...`):
      - `REPORT_OUTPUT_DIR` = `/tmp/finvantage-reports` (Vercel functions can only write under `/tmp`)
      - `AUTH_PRIVATE_JWK` = a private RSA JWK that signs sign-in tokens. Generate it once and pipe it straight into `vercel env add`, so it never appears on screen. Changing it signs everyone out
      - `SPACETIME_TOKEN`, `SPACETIME_URL`, `SPACETIME_MODULE` = the Spacetime admin token and database (see `apps/spacetime/README.md`)
+     - `LEDGER_BACKEND` = `spacetime` (accounts, transactions, and goals in Spacetime)
+     - `PLAID_CLIENT_ID`, `PLAID_SECRET` (Sandbox), `PLAID_ENV` = `sandbox`, `PLAID_TOKEN_KEY` = 32 random bytes as base64, which encrypts Plaid access tokens. Changing the key disconnects every linked bank
      - `DOCUMENT_BACKEND` = `mongodb`, `MONGODB_URI` = the Atlas connection string, `MONGODB_DB` = `finvantage`. In Atlas, Network Access must allow `0.0.0.0/0`, because Vercel has no fixed IPs. A blocked IP shows up in the logs as `SSL alert number 80`
    - `finvantage-web`: Root Directory `apps/web`, Framework **Next.js**. Env vars:
      - `NEXT_PUBLIC_API_URL` = `https://finvantage-api.vercel.app`
@@ -92,8 +94,7 @@ The build adds the API origin to `host_permissions` automatically. Load `apps/ex
 
 - **Report PDFs live in one instance's `/tmp`.** A PDF download that lands on a different instance than the one that generated the report gets a 404. This lasts until PDFs are stored in MongoDB or blob storage.
 - **Files the API bundle reads at runtime** (pdfkit's font data, the Poppins fonts) are copied next to the bundle by `scripts/build-vercel.mjs`. A new dependency that reads its own files from disk needs the same treatment, or the API crashes on Vercel while working locally.
-- **The ledger store resets.** Documents persist in MongoDB, but accounts, transactions, and goals are in memory until Sprint 6.
-- **Memory stores reset.** Data lives in each function instance until the Spacetime and Mongo stores land, so saved data can vanish or differ between requests. This is fine for the demo profile.
+- **Data persists in production:** the ledger in Spacetime and documents in MongoDB. Locally both default to memory and reset when the API restarts. The signed-out demo user is shared, so edits made while signed out are visible to every visitor.
 - **Live updates through SSE are unreliable.** A Copilot event published on one function instance never reaches a dashboard connected to another. Sprint 5 moves live updates to Spacetime subscriptions. Locally, SSE works.
 - **SSE streams end** when they reach the function's maximum duration. The browser's `EventSource` reconnects by itself.
 

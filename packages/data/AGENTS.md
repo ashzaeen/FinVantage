@@ -7,7 +7,7 @@ Storage and data sources. Read the root `AGENTS.md` first. Briefs: `docs/workstr
 | `src/stores.ts` | `LedgerStore` and `DocumentStore` interfaces |
 | `src/memory.ts` | Default in-memory implementations |
 | `src/profile.ts` | Demo profile schema, loader, `buildSnapshot` |
-| `src/tiger/` | Tiger Data stub and `schema.sql` |
+| `src/spacetime/` | `SpacetimeLedgerStore` and its HTTP client (SQL and reducer calls, SATS-JSON decoding) |
 | `src/mongo/` | MongoDB Atlas `DocumentStore` implementation |
 | `src/bank.ts` | Bank providers: synthetic demo data |
 | `src/plaid/` | Plaid's objects (`schema.ts`), the mapper to app types (`map.ts`), and Spacetime rows (`spacetime-rows.ts`). See `docs/DATA-MODEL.md` |
@@ -19,11 +19,12 @@ Storage and data sources. Read the root `AGENTS.md` first. Briefs: `docs/workstr
 | --- | --- |
 | Users, income profile, bank data in Plaid's shape (items, accounts, transactions, liabilities, recurring streams, holdings), goals, budgets, balance snapshots | Life events, simulation runs, Copilot events, recommendations, reports |
 
-Tiger Data is no longer used (`docs/DECISIONS.md`). Do not add a third store. The Spacetime ledger store is Sprint 6; until then the ledger is in memory.
+Tiger Data is no longer used (`docs/DECISIONS.md`). Do not add a third store. Production runs `LEDGER_BACKEND=spacetime` and `DOCUMENT_BACKEND=mongodb`; locally both default to memory.
 
 ## Rules
 
-- Routes use the interfaces, never a driver. `createStores` picks implementations from `LEDGER_BACKEND` and `DOCUMENT_BACKEND`; `DATA_BACKEND` remains as a compatibility switch.
+- Routes use the interfaces, never a driver. `createStores` picks implementations from `LEDGER_BACKEND` and `DOCUMENT_BACKEND`.
+- `src/stores.test.ts` is the ledger contract. Every implementation must pass it. Run it against Maincloud with `SPACETIME_TEST_TOKEN=... npm test -w @finvantage/data`.
 - In development, an invalid MongoDB URI logs a credential-safe warning and falls back to the memory document store so the demo remains runnable. Production fails closed.
 - A new store method goes on the interface, in memory, and in the real implementation.
 - Money stays integer cents in every store.

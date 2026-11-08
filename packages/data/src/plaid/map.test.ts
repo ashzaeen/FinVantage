@@ -68,7 +68,7 @@ test("the demo fixture is valid Plaid data and maps to all six account categorie
   assert.ok(profile.transactions.every((t) => t.category !== null));
 });
 
-test("rates, minimum payments, and due dates come from liabilities, then from user details", () => {
+test("rates, minimum payments, and due dates come from user details, then liabilities", () => {
   const byId = Object.fromEntries(loadDemoProfileFixture().accounts.map((a) => [a.id, a]));
   // Credit card: purchase APR, minimum payment, due date, limit, and available credit from Plaid.
   assert.equal(byId.acc_card!.annualRate, 0.2299);
@@ -86,6 +86,14 @@ test("rates, minimum payments, and due dates come from liabilities, then from us
   assert.equal(byId.acc_auto!.minimumPaymentCents, 34000);
   assert.equal(byId.acc_savings!.annualRate, 0.04);
   assert.equal(byId.acc_checking!.mask, "0042");
+});
+
+test("a rate the user entered beats the bank's", () => {
+  const item = loadDemoProfileSource().bank[0]!;
+  const card = mapItemSnapshot(item, "u", { acc_card: { annualRate: 0.1999, minimumPaymentCents: null, promoRateEndsOn: null } })
+    .accounts.find((a) => a.id === "acc_card")!;
+  assert.equal(card.annualRate, 0.1999);
+  assert.equal(card.minimumPaymentCents, 3500, "unset fields still come from the bank");
 });
 
 test("transactions in an active recurring stream are flagged recurring; tombstoned streams don't count", () => {
