@@ -157,6 +157,16 @@ export function registerAdvisorRoutes(app: Hono<AppEnv>, deps: AppDeps) {
       source: result.source,
       citations: result.citations,
       attachments: result.attachments,
+      ...(result.source === "fallback"
+        ? {
+            diagnostics: {
+              fallbackReason: result.trace.fallbackReason,
+              rejected: result.trace.rejected,
+              toolCalls: result.trace.toolCalls,
+              toolErrors: result.trace.toolErrors,
+            },
+          }
+        : {}),
       createdAt: deps.now(),
     });
     await deps.docs.saveAdvisorConversation({

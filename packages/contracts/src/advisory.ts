@@ -95,6 +95,13 @@ export const AdvisorMessage = z.object({
   source: z.enum(["gemini", "fallback"]).nullable(),
   citations: z.array(AdvisorCitation),
   attachments: z.array(AdvisorAttachment),
+  /** Why a reply fell back, for debugging. Set only on fallback replies; never shown in the UI. */
+  diagnostics: z.object({
+    fallbackReason: z.string().nullable(),
+    rejected: z.array(z.string()),
+    toolCalls: z.array(z.string()),
+    toolErrors: z.array(z.string()),
+  }).optional(),
   createdAt: IsoDateTime,
 });
 export type AdvisorMessage = z.infer<typeof AdvisorMessage>;
