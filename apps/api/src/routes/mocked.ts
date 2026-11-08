@@ -25,7 +25,12 @@ export function registerMockedRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     mocked: true as const,
     score: 742,
     history: [
+      { date: "2026-05-01", score: 718 },
+      { date: "2026-06-01", score: 723 },
+      { date: "2026-07-01", score: 727 },
       { date: "2026-08-01", score: 731 },
+      { date: "2026-09-01", score: 735 },
+      { date: "2026-10-01", score: 738 },
       { date: "2026-11-01", score: 742 },
     ],
   }));
