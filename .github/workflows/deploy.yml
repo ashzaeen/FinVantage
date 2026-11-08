@@ -35,7 +35,8 @@ jobs:
             project: finvantage-web
             smoke: https://finvantage-web-ten.vercel.app/
             # apps/extension too: the web build packages the extension for the Copilot tab's download.
-            paths: apps/web apps/extension packages/contracts package.json package-lock.json tsconfig.base.json
+            # This file too: a change to how the web app deploys should deploy it.
+            paths: apps/web apps/extension packages/contracts package.json package-lock.json tsconfig.base.json .github/workflows/deploy.yml
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
