@@ -731,7 +731,8 @@ test("the income summary totals deposits by month and source, and leaves out tra
   await deposit("2026-09-03", 300_000, "Acme Payroll", "income");
   await deposit("2026-08-03", 300_000, "Acme Payroll", "income");
   await deposit("2026-11-05", 50_000, "Savings Transfer", "transfers");
-  await client.addTransaction({ body: { accountId: account!.id, date: "2026-11-04", amountCents: 12_000, merchant: "Side Gig", category: "income", subcategory: "income.self_employed" } });
+  // A kind of income the demo profile has none of, so its total is this deposit alone.
+  await client.addTransaction({ body: { accountId: account!.id, date: "2026-11-04", amountCents: 12_000, merchant: "Room Rental", category: "income", subcategory: "income.rental" } });
 
   const income = await client.getIncomeSummary();
   assert.equal(income.thisMonthCents >= 300_000, true);
@@ -741,7 +742,7 @@ test("the income summary totals deposits by month and source, and leaves out tra
   assert.ok(acme.deposits >= 4);
   assert.equal(income.trend.length, 6);
   assert.equal(income.debtToIncome.ratio, income.debtToIncome.monthlyDebtCents / income.debtToIncome.monthlyIncomeCents);
-  const gig = income.categories.find((c) => c.categoryId === "income.self_employed");
+  const gig = income.categories.find((c) => c.categoryId === "income.rental");
   assert.equal(gig?.totalCents, 12_000);
   assert.ok(income.categories.some((c) => c.categoryId === "income.other"), "deposits with no subcategory fall under Other Income");
   assert.ok(!income.categories.some((c) => c.categoryId === "transfers"));
@@ -1186,4 +1187,19 @@ test("a financed car goes through the scenario with the user's own terms, not th
   assert.equal(loan.financed, "$7,000");
   const visual = turn.reply.attachments.find((a) => a.kind === "visual");
   assert.ok(visual?.kind === "visual" && visual.visual.kind === "loan_explorer" && visual.visual.inputs.aprPercent === 7.49);
+});
+
+test("deleting a life event removes it and saves a fresh run without it", async () => {
+  const { client } = setup();
+  const before = await client.runSimulation({ body: { persist: false } });
+  const { event } = await client.createLifeEvent({
+    body: { type: "job_change", date: "2026-11-09", recurrence: "one_time", dollarImpactCents: -3_000_000, durationMonths: null, linkedGoalId: null, source: "form" },
+  });
+  const { deleted, run } = await client.deleteLifeEvent({ params: { id: event.id } });
+  assert.equal(deleted, true);
+  assert.ok(!(await client.listLifeEvents()).some((e) => e.id === event.id));
+  assert.deepEqual(run.goalOutcomes.map((o) => o.probabilityLow), before.goalOutcomes.map((o) => o.probabilityLow), "odds are back to before the event");
+  const [latest] = await client.listSimulations();
+  assert.equal(latest?.id, run.id, "the fresh run is the latest saved one");
+  await assert.rejects(client.deleteLifeEvent({ params: { id: event.id } }), /No such life event/);
 });

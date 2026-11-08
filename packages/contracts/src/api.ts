@@ -161,6 +161,12 @@ export const routes = {
       goalChanges: z.array(GoalImpact),
     }),
   }),
+  /** Removes a saved life event and re-runs the simulation, so the odds drop it at once. */
+  deleteLifeEvent: route({
+    method: "DELETE",
+    path: "/v1/life-events/:id",
+    response: z.object({ deleted: z.literal(true), run: SimulationRun }),
+  }),
   previewLifeEvent: route({
     method: "POST",
     path: "/v1/life-events/preview",

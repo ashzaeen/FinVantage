@@ -86,7 +86,7 @@ const PERSONAL_PAYMENT = 150;
 const INSURANCE = 118;
 const SAVINGS_TRANSFER = 1400;
 const ROTH_TRANSFER = 500;
-const BROKERAGE_TRANSFER = 400;
+const BROKERAGE_TRANSFER = 450;
 const PROMO_PLAN = 200;
 
 /** Today's balances in dollars. History is worked backwards from these. */
@@ -204,9 +204,13 @@ for (const [index, m] of months.entries()) {
   // Income: semi-monthly pay, interest, quarterly dividends, occasional freelance, an April refund.
   add(day(m, 1), A.checking.id, -PAYCHECK, "Northwind Design Co", cat(C.paycheck), "online", "stream_payroll");
   add(day(m, 15), A.checking.id, -PAYCHECK, "Northwind Design Co", cat(C.paycheck), "online", "stream_payroll");
-  add(day(m, 28), A.savings.id, -money(between(52, 58) * (1 + index * 0.015)), "High-Yield Savings Interest", cat(C.interest), "other");
+  // Interest for the month before posts on the 1st; a bond fund pays a small dividend monthly, with
+  // the larger stock dividends quarterly. So even early in a month, income has several sources.
+  add(day(m, 1), A.savings.id, -money(between(52, 58) * (1 + index * 0.015)), "High-Yield Savings Interest", cat(C.interest), "other");
+  add(day(m, 3), A.brokerage.id, -money(between(14, 22)), "Bond Fund Dividend", cat(C.dividends), "other");
   if ([3, 6, 9, 12].includes(mm)) add(day(m, 27), A.brokerage.id, -money(between(38, 52)), "Brokerage Dividends", cat(C.dividends), "other");
   if ([1, 4, 6, 9].includes(mm)) add(day(m, 20), A.checking.id, -pick([450, 600, 750, 900]), "Freelance Client Payment", cat(C.freelance), "online");
+  if (mm === 11) add(day(m, 6), A.checking.id, -650, "Freelance Client Payment", cat(C.freelance), "online");
   if (mm === 4) add(day(m, 18), A.checking.id, -1240, "IRS Treasury Tax Refund", cat(C.taxRefund), "online");
 
   // Housing and bills, from checking. Bills fall mid to late month.
@@ -240,8 +244,7 @@ for (const [index, m] of months.entries()) {
   if (!isCurrent || index % 2 === 0) card(day(m, 13), A.cashCard.id, between(30, 55), "Costwise Warehouse", C.superstore);
   const dining = isCurrent ? [2, 7] : [2, 7, 12, 19, 23, 27].slice(0, pick([5, 5, 6]));
   for (const d of dining) card(day(m, d), A.cashCard.id, between(16, 58), pick(["Taqueria Norte", "Basil & Vine", "The Noodle Bar", "Harbor Grill", "Sunrise Diner"]), C.restaurant);
-  for (const d of isCurrent ? [5] : [6, 21]) card(day(m, d), A.cashCard.id, between(4.5, 7.5), "Bean There Coffee", C.coffee);
-  if (!isCurrent) card(day(m, 25), A.cashCard.id, between(9, 15), "Quick Bite", C.fastFood);
+  for (const d of isCurrent ? [5] : [14]) card(day(m, d), A.cashCard.id, between(4.5, 7.5), "Bean There Coffee", C.coffee);
   for (const d of isCurrent ? [6] : [7, 16, 26]) card(day(m, d), A.cashCard.id, between(38, 52), "Fuel Stop", C.gas);
   if (!isCurrent && index % 3 === 1) card(day(m, 19), A.cashCard.id, between(14, 26), "Ride Share", C.rideshare, "online");
   if (!isCurrent) card(day(m, 11), A.cashCard.id, between(22, 68), "Shopwise", C.online, "online");
@@ -354,7 +357,7 @@ function changeAfter(account: string, date: string, liability: boolean) {
 }
 const monthEnds = months.slice(0, -1).map((m) => day(m, 31));
 // Today's checking balance is whatever keeps every past month-end above the cash cushion.
-const CHECKING_FLOOR = 2200;
+const CHECKING_FLOOR = 1450;
 const lowestBefore = Math.min(...monthEnds.map((date) => -changeAfter(A.checking.id, date, false)));
 TODAY_BALANCE.checking = Math.max(TODAY_BALANCE.checking, money(Math.ceil((CHECKING_FLOOR - lowestBefore) / 50) * 50));
 const history: Array<{ accountId: string; date: string; balanceCents: number }> = [];
