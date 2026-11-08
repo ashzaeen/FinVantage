@@ -61,6 +61,27 @@ jobs:
             echo "deploy=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # The Copilot tab's "Download extension" zip. Built here, where the toolchain is known, and
+      # uploaded with the web app (apps/web/public). The web build tries again and only replaces it
+      # on success. Update these URLs if a domain changes.
+      - uses: actions/setup-node@v4
+        if: steps.changed.outputs.deploy == 'true' && matrix.app == 'web'
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Package the Copilot extension
+        if: steps.changed.outputs.deploy == 'true' && matrix.app == 'web'
+        env:
+          EXTENSION_API_URL: https://finvantage-api.vercel.app
+          EXTENSION_WEB_URL: https://finvantage-web-ten.vercel.app
+        run: |
+          npm ci --no-audit --no-fund
+          node apps/web/scripts/bundle-extension.mjs
+          test -s apps/web/public/finvantage-copilot.zip
+          # Ignored in git so local builds aren't committed; this CI copy must reach the upload.
+          sed -i '/finvantage-copilot.zip/d' .gitignore
+
       - name: Link the Vercel project
         if: steps.changed.outputs.deploy == 'true'
         run: npx --yes "$VERCEL_CLI" link --yes --project "${{ matrix.project }}" --token "$VERCEL_TOKEN"
