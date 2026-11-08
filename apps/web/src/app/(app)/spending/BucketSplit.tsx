@@ -46,7 +46,7 @@ export function BucketSplit({ initial }: { initial: BucketSummary }) {
 
   return (
     <Card
-      title="Needs, Wants and Savings"
+      title="Nature of Spending"
       subtitle={`${summary.month} · of ${formatUsd(summary.incomeCents)} monthly income`}
       action={
         !editing && (

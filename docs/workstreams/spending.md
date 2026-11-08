@@ -30,7 +30,7 @@ A transaction stores its top-level category in `category` and its most specific 
 - **Subscriptions are not a category.** They are a view over recurring charges, because streaming, gyms and software sit in different categories.
 - **Superstores** (Walmart, Target) default to Shopping. Users can move them.
 
-### Needs, Wants and Savings
+### Needs, Wants and Savings (shown as "Nature of Spending")
 
 - The default split is 50/30/20 of monthly income, and each user can change it. The three shares must add up to 100%.
 - The API reports each bucket's spending against its target for the month.
