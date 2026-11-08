@@ -42,9 +42,9 @@ The demo profile, `packages/data/fixtures/planner.json`, holds its bank data in 
 | Account | Spacetime | `bank_item`, `bank_account`, `liability`, `account_detail` |
 | Transaction | Spacetime | `bank_transaction`, `recurring_stream` |
 | Goal | Spacetime | `goal` |
-| Life event | MongoDB | `lifeEvents` |
-| Simulation run | MongoDB | `simulationRuns` |
-| Copilot event and recommendation | MongoDB | `copilotEvents`, `recommendations`, plus quarterly reports and email schedules |
+| Life event | MongoDB | `life_events` |
+| Simulation run | MongoDB | `simulation_runs` |
+| Copilot event and recommendation | MongoDB | `copilot_events`, `recommendations`, plus `quarterly_reports`, `email_schedules`, `email_schedule_logs` |
 
 Spacetime also holds `budget`, `balance_snapshot`, `holding`, `security`, `live_event`, `admin` and `user_identity`.
 
