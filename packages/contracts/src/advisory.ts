@@ -93,6 +93,13 @@ export const MonthlyContribution = z.object({
 export type MonthlyContribution = z.infer<typeof MonthlyContribution>;
 
 export const ReportVisuals = z.object({
+  /** "bank" once the user has linked a bank; "demo" while the report runs on the sample profile. */
+  dataSource: z.enum(["bank", "demo"]).default("demo"),
+  /**
+   * Set when the quarter had no saved simulation, so the goal outlook comes from a run made on
+   * another date (the newest one, or one made for this report). Null when the run is the quarter's.
+   */
+  outlookAsOf: IsoDate.nullable().default(null),
   summary: z.object({
     netWorthCents: Cents,
     monthlyIncomeCents: Cents,

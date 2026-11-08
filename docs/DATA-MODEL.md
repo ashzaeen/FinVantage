@@ -34,6 +34,8 @@ App types: Account, Transaction     packages/contracts           (what routes, m
 
 The demo profile, `packages/data/fixtures/planner.json`, holds its bank data in Plaid's format and goes through the same mapper. Switching to live Plaid means changing where the snapshots come from, and nothing else.
 
+A signed-up user starts with a copy of the demo profile (IDs `<userId>__...`). Once they link a bank, every read leaves the demo copy's accounts and transactions out (`packages/data/src/linked-banks.ts`), so pages, simulations and quarterly reports run on the bank. Goals, income and hand-added accounts stay. Unlinking every bank brings the demo copy back.
+
 ## Where each entity lives
 
 | Entity (PRD section 9) | Store | Tables or collections |

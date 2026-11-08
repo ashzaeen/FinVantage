@@ -42,8 +42,8 @@ test("categories: detailed rules win, then primary, then unknown", () => {
   assert.equal(categoryFor({ primary: "LOAN_PAYMENTS", detailed: "LOAN_PAYMENTS_CAR_PAYMENT" }), "debt_payments");
   // A detailed category we have no rule for falls back to its primary.
   assert.equal(categoryFor({ primary: "TRAVEL", detailed: "TRAVEL_SOMETHING_NEW" }), "travel");
-  assert.equal(categoryFor({ primary: "SOMETHING_NEW", detailed: "SOMETHING_NEW_OTHER" }), null);
-  assert.equal(categoryFor(null), null);
+  assert.equal(categoryFor({ primary: "SOMETHING_NEW", detailed: "SOMETHING_NEW_OTHER" }), "unknown");
+  assert.equal(categoryFor(null), "unknown");
 });
 
 test("Plaid types and subtypes map to the app's account types", () => {
@@ -174,3 +174,8 @@ test("a card's 0% special APR without a known end date doesn't hide its purchase
   assert.equal(card({ acc_card: { promoRateEndsOn: "2027-06-30" } }).annualRate, 0, "with an end date: the promo rate");
 });
 
+
+test("a merchant Plaid cannot place is Unknown, not blank", () => {
+  const out = mapTransaction(plaidTxn({ personal_finance_category: null }), new Set());
+  assert.equal(out.category, "unknown");
+});

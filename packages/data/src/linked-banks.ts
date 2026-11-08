@@ -11,9 +11,12 @@ import type { LedgerStore } from "./stores";
  * Both ledger backends give the demo copy's records IDs of the form `<userId>__<original>`
  * (`demoProfileFor` and `demoSourceFor`), and neither lists the demo copy as a linked bank.
  */
+/** Whether an account belongs to the user's demo copy (not to a linked bank or one they added). */
+export function isDemoCopy(userId: string, accountId: string): boolean {
+  return userId !== DEMO_USER_ID && accountId.startsWith(`${userId}__`);
+}
+
 export function preferLinkedBanks(ledger: LedgerStore): LedgerStore {
-  const isDemoCopy = (userId: string, accountId: string) =>
-    userId !== DEMO_USER_ID && accountId.startsWith(`${userId}__`);
   const hasLinkedBank = async (userId: string) => (await ledger.listBankItems(userId)).length > 0;
 
   return new Proxy(ledger, {

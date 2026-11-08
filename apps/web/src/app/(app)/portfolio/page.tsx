@@ -11,7 +11,7 @@ export default async function PortfolioPage() {
 
   return (
     <>
-      <PageHeader title="Portfolio" />
+      <PageHeader title="Investments" />
       <div className="grid gap-5 md:grid-cols-2">
         {/* Total value */}
         <Card title="Total Value">

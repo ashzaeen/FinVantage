@@ -124,17 +124,42 @@ export const DEFAULT_SPENDING_CATEGORIES: readonly SpendingCategoryDef[] = [
   { id: "giving", label: "Giving", bucket: "wants", parentId: null },
   { id: "giving.donations", label: "Donations", bucket: "wants", parentId: "giving" },
   { id: "other_spending", label: "Other", bucket: "wants", parentId: null },
+  { id: "unknown", label: "Unknown", bucket: "wants", parentId: null },
   { id: "savings_investing", label: "Savings & Investing", bucket: "savings", parentId: null },
   { id: "savings_investing.savings", label: "Savings", bucket: "savings", parentId: "savings_investing" },
   { id: "savings_investing.investments", label: "Investments & Retirement", bucket: "savings", parentId: "savings_investing" },
   { id: "savings_investing.crypto", label: "Crypto", bucket: "savings", parentId: "savings_investing" },
   { id: "income", label: "Income", bucket: "excluded", parentId: null },
+  { id: "income.paycheck", label: "Paycheck", bucket: "excluded", parentId: "income" },
+  { id: "income.self_employed", label: "Self-Employment", bucket: "excluded", parentId: "income" },
+  { id: "income.interest", label: "Interest", bucket: "excluded", parentId: "income" },
+  { id: "income.dividends", label: "Dividends", bucket: "excluded", parentId: "income" },
+  { id: "income.rental", label: "Rental", bucket: "excluded", parentId: "income" },
+  { id: "income.retirement", label: "Pension & Retirement", bucket: "excluded", parentId: "income" },
+  { id: "income.benefits", label: "Benefits & Support", bucket: "excluded", parentId: "income" },
+  { id: "income.tax_refund", label: "Tax Refund", bucket: "excluded", parentId: "income" },
+  { id: "income.other", label: "Other Income", bucket: "excluded", parentId: "income" },
   { id: "transfers", label: "Transfers", bucket: "excluded", parentId: null },
   { id: "transfers.credit_card_payment", label: "Credit Card Payment", bucket: "excluded", parentId: "transfers" },
 ];
 
 /** Plaid detailed category to a FinVantage category or subcategory. */
 export const PLAID_DETAILED_CATEGORY: Readonly<Record<string, string>> = {
+  INCOME_WAGES: "income.paycheck",
+  INCOME_SALARY: "income.paycheck",
+  INCOME_CONTRACTOR: "income.self_employed",
+  INCOME_GIG_ECONOMY: "income.self_employed",
+  INCOME_DIVIDENDS: "income.dividends",
+  INCOME_INTEREST_EARNED: "income.interest",
+  INCOME_RENTAL: "income.rental",
+  INCOME_RETIREMENT_PENSION: "income.retirement",
+  INCOME_UNEMPLOYMENT: "income.benefits",
+  INCOME_MILITARY: "income.benefits",
+  INCOME_LONG_TERM_DISABILITY: "income.benefits",
+  INCOME_CHILD_SUPPORT: "income.benefits",
+  INCOME_TAX_REFUND: "income.tax_refund",
+  INCOME_OTHER: "income.other",
+  INCOME_OTHER_INCOME: "income.other",
   ENTERTAINMENT_CASINOS_AND_GAMBLING: "entertainment.gambling",
   ENTERTAINMENT_MUSIC_AND_AUDIO: "entertainment.music",
   ENTERTAINMENT_OTHER_ENTERTAINMENT: "entertainment.other",
@@ -404,13 +429,22 @@ export function topCategoryId(id: string): string {
   return id.split(".")[0]!;
 }
 
+/** The category of a merchant Plaid cannot place. Users can fix it by hand or with a rule. */
+export const UNKNOWN_CATEGORY_ID = "unknown";
+
 /** Plaid's category as FinVantage's top-level category and most specific subcategory. */
 export function categorizePlaid(
   pfc: { primary: string; detailed: string } | null,
-): { category: string | null; subcategory: string | null } {
+): { category: string; subcategory: string | null } {
   const id = pfc ? (PLAID_DETAILED_CATEGORY[pfc.detailed] ?? PLAID_PRIMARY_CATEGORY[pfc.primary]) : undefined;
-  if (!id) return { category: null, subcategory: null };
+  if (!id) return { category: UNKNOWN_CATEGORY_ID, subcategory: null };
   return { category: topCategoryId(id), subcategory: id.includes(".") ? id : null };
+}
+
+/** What Plaid alone would say for a stored detailed category, which is all a transaction keeps of it. */
+export function categorizePlaidDetailed(detailed: string | null): { category: string; subcategory: string | null } {
+  const primary = Object.keys(PLAID_PRIMARY_CATEGORY).sort((a, b) => b.length - a.length).find((k) => detailed?.startsWith(`${k}_`));
+  return categorizePlaid(detailed && primary ? { primary, detailed } : null);
 }
 
 /** The display name for a category or subcategory id. Unknown ids are shown as they are. */

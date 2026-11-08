@@ -1,5 +1,5 @@
 import type { Hono } from "hono";
-import { assignCategory, routes, topCategoryId, type NewTransaction, type Transaction } from "@finvantage/contracts";
+import { assignCategory, routes, UNKNOWN_CATEGORY_ID, topCategoryId, type NewTransaction, type Transaction } from "@finvantage/contracts";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
 import { buildCatalog, ruleCategoryFor } from "../spending/catalog";
@@ -40,9 +40,10 @@ export function registerTransactionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
   );
 
   mount(app, deps, routes.addTransaction, async ({ userId, body }) => {
-    // STUB(transactions): the LLM fallback for merchants with no category and no rule.
+    // STUB(transactions): the LLM fallback for merchants with no category and no rule. Until then they are Unknown.
     const ruled = body.category ? null : ruleCategoryFor((await deps.spending.get(userId)).rules, body.merchant);
-    const normalized = withValidSubcategory(await normalizeToUsd(ruled ? { ...body, ...assignCategory(ruled) } : body));
+    const categorized = body.category ? body : { ...body, ...assignCategory(ruled ?? UNKNOWN_CATEGORY_ID) };
+    const normalized = withValidSubcategory(await normalizeToUsd(categorized));
     const saved = await deps.ledger.addTransaction(normalized);
     deps.live.publish(userId, { type: "transaction.added", transactionId: saved.id });
     return saved;

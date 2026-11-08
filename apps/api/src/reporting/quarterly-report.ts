@@ -7,9 +7,13 @@ import {
   type Quarter,
   type ReportEvidence,
   type ReportVisuals,
+  SimulationRequest,
   type SimulationRun,
 } from "@finvantage/contracts";
+import { isDemoCopy } from "@finvantage/data";
 import type { AppDeps } from "../deps";
+import { runSimulation } from "../services";
+import { averageCashFlow, monthlyCashFlow } from "./cashflow";
 
 export class InsufficientQuarterDataError extends Error {}
 
@@ -91,26 +95,59 @@ function causeOfChange(previous: SimulationRun, current: SimulationRun): string 
   return "No changed input was found in the stored runs, so the cause is not established.";
 }
 
+/** The three `YYYY-MM` keys of a quarter. */
+function monthKeysOf(quarter: Quarter): string[] {
+  const start = quarterWindow(quarter).start;
+  const year = Number(start.slice(0, 4));
+  const month = Number(start.slice(5, 7));
+  return [0, 1, 2].map((offset) => `${year}-${String(month + offset).padStart(2, "0")}`);
+}
+
+export interface EvidenceOptions {
+  /**
+   * When the quarter has no saved simulation, use the newest one from any date, or run one now.
+   * Only for the quarter being generated: a previous quarter must have its own run, or the
+   * comparison would set a run against itself.
+   */
+  fallbackRun?: boolean;
+}
+
 export async function buildQuarterlyEvidence(
   deps: AppDeps,
   userId: string,
   requestedQuarter?: Quarter,
+  options: EvidenceOptions = {},
 ) {
   const quarter = requestedQuarter ?? latestCompletedQuarter(deps.today());
   const previous = previousQuarter(quarter);
   const currentWindow = quarterWindow(quarter);
   const previousWindow = quarterWindow(previous);
+  // Once a bank is linked the report runs on it. Runs saved before that were simulated on the
+  // demo copy's accounts, so they no longer describe the user's money and are skipped.
+  const dataSource = (await deps.ledger.listBankItems(userId)).length > 0 ? ("bank" as const) : ("demo" as const);
+  const describesUser = (run: SimulationRun) =>
+    dataSource === "demo" || !run.inputs.snapshot.accounts.some((account) => isDemoCopy(userId, account.id));
+  const runsIn = async (range?: { start: string; end: string }) =>
+    (await deps.docs.listSimulationRuns(userId, range)).filter(describesUser);
   const [currentRuns, previousRuns, currentEvents, previousEvents, currentRecommendations, previousRecommendations] =
     await Promise.all([
-      deps.docs.listSimulationRuns(userId, timestampRange(currentWindow)),
-      deps.docs.listSimulationRuns(userId, timestampRange(previousWindow)),
+      runsIn(timestampRange(currentWindow)),
+      runsIn(timestampRange(previousWindow)),
       deps.docs.listCopilotEvents(userId, timestampRange(currentWindow)),
       deps.docs.listCopilotEvents(userId, timestampRange(previousWindow)),
       deps.docs.listRecommendations(userId, timestampRange(currentWindow)),
       deps.docs.listRecommendations(userId, timestampRange(previousWindow)),
     ]);
-  const currentRun = currentRuns[0];
-  const previousRun = previousRuns[0];
+  let currentRun = currentRuns[0];
+  let outlookAsOf: string | null = null;
+  if (!currentRun && options.fallbackRun) {
+    currentRun =
+      (await runsIn())[0] ?? (await runSimulation(deps, userId, SimulationRequest.parse({ persist: true })));
+    outlookAsOf = currentRun.createdAt.slice(0, 10);
+    currentRuns.push(currentRun);
+  }
+  // A fallback run may sit in the previous quarter; it can't be compared with itself.
+  const previousRun = previousRuns.find((run) => run.id !== currentRun?.id);
   if (!currentRun) {
     throw new InsufficientQuarterDataError(
       `A stored simulation run is required for ${quarter}.`,
@@ -240,66 +277,54 @@ export async function buildQuarterlyEvidence(
     const label = ACCOUNT_CATEGORY_LABEL[category];
     allocation.set(label, (allocation.get(label) ?? 0) + account.balanceCents);
   }
-  const [yearText, quarterNumText] = quarter.split("-Q");
-  const year = Number(yearText);
-  const qNum = Number(quarterNumText);
-  const startMonthIndex = (qNum - 1) * 3;
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-  const transactions = await deps.ledger.listTransactions(userId, 500);
-  const monthlyBreakdown = [0, 1, 2].map((offset) => {
-    const mIdx = startMonthIndex + offset;
-    const monthNum = String(mIdx + 1).padStart(2, "0");
-    const monthKey = `${year}-${monthNum}`;
-    const monthLabel = `${monthNames[mIdx]} ${year}`;
-
-    const monthTx = transactions.filter((t) => t.date.startsWith(monthKey));
-    const inc = monthTx.filter((t) => t.amountCents > 0).reduce((acc, t) => acc + t.amountCents, 0);
-    const spd = monthTx.filter((t) => t.amountCents < 0).reduce((acc, t) => acc + Math.abs(t.amountCents), 0);
-
-    const categoriesMap = new Map<string, number>();
-    for (const tx of monthTx.filter((t) => t.amountCents < 0)) {
-      const cat = tx.category ?? "General";
-      categoriesMap.set(cat, (categoriesMap.get(cat) ?? 0) + Math.abs(tx.amountCents));
-    }
-
-    const categorySpending = [...categoriesMap.entries()].map(([category, cents]) => ({
-      category,
-      cents,
-    })).sort((a, b) => b.cents - a.cents);
-
-    return {
-      month: monthLabel,
-      monthKey,
-      incomeCents: inc,
-      spendingCents: spd,
-      savingsCents: inc - spd,
-      categorySpending,
-    };
-  });
+  // Linked users only see their bank's transactions here (packages/data/src/linked-banks.ts).
+  const transactions = await deps.ledger.listTransactions(userId, 5_000);
+  const monthlyBreakdown = monthlyCashFlow(transactions, monthKeysOf(quarter)).map((month) => ({
+    month: `${monthNames[Number(month.monthKey.slice(5, 7)) - 1]} ${month.monthKey.slice(0, 4)}`,
+    ...month,
+  }));
+  // On bank data, the quarter's figures are what actually happened. On the demo profile they are
+  // the simulation's stored assumptions, as before.
+  const bankFlow = dataSource === "bank" ? averageCashFlow(monthlyBreakdown) : null;
+  const previousBankFlow =
+    dataSource === "bank" ? averageCashFlow(monthlyCashFlow(transactions, monthKeysOf(previous))) : null;
+  const assumed = {
+    monthlyIncomeCents: currentRun.inputs.snapshot.monthlyIncomeCents,
+    monthlySavingsCents:
+      currentRun.inputs.snapshot.monthlySavingsCents + (currentRun.inputs.whatIf?.monthlySavingsDeltaCents ?? 0),
+    monthlySpendingCents: Math.max(0, currentRun.inputs.snapshot.monthlySpendingCents),
+  };
 
   const visuals = {
+    dataSource,
+    outlookAsOf,
     summary: {
       netWorthCents: assetsCents - liabilitiesCents,
-      monthlyIncomeCents: currentRun.inputs.snapshot.monthlyIncomeCents,
-      monthlySavingsCents:
-        currentRun.inputs.snapshot.monthlySavingsCents +
-        (currentRun.inputs.whatIf?.monthlySavingsDeltaCents ?? 0),
-      monthlySpendingCents: Math.max(0, currentRun.inputs.snapshot.monthlySpendingCents),
+      ...(bankFlow
+        ? {
+            monthlyIncomeCents: bankFlow.incomeCents,
+            monthlySavingsCents: bankFlow.savingsCents,
+            monthlySpendingCents: bankFlow.spendingCents,
+          }
+        : assumed),
     },
     accountAllocation: [...allocation.entries()]
       .map(([label, balanceCents]) => ({ label, balanceCents }))
       .sort((left, right) => right.balanceCents - left.balanceCents),
-    spendingTrend: [
-      ...(previousRun ? [{
-        quarter: previous,
-        monthlySpendingCents: Math.max(0, previousRun.inputs.snapshot.monthlySpendingCents),
-      }] : []),
-      {
-        quarter,
-        monthlySpendingCents: Math.max(0, currentRun.inputs.snapshot.monthlySpendingCents),
-      },
-    ],
+    spendingTrend:
+      dataSource === "bank"
+        ? [
+            ...(previousBankFlow ? [{ quarter: previous, monthlySpendingCents: previousBankFlow.spendingCents }] : []),
+            { quarter, monthlySpendingCents: bankFlow?.spendingCents ?? 0 },
+          ]
+        : [
+            ...(previousRun ? [{
+              quarter: previous,
+              monthlySpendingCents: Math.max(0, previousRun.inputs.snapshot.monthlySpendingCents),
+            }] : []),
+            { quarter, monthlySpendingCents: assumed.monthlySpendingCents },
+          ],
     monthlyBreakdown,
     goalComparisons: comparisons.map(({ goalId, goalName, before, after }) => ({
       goalId,

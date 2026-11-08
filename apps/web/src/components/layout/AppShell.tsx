@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { NAV_ITEMS } from "@/lib/nav";
+import { NAV_GROUPS, NAV_ITEMS, OVERVIEW_ITEM, SETTINGS_ITEM, type NavItem } from "@/lib/nav";
 import { AccountCard } from "./AccountCard";
 
 /* ─── Navigation SVG Icons (Clean, Consistent 20x20 Stroke) ─────────────────── */
@@ -89,6 +89,16 @@ function SpendingIcon() {
   );
 }
 
+function IncomeIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v12" />
+      <polyline points="7 10 12 15 17 10" />
+      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+    </svg>
+  );
+}
+
 function PortfolioIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -155,6 +165,8 @@ function getNavIcon(href: string, active: boolean) {
       return <CopilotIcon />;
     case "/advisor":
       return <AdvisorIcon />;
+    case "/income":
+      return <IncomeIcon />;
     case "/spending":
       return <SpendingIcon />;
     case "/portfolio":
@@ -168,6 +180,37 @@ function getNavIcon(href: string, active: boolean) {
     default:
       return <OverviewIcon active={active} />;
   }
+}
+
+/** One row in the sidebar. Intelligence rows are taller and carry a hint under the label. */
+function SidebarLink({ item, pathname, hero = false }: { item: NavItem; pathname: string; hero?: boolean }) {
+  const active = item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href);
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      className={`flex items-center gap-3 rounded-2xl px-3.5 font-roboto text-sm transition-all duration-150 ${hero ? "py-2" : "py-2.5"}`}
+      style={{
+        backgroundColor: active ? "#ffffff" : "transparent",
+        color: active ? "#544af7" : "rgba(255, 255, 255, 0.72)",
+        boxShadow: active ? "0 4px 14px 0 rgba(0, 0, 0, 0.08)" : "none",
+        fontWeight: active ? 600 : 400,
+      }}
+    >
+      <span
+        className={`flex shrink-0 items-center justify-center ${hero ? "h-8 w-8 rounded-xl" : ""}`}
+        style={hero ? { backgroundColor: active ? "rgba(84, 74, 247, 0.12)" : "rgba(255, 255, 255, 0.14)" } : undefined}
+      >
+        {getNavIcon(item.href, active)}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate">{item.label}</span>
+        {hero && item.hint && (
+          <span className="block truncate text-[11px] font-normal" style={{ opacity: active ? 0.7 : 0.55 }}>{item.hint}</span>
+        )}
+      </span>
+    </Link>
+  );
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -209,27 +252,22 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </Link>
 
-          {/* Dashboard navigation */}
+          {/* Dashboard navigation: Overview, then Intelligence, then Finances, with Settings last */}
           <nav aria-label="Main Navigation" className="flex flex-col gap-1">
-            {NAV_ITEMS.map((item) => {
-              const active = item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-roboto text-sm transition-all duration-150"
-                  style={{
-                    backgroundColor: active ? "#ffffff" : "transparent",
-                    color: active ? "#544af7" : "rgba(255, 255, 255, 0.72)",
-                    boxShadow: active ? "0 4px 14px 0 rgba(0, 0, 0, 0.08)" : "none",
-                    fontWeight: active ? 600 : 400,
-                  }}
-                >
-                  <span className="shrink-0">{getNavIcon(item.href, active)}</span>
-                  <span className="truncate">{item.label}</span>
-                </Link>
-              );
-            })}
+            <SidebarLink item={OVERVIEW_ITEM} pathname={pathname} />
+            {NAV_GROUPS.map((group) => (
+              <div key={group.label} className="mt-4 flex flex-col gap-1">
+                <p className="px-3.5 pb-1 font-roboto text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">
+                  {group.label}
+                </p>
+                {group.items.map((item) => (
+                  <SidebarLink key={item.href} item={item} pathname={pathname} hero={group.label === "Intelligence"} />
+                ))}
+              </div>
+            ))}
+            <div className="mt-4 border-t border-white/10 pt-3">
+              <SidebarLink item={SETTINGS_ITEM} pathname={pathname} />
+            </div>
           </nav>
 
           {/* Divider */}
