@@ -75,6 +75,17 @@ export function Hero() {
             >
               Create Your Account
             </Link>
+            {/* Signed out, the dashboard runs on the shared demo profile, so judges can look around without signing up. */}
+            <Link
+              href="/app"
+              className="flex min-h-12 items-center justify-center rounded-xl border bg-white px-6 text-sm font-semibold transition-colors hover:bg-[#EEF2FF] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--landing-primary)]/25"
+              style={{ borderColor: "var(--landing-border)", color: "var(--landing-primary-dark)" }}
+            >
+              Use a Demo<span aria-hidden="true" className="ml-0.5" style={{ color: "var(--landing-primary)" }}>*</span>
+            </Link>
+            <span className="text-xs font-medium" style={{ color: "var(--landing-text-muted)" }}>
+              <span aria-hidden="true">* </span>For judges
+            </span>
           </div>
           <ul className="mt-7 flex flex-col gap-2 sm:flex-row sm:gap-6">
             <CheckLine>Model decisions before you commit</CheckLine>
