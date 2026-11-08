@@ -41,7 +41,7 @@ GEMINI_MODEL_FLASH=...
 GEMINI_MODEL_PRO=...
 ```
 
-The key travels in the `x-goog-api-key` header, never the URL. Pass `jsonSchema` for structured output (ordinary JSON Schema; the client converts it to Gemini's format) and `timeoutMs` when you need an answer fast. Every failure (HTTP error, block, empty reply, timeout) throws, so callers fall back. Copilot cards use a 2-second timeout.
+The key travels in the `x-goog-api-key` header, never the URL. Pass `jsonSchema` for structured output (ordinary JSON Schema; the client converts it to Gemini's format) and `timeoutMs` when you need an answer fast. Gemini 3 models think by default, which can take more than 15 seconds, so a fast call also needs `thinking: "minimal"`. Every failure (HTTP error, block, empty reply, timeout) throws, so callers fall back. Copilot cards use a 2-second timeout and minimal thinking.
 
 Tests inject a fake `LlmClient`. See `src/guardrails.test.ts`.
 

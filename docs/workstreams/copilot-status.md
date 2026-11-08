@@ -17,7 +17,7 @@ Tests: `npm run check` passes (simulator 11, math core 24, card 14, extension 3,
 
 ## Not done
 
-- **Gemini is built but not tested live.** `GeminiClient` in `packages/llm/src/client.ts` is done and tested with a simulated Gemini. To turn it on, fill in the Gemini lines in `.env` (see `packages/llm/AGENTS.md`) and restart. Then open a demo page and check the card: AI-written cards come back with `source: "llm"`. If cards still say `template`, the API terminal shows why.
+- **Gemini is off for the demo** (`LLM_PROVIDER=mock`), so every card is the instant template card with no network call. Gemini was tested live on 2026-11-07 and works: `gemini-3-flash-preview` with minimal thinking returns `source: "llm"` cards in about 1.5 s. The team chose not to risk it in the demo because the key is free tier (5 requests a minute). To turn it back on, set `LLM_PROVIDER=gemini` in `.env` and restart.
 - **"Open full simulation"** links to `/simulator?copilotEvent=<id>`. Check with the dashboard owner that the page applies the purchase.
 - **Live-site rules** (Zillow, Best Buy and others) are not written. The demo runs on the mock pages, as the PRD says.
 - The extension's on/off and snooze settings live in `chrome.storage` only, not in the API.

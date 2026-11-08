@@ -11,7 +11,7 @@ if (checkbox) {
 
 // Brings back every card closed or snoozed, so a demo can run again from the start.
 const reset = document.querySelector<HTMLButtonElement>("#reset");
-const status = document.querySelector<HTMLParagraphElement>("#reset-status");
+const resetStatus = document.querySelector<HTMLParagraphElement>("#reset-status");
 
 if (reset) {
   reset.addEventListener("click", () => {
@@ -19,7 +19,7 @@ if (reset) {
       chrome.storage.session.remove("dismissedSites"),
       chrome.storage.local.set({ snoozedSites: [] }),
     ]).then(() => {
-      if (status) status.textContent = "Done. Refresh the page to see its card again.";
+      if (resetStatus) resetStatus.textContent = "Done. Refresh the page to see its card again.";
     });
   });
 }

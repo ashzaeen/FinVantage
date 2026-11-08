@@ -12,6 +12,11 @@ export interface LlmRequest {
   jsonSchema?: Record<string, unknown>;
   /** Give up after this long, so callers can fall back in time. Defaults per provider. */
   timeoutMs?: number;
+  /**
+   * How much the model may reason before answering. Omit for the model's default. Gemini 3
+   * models think by default, which can take over 15 seconds; "minimal" answers in about one.
+   */
+  thinking?: "minimal" | "low" | "high";
 }
 
 export interface LlmClient {
@@ -68,9 +73,12 @@ export class GeminiClient implements LlmClient {
     const body = {
       systemInstruction: { parts: [{ text: request.system }] },
       contents: [{ role: "user", parts: [{ text: request.prompt }] }],
-      generationConfig: request.jsonSchema
-        ? { responseMimeType: "application/json", responseSchema: toGeminiSchema(request.jsonSchema) }
-        : {},
+      generationConfig: {
+        ...(request.jsonSchema
+          ? { responseMimeType: "application/json", responseSchema: toGeminiSchema(request.jsonSchema) }
+          : {}),
+        ...(request.thinking ? { thinkingConfig: { thinkingLevel: request.thinking } } : {}),
+      },
     };
 
     const controller = new AbortController();

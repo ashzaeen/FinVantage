@@ -356,6 +356,8 @@ export async function generateCopilotCard(
       tier: "pro",
       // The card must appear within 3 seconds (PRD). Past this, the template card shows.
       timeoutMs: CARD_TIMEOUT_MS,
+      // Default thinking blows the 2-second budget. The figures are fixed, so there is nothing to reason out.
+      thinking: "minimal",
       system: SYSTEM_PROMPT,
       jsonSchema: CARD_SCHEMA,
       prompt: JSON.stringify({

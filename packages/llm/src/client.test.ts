@@ -47,6 +47,15 @@ test("sends the right model, key header, and JSON mode; returns the text", async
   assert.equal(body.generationConfig.responseSchema.properties.a.type, "STRING");
 });
 
+test("thinking level is sent only when asked for", async () => {
+  const calls: Call[] = [];
+  const client = new GeminiClient("k", models, fakeFetch(200, ok, calls));
+  await client.generate({ tier: "pro", system: "s", prompt: "p", thinking: "minimal" });
+  await client.generate({ tier: "pro", system: "s", prompt: "p" });
+  assert.deepEqual(JSON.parse(String(calls[0]!.init.body)).generationConfig.thinkingConfig, { thinkingLevel: "minimal" });
+  assert.equal(JSON.parse(String(calls[1]!.init.body)).generationConfig.thinkingConfig, undefined);
+});
+
 test("flash tier uses the flash model", async () => {
   const calls: Call[] = [];
   await new GeminiClient("k", models, fakeFetch(200, ok, calls)).generate({ tier: "flash", system: "s", prompt: "p" });
