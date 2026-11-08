@@ -355,9 +355,9 @@ export function LifeSimulatorClient() {
     }
   }
 
-  if (contextLoading) return <><PageHeader title="Life Simulator" /><p className="py-16 text-center text-sm" style={{ color: "var(--ink-muted)" }}>Loading your goals…</p></>;
-  if (contextError || !context) return <><PageHeader title="Life Simulator" /><p role="alert" className="py-16 text-center text-sm" style={{ color: "var(--critical)" }}>{contextError || "Could not load the life simulator."}</p></>;
-  if (context.goals.length === 0) return <><PageHeader title="Life Simulator" /><p className="py-12 text-center text-sm" style={{ color: "var(--ink-muted)" }}>Add a goal before modeling a life event. <a href="/goals" className="font-semibold underline">Go to Goals</a></p></>;
+  if (contextLoading) return <><PageHeader title="Life Events" /><p className="py-16 text-center text-sm" style={{ color: "var(--ink-muted)" }}>Loading your goals…</p></>;
+  if (contextError || !context) return <><PageHeader title="Life Events" /><p role="alert" className="py-16 text-center text-sm" style={{ color: "var(--critical)" }}>{contextError || "Could not load life events."}</p></>;
+  if (context.goals.length === 0) return <><PageHeader title="Life Events" /><p className="py-12 text-center text-sm" style={{ color: "var(--ink-muted)" }}>Add a goal before modeling a life event. <a href="/goals" className="font-semibold underline">Go to Goals</a></p></>;
   if (!form) return null;
 
   const eventName = form.eventType === "custom" ? form.customEventName.trim() || "your event" : EVENT_LABEL[form.eventType].toLowerCase();
@@ -368,11 +368,11 @@ export function LifeSimulatorClient() {
   const scenarioLabels = savedScenarioLabels(savedScenarios);
 
   return <>
-    <PageHeader title="Life Simulator" action={<div className="flex items-center gap-3">
-      <button type="button" onClick={() => setShowSavedChanges((showing) => !showing)} className="min-h-11 border px-4 text-sm font-semibold transition-colors hover:bg-[var(--surface-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>{showSavedChanges ? "Model Changes" : "Saved Changes"}</button>
+    <PageHeader title="Life Events" action={<div className="flex items-center gap-3">
+      <button type="button" onClick={() => setShowSavedChanges((showing) => !showing)} className="min-h-11 rounded-xl border px-4 text-sm font-semibold transition-colors hover:bg-[var(--surface-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>{showSavedChanges ? "Model Changes" : "Saved Changes"}</button>
       {saved && <span role="status" aria-live="polite" className="text-xs font-medium" style={{ color: "var(--good)" }}>Saved ✓</span>}
-      <button type="button" onClick={() => void downloadPdf()} disabled={pdfLoading || !generatedForm || hasUnappliedEdits} className="min-h-11 border px-4 text-sm font-semibold transition-colors hover:bg-[var(--surface-inset)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>{pdfLoading ? "Preparing PDF…" : "Download PDF"}</button>
-      <button type="button" onClick={() => void saveChanges()} disabled={saving || !generatedForm || hasUnappliedEdits} className="min-h-11 rounded-lg px-4 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>{saving ? "Saving…" : "Save Changes"}</button>
+      <button type="button" onClick={() => void downloadPdf()} disabled={pdfLoading || !generatedForm || hasUnappliedEdits} className="min-h-11 rounded-xl border px-4 text-sm font-semibold transition-colors hover:bg-[var(--surface-inset)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>{pdfLoading ? "Preparing PDF…" : "Download PDF"}</button>
+      <button type="button" onClick={() => void saveChanges()} disabled={saving || !generatedForm || hasUnappliedEdits} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>{saving ? "Saving…" : "Save Changes"}</button>
     </div>} />
     <div className="space-y-5">
       <p className="-mt-3 text-sm" style={{ color: "var(--ink-muted)" }}>Model an event and compare its effect across all of your goals. As of {formatDate(context.asOf)}.</p>
@@ -400,7 +400,7 @@ export function LifeSimulatorClient() {
             : <>
                 <EventForm context={context} form={form} onChange={updateForm} error={fieldError} />
                 <div className="mt-5 border-t pt-4" style={{ borderColor: "var(--border)" }}>
-                  <button type="button" onClick={() => void generate()} disabled={analysisLoading} className="min-h-12 w-full px-6 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>{analysisLoading ? "Generating…" : "Generate"}</button>
+                  <button type="button" onClick={() => void generate()} disabled={analysisLoading} className="min-h-12 w-full rounded-xl px-6 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>{analysisLoading ? "Generating…" : "Generate"}</button>
                 </div>
                 {analysis && generatedForm && <ScenarioInsight analysis={analysis} />}
               </>}

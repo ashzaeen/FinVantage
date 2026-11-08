@@ -78,10 +78,7 @@ export function CopilotFeed({ initial }: { initial: CopilotEvent[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="font-roboto text-sm text-[#4b5268]">
-          {events.length} {events.length === 1 ? "intervention" : "interventions"}
-        </p>
+      <div className="flex flex-wrap items-center justify-end gap-3">
         {confirmingClear ? (
           <div className="flex items-center gap-2 font-roboto text-sm" role="group" aria-label="Confirm clearing all">
             <span className="text-[#16192c]">Delete all {events.length}?</span>

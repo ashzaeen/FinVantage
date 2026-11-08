@@ -8,9 +8,9 @@ export default async function ReportsPage() {
   const reports = await api.listReports();
 
   return (
-    <>
-      <PageHeader title="Quarterly reports" tier="P2" prd="7.2" />
+    <div style={{ textTransform: "capitalize" }}>
+      <PageHeader title="Quarterly Reports" tier="P2" prd="7.2" />
       <ReportsClient initialReports={reports} />
-    </>
+    </div>
   );
 }

@@ -25,7 +25,7 @@ const PIE_COLORS = ["#544af7", "#3f7cac", "#45a181", "#d59a42", "#b66b64", "#8f8
 
 function ChartPanel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-3xl border border-line bg-white p-5 sm:p-6">
+    <section className="rounded-3xl border border-line bg-white p-5 sm:p-6 capitalize">
       <h2 className="font-poppins text-lg font-bold tracking-tight text-ink">{title}</h2>
       {children}
     </section>

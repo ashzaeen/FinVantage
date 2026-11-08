@@ -94,7 +94,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
 
   if (!latest) {
     return (
-      <div className="space-y-5">
+      <div className="space-y-5 text-ink capitalize">
         <Card title="Your latest completed quarter">
           <p className="text-sm text-muted">
             Reports can start from one saved quarter and add comparisons when a prior quarter exists.
@@ -113,7 +113,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
   }
 
   return (
-    <div className="space-y-6 text-ink">
+    <div className="space-y-6 text-ink capitalize">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white p-3 shadow-sm">
         <div className="flex gap-2 overflow-x-auto no-scrollbar" aria-label="Generated quarterly reports">
           {[...reports].sort((left, right) => left.quarter.localeCompare(right.quarter)).map((report) => (
@@ -151,10 +151,11 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
             {busy ? "Regenerating..." : "Regenerate"}
           </button>
           <button
+            type="button"
             className="rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-inset focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             onClick={() => setShowCharts((visible) => !visible)}
           >
-            {showCharts ? "Hide charts" : "Show charts"}
+            {showCharts ? "Hide Charts" : "Show Charts"}
           </button>
         </div>
       </div>
