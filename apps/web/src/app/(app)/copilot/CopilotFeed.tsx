@@ -1,19 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { formatUsd, type CopilotEvent } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
 import { api } from "@/lib/api";
 import { useLiveEvents } from "@/lib/useLiveEvents";
 
+/** One card per event, newest first, even if the same event arrives twice. */
+function unique(events: CopilotEvent[]): CopilotEvent[] {
+  const seen = new Set<string>();
+  return events.filter((e) => !seen.has(e.id) && seen.add(e.id));
+}
+
 export function CopilotFeed({ initial }: { initial: CopilotEvent[] }) {
-  const [events, setEvents] = useState(initial);
+  const [events, setEvents] = useState(() => unique(initial));
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const refetchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+  // A push is a signal to refetch, never data to show (see useLiveEvents). The live channel can
+  // replay old pushes when it connects, including for events already deleted, so the list always
+  // comes from the API. Bursts of pushes collapse into one refetch.
   useLiveEvents((message) => {
-    if (message.type === "copilot.event") setEvents((prev) => [message.event, ...prev]);
+    if (message.type !== "copilot.event") return;
+    clearTimeout(refetchTimer.current);
+    refetchTimer.current = setTimeout(() => {
+      void api
+        .listCopilotEvents()
+        .then((fresh) => setEvents(unique(fresh)))
+        .catch(() => {});
+    }, 400);
   });
 
   async function remove(id: string) {
