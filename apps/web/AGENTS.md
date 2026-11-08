@@ -17,14 +17,15 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
 | `src/components/ui` | Generic pieces: `Card`, `Stat`, `PageHeader`, `MockedBadge` |
 | `src/components/finance` | Domain pieces: `ProbabilityRange`, `GoalCard`, `FanChart` |
 | `src/lib/api.ts` | The typed API client |
-| `src/lib/useLiveEvents.ts` | Subscribes to pushed updates |
+| `src/lib/useLiveEvents.ts` | Subscribes to pushed updates: SpacetimeDB when signed in, SSE otherwise |
+| `src/spacetime/` | Generated SpacetimeDB client bindings. Do not edit: run `npm run generate -w @finvantage/spacetime` |
 | `src/lib/nav.ts` | Navigation items |
 | `src/app/globals.css` | Design tokens for light and dark |
 
 ## Rules
 
 - Get data through `api` from `@/lib/api`. It works in server and client components and validates every response. Do not call `fetch` directly.
-- Import only from `@finvantage/contracts`, never from other packages.
+- Import only from `@finvantage/contracts`, never from other packages. The one exception is the `spacetimedb` SDK and its generated bindings (`@/spacetime`), used only in `useLiveEvents`.
 - Do not compute financial figures here. If the API does not return a number you need, add it to the API. Every number must link back to its inputs.
 - Show probabilities only through `ProbabilityRange`, as a range with its disclaimer.
 - Put `MockedBadge` beside any mocked value.

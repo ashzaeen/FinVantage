@@ -283,6 +283,16 @@ export class MemoryDocumentStore implements DocumentStore {
     );
   }
 
+  private reportPdfs = new Map<string, Buffer>();
+
+  async saveReportPdf(userId: string, reportId: string, pdf: Buffer) {
+    this.reportPdfs.set(`${userId}:${reportId}`, Buffer.from(pdf));
+  }
+
+  async getReportPdf(userId: string, reportId: string) {
+    return this.reportPdfs.get(`${userId}:${reportId}`) ?? null;
+  }
+
   async saveReport(report: QuarterlyReport) {
     const existing = this.reports.findIndex(
       (candidate) => candidate.userId === report.userId && candidate.quarter === report.quarter,

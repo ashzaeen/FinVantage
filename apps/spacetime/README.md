@@ -28,6 +28,8 @@ Install the CLI once: in PowerShell, run `iwr https://windows.spacetimedb.com -u
 | Load the demo profile | `npm run seed:maincloud -w @finvantage/spacetime` |
 | Look at data | `spacetime sql finvantage "SELECT * FROM goal" --server maincloud` |
 | Read logs | `spacetime logs finvantage --server maincloud` |
+| Regenerate the web bindings | `npm run generate -w @finvantage/spacetime` |
+| Let an issuer's users connect (once per issuer) | `spacetime call finvantage trust_issuer '"https://finvantage-api.vercel.app"' --server maincloud` |
 
 Only the platform owner publishes, from their laptop. Adding a table, or appending a column with a
 `.default(...)`, is safe. Spacetime refuses to remove a table that still has rows. Publish a

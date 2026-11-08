@@ -135,7 +135,7 @@ export function LinkedBanks({ initialItems }: { initialItems: BankItemSummary[] 
     <section className="mb-6 rounded-3xl border border-[#edf0f7] bg-white p-5 shadow-[0_2px_12px_rgba(22,25,44,0.03)] sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="font-poppins text-base font-bold text-[#16192c]">Linked banks</h3>
+          <h3 className="font-poppins text-base font-bold text-[#16192c]">Linked Banks</h3>
           <p className="mt-1 text-xs text-[#8d94a8]">
             Connected securely through Plaid. FinVantage reads balances and transactions; it never moves money.
           </p>
@@ -145,7 +145,7 @@ export function LinkedBanks({ initialItems }: { initialItems: BankItemSummary[] 
             href="/login?next=/accounts"
             className="self-start rounded-xl border border-[#e6e9f2] px-4 py-2.5 text-sm font-semibold text-[#544af7] hover:bg-[#eef1fc] sm:self-auto"
           >
-            Sign in to connect a bank
+            Sign In to Connect a Bank
           </Link>
         ) : (
           <button
@@ -154,7 +154,7 @@ export function LinkedBanks({ initialItems }: { initialItems: BankItemSummary[] 
             disabled={signedIn !== true || busy !== null}
             className="self-start rounded-xl bg-[#544af7] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#453bc9] disabled:cursor-not-allowed disabled:opacity-50 sm:self-auto"
           >
-            {busy === "connect" ? "Opening Plaid…" : "+ Connect a bank"}
+            {busy === "connect" ? "Opening Plaid…" : "+ Connect a Bank"}
           </button>
         )}
       </div>

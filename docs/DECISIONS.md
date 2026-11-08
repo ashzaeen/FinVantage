@@ -67,6 +67,7 @@ These replace the Tiger Data and Vultr lines above, and the "Spacetime: enter or
 | CI is manual-only for now | It failed on Linux in the build step, the logs weren't visible without signing in, and deploys don't depend on it |
 | Sign-in is our own email + password, not SpacetimeAuth. The API issues RS256 tokens and publishes its key at `/.well-known/jwks.json`. Accounts live in a private Spacetime `credential` table, with scrypt hashes | SpacetimeAuth only offers magic link, anonymous, and social logins, and the team wanted email + password. Our tokens are OpenID-shaped, so SpacetimeDB can still accept them as identities for live subscriptions |
 | Bank data is modeled on Plaid: Spacetime tables mirror Plaid's objects and signs, the demo fixture is in Plaid's format, and one mapper (`packages/data/src/plaid/map.ts`) turns it into the app's `Account` and `Transaction`, which only gained optional fields | Plaid is the main bank connector. Keeping Plaid's shape at the edge means live Plaid is a data-source swap, and keeping the app types stable avoids breaking teammates' code. See `docs/DATA-MODEL.md` |
+| Live updates: the browser connects to SpacetimeDB with the FinVantage sign-in token itself, and subscribes to a per-user `my_live_event` view. The module trusts only issuers listed in `trusted_issuer` | No second sign-in system. SpacetimeDB verifies the token against our published JWKS, and the view keys rows by the identity linked to the token's `sub`, so users only ever see their own events |
 
 ## Open questions
 

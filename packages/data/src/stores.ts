@@ -69,6 +69,9 @@ export interface DocumentStore {
   /** Newest first. */
   listRecommendations(userId: string, range?: TimeRange): Promise<Recommendation[]>;
   saveReport(report: QuarterlyReport): Promise<QuarterlyReport>;
+  /** A report's rendered PDF. Kept with the documents so any server instance can serve it. */
+  saveReportPdf(userId: string, reportId: string, pdf: Buffer): Promise<void>;
+  getReportPdf(userId: string, reportId: string): Promise<Buffer | null>;
   getReport(userId: string, id: string): Promise<QuarterlyReport | null>;
   getReportByQuarter(userId: string, quarter: string): Promise<QuarterlyReport | null>;
   updateReport(report: QuarterlyReport): Promise<QuarterlyReport>;

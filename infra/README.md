@@ -92,10 +92,10 @@ The build adds the API origin to `host_permissions` automatically. Load `apps/ex
 
 ## Known limits on Vercel
 
-- **Report PDFs live in one instance's `/tmp`.** A PDF download that lands on a different instance than the one that generated the report gets a 404. This lasts until PDFs are stored in MongoDB or blob storage.
+- **Report PDFs** render to `/tmp`, and their bytes are saved in MongoDB (`report_pdfs`), so any instance can serve the download.
 - **Files the API bundle reads at runtime** (pdfkit's font data, the Poppins fonts) are copied next to the bundle by `scripts/build-vercel.mjs`. A new dependency that reads its own files from disk needs the same treatment, or the API crashes on Vercel while working locally.
 - **Data persists in production:** the ledger in Spacetime and documents in MongoDB. Locally both default to memory and reset when the API restarts. The signed-out demo user is shared, so edits made while signed out are visible to every visitor.
-- **Live updates through SSE are unreliable.** A Copilot event published on one function instance never reaches a dashboard connected to another. Sprint 5 moves live updates to Spacetime subscriptions. Locally, SSE works.
+- **Live updates:** signed-in dashboards subscribe through SpacetimeDB (`LIVE_TRANSPORT=spacetime`), so a push reaches them whichever instance sent it. Signed-out visitors use SSE, which only reaches a dashboard connected to the same instance.
 - **SSE streams end** when they reach the function's maximum duration. The browser's `EventSource` reconnects by itself.
 
 ## Reminder
