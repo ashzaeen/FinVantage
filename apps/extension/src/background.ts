@@ -1,10 +1,11 @@
-import { ApiError, createApiClient } from "@finvantage/contracts";
-import type { AccountReply, EvaluateReply, ExtensionMessage, SignInReply } from "./messages";
+import { ApiError, createApiClient, readClaims, SESSION_COOKIE, usableToken } from "@finvantage/contracts";
+import type { AccountReply, EvaluateReply, ExtensionMessage } from "./messages";
 
 /*
- * Signed out, the Copilot answers for the shared demo profile. Signed in (popup), it answers for
- * the user's own account, including any bank they linked in the dashboard. Only the session token
- * is kept, in chrome.storage.local; the password is sent once to log in and never stored.
+ * The Copilot follows whoever is signed in to the FinVantage dashboard: the extension reads the
+ * dashboard's sign-in cookie (chrome.cookies, scoped to the web app's origin) on each request.
+ * Signed in, cards use that user's accounts and linked banks; signed out or expired, the shared
+ * demo profile. The extension never sees or stores a password.
  */
 const demoApi = createApiClient({ baseUrl: __API_URL__, token: __API_TOKEN__ });
 
@@ -14,39 +15,31 @@ interface Session {
 }
 
 async function getSession(): Promise<Session | null> {
-  const stored = await chrome.storage.local.get("session");
-  return (stored.session as Session | undefined) ?? null;
+  const cookie = await chrome.cookies.get({ url: __WEB_URL__, name: SESSION_COOKIE }).catch(() => null);
+  const token = usableToken(cookie ? decodeURIComponent(cookie.value) : null);
+  if (!token) return null;
+  const claims = readClaims(token);
+  return { token, name: claims?.name ?? claims?.email ?? "your account" };
 }
 
-async function apiFor(session: Session | null) {
+function apiFor(session: Session | null) {
   return session ? createApiClient({ baseUrl: __API_URL__, token: session.token }) : demoApi;
 }
 
-/** Runs a call as the signed-in user. An expired session signs out and falls back to the demo. */
+/** Runs a call as the signed-in user. A token the API rejects falls back to the demo profile. */
 async function asUser<T>(call: (api: ReturnType<typeof createApiClient>) => Promise<T>): Promise<T> {
   const session = await getSession();
   try {
-    return await call(await apiFor(session));
+    return await call(apiFor(session));
   } catch (error) {
-    if (session && error instanceof ApiError && error.status === 401) {
-      await chrome.storage.local.remove("session");
-      return call(demoApi);
-    }
+    if (session && error instanceof ApiError && error.status === 401) return call(demoApi);
     throw error;
   }
 }
 
-async function signIn(email: string, password: string): Promise<SignInReply> {
-  try {
-    const { token, user } = await demoApi.logIn({ body: { email, password } });
-    await chrome.storage.local.set({ session: { token, name: user.displayName } satisfies Session });
-    return { ok: true, name: user.displayName };
-  } catch (error) {
-    if (error instanceof ApiError && (error.status === 401 || error.status === 400)) {
-      return { ok: false, message: "Wrong email or password." };
-    }
-    return { ok: false, message: "Can't reach FinVantage. Is the app running?" };
-  }
+/** Signs out of FinVantage everywhere: the dashboard reads the same cookie. */
+async function signOut() {
+  await chrome.cookies.remove({ url: __WEB_URL__, name: SESSION_COOKIE }).catch(() => null);
 }
 
 interface LocalState {
@@ -103,14 +96,13 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
     case "action":
       void recordAction(message).then(() => sendResponse(null));
       return true;
-    case "signIn":
-      void signIn(message.email, message.password).then(sendResponse);
-      return true;
     case "signOut":
-      void chrome.storage.local.remove("session").then(() => sendResponse(null));
+      void signOut().then(() => sendResponse(null));
       return true;
     case "account":
-      void getSession().then((session) => sendResponse({ name: session?.name ?? null } satisfies AccountReply));
+      void getSession().then((session) =>
+        sendResponse({ name: session?.name ?? null, webUrl: __WEB_URL__ } satisfies AccountReply),
+      );
       return true;
   }
 });

@@ -21,6 +21,9 @@ mkdirSync(dist, { recursive: true });
 const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
 const apiPermission = `${new URL(apiUrl).origin}/*`;
 if (!manifest.host_permissions.includes(apiPermission)) manifest.host_permissions.push(apiPermission);
+// The web app's origin too, only so chrome.cookies can read its sign-in cookie (SESSION_COOKIE).
+const webPermission = `${new URL(process.env.EXTENSION_WEB_URL ?? "http://localhost:3000").origin}/*`;
+if (!manifest.host_permissions.includes(webPermission)) manifest.host_permissions.push(webPermission);
 writeFileSync(join(dist, "manifest.json"), `${JSON.stringify(manifest, null, 2)}
 `);
 copyFileSync(join(root, "popup.html"), join(dist, "popup.html"));

@@ -9,12 +9,9 @@
       p { margin: 8px 0 0; color: #66645d; font-size: 12px; }
       button { margin-top: 12px; width: 100%; padding: 7px; border: 1px solid #e4e1d8; border-radius: 8px; background: #fff; font: inherit; cursor: pointer; }
       button:hover { border-color: #2563a8; }
-      button:focus-visible, input:focus-visible { outline: 2px solid #2563a8; outline-offset: 2px; }
+      button:focus-visible { outline: 2px solid #2563a8; outline-offset: 2px; }
       section { margin-top: 14px; padding-top: 12px; border-top: 1px solid #e4e1d8; }
       h2 { margin: 0; font-size: 13px; font-weight: 650; }
-      form { display: grid; gap: 6px; margin-top: 8px; }
-      form button { margin-top: 4px; }
-      input[type="email"], input[type="password"] { padding: 7px 8px; border: 1px solid #e4e1d8; border-radius: 8px; font: inherit; }
       .who { color: #1d1d1b; font-size: 13px; }
     </style>
   </head>
@@ -26,11 +23,7 @@
     <section aria-labelledby="account-title">
       <h2 id="account-title">Your account</h2>
       <p id="who" class="who">Checking…</p>
-      <form id="sign-in" hidden>
-        <input id="email" type="email" autocomplete="username" placeholder="Email" required />
-        <input id="password" type="password" autocomplete="current-password" placeholder="Password" required />
-        <button type="submit">Sign in</button>
-      </form>
+      <button id="sign-in" type="button" hidden>Sign in on FinVantage</button>
       <button id="sign-out" type="button" hidden>Sign out</button>
       <p id="account-status" role="status"></p>
     </section>
