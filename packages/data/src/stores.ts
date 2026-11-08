@@ -26,6 +26,18 @@ export interface BankItemRecord {
   accountCount: number;
 }
 
+/** One of the bank's recurring streams (Plaid /transactions/recurring/get), outflows only. */
+export interface RecurringStream {
+  merchant: string;
+  /** Positive: the usual amount paid. */
+  amountCents: number;
+  frequency: "WEEKLY" | "BIWEEKLY" | "SEMI_MONTHLY" | "MONTHLY" | "ANNUALLY" | "UNKNOWN";
+  predictedNextDate: string | null;
+  accountId: string;
+  /** Plaid's detailed category, such as "ENTERTAINMENT_TV_AND_MOVIES". */
+  categoryDetailed: string | null;
+}
+
 /** Relational data. Memory by default; SpacetimeDB in production (spacetime/ledger.ts). */
 export interface LedgerStore {
   getUser(userId: string): Promise<User | null>;
@@ -50,6 +62,11 @@ export interface LedgerStore {
   applyBankUpdate(userId: string, update: BankItemUpdate): Promise<void>;
   /** Removes a linked bank and everything under it. False if the user has no such item. */
   removeBankItem(userId: string, itemId: string): Promise<boolean>;
+  /**
+   * Active outgoing recurring streams across the user's banks. Optional: without it, the
+   * Spending routes estimate recurring charges from transactions. TODO(platform): Spacetime.
+   */
+  listRecurringStreams?(userId: string): Promise<RecurringStream[]>;
 }
 
 /** Nested, variable-shape records. Backed by MongoDB Atlas. */

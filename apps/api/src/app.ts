@@ -14,6 +14,7 @@ import { registerLiveRoutes } from "./routes/live";
 import { registerMockedRoutes } from "./routes/mocked";
 import { registerProfileRoutes } from "./routes/profile";
 import { registerSimulationRoutes } from "./routes/simulations";
+import { registerSpendingRoutes } from "./routes/spending";
 import { registerTransactionRoutes } from "./routes/transactions";
 
 /**
@@ -70,6 +71,7 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   registerProfileRoutes(app, deps);
   registerAccountRoutes(app, deps);
   registerTransactionRoutes(app, deps);
+  registerSpendingRoutes(app, deps);
   registerGoalRoutes(app, deps);
   registerLifeEventRoutes(app, deps);
   registerSimulationRoutes(app, deps);

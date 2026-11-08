@@ -157,3 +157,16 @@ Answers to the open questions above. These replace those rows.
 | A purchase or card payment is judged on what it changes. The cushion counts only when checking was at or above it beforehand: then dropping below it warns, and a transfer restores it. When checking was already under the cushion, a payment checking covers is fine, the card leaves the cushion out, and a transfer covers only a shortfall | A $12.99 extension cord told a Plaid Sandbox user (checking $100, cushion $2,500) to "move $2,413" and to keep a cushion they were already under. Leaving the cushion figures out also stops a model from bringing it up, through the number check |
 | The extension installs from the dashboard's Copilot tab: a zip, loaded with Developer mode's "Load unpacked". The web build (`apps/web/scripts/bundle-extension.mjs`) builds it from the current code and points it at that dashboard's API and origin (`NEXT_PUBLIC_API_URL`, `VERCEL_PROJECT_PRODUCTION_URL`, or `EXTENSION_*` overrides). `apps/extension` changes now redeploy the web app | Teammates and judges had no way to install it without the repo. The Chrome Web Store is the only one-click install and its review is too slow for the hackathon |
 
+## Spending categories, decided 2026-11-08
+
+| Decision | Why |
+| --- | --- |
+| Spending categories have three layers: Plaid's 127 detailed categories (hidden), about 20 FinVantage categories, and subcategories. `packages/contracts/src/categories.ts` holds the defaults and the Plaid map | Plaid's list is too fine to budget against. A test proves every Plaid category, v2 and v1, maps to a category that exists |
+| A transaction stores its top-level category in `category` and its most specific subcategory in `subcategory`. The API drops a subcategory that is not under the category | Code that groups by `category` keeps working, and edits cannot leave a mismatched pair |
+| Every category has a default bucket: Needs, Wants, Savings, or excluded. Income and Transfers, including credit card payments, are excluded from spending totals and budgets | Counting a card payment would double the purchases already on the card. The 50/30/20 split needs every dollar of spending in a bucket |
+| Debt Payments is one Needs category, not split into minimum and extra | Owner's call (Ashzaeen) |
+| The split defaults to 50/30/20, and each user can change it (`User.preferences.spendingSplit`) | It defaults through the schema, so stores without the field still parse. The Spacetime store must save it to keep edits |
+| Users can add subcategories up to three levels (Shopping → Superstores → Walmart) | Planned as step 3 in `docs/workstreams/spending.md` |
+| Old category ids (`dining`, `transport`, `debt`, `subscriptions`, `fees`, `transfer`, `home`, `services`) are read as the new ones through `canonicalCategoryId` | Stored data from before the change keeps working without a migration. Spending totals group by the current id |
+| **Open, for the Spacetime store:** `transaction.subcategory` and `User.preferences.spendingSplit` have no columns yet, so they are not saved in production | Until then, subcategories read as null and the split stays at 50/30/20 there. The memory store keeps both |
+

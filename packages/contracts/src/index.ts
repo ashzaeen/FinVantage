@@ -7,6 +7,7 @@ export * from "./simulation";
 export * from "./copilot";
 export * from "./advisory";
 export * from "./spending";
+export * from "./categories";
 export * from "./live";
 export * from "./session";
 export { routes, LIVE_STREAM_PATH, ApiErrorBody, type RouteDef } from "./api";

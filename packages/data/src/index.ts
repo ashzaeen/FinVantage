@@ -1,6 +1,8 @@
 import { MemoryDocumentStore, MemoryLedgerStore } from "./memory";
 import { preferLinkedBanks } from "./linked-banks";
 import { createMongoDocumentStore } from "./mongo";
+import { createMongoSpendingStore } from "./mongo/spending";
+import { MemorySpendingStore, type SpendingStore } from "./spending";
 import type { DocumentStore, LedgerStore } from "./stores";
 import { MemoryBankTokenStore, parseTokenKey, SpacetimeBankTokenStore, type BankTokenStore } from "./bank-tokens";
 import { SpacetimeLedgerStore } from "./spacetime/ledger";
@@ -14,6 +16,7 @@ export { preferLinkedBanks } from "./linked-banks";
 export * from "./plaid/spacetime-rows";
 export * from "./plaid/client";
 export * from "./bank-tokens";
+export * from "./spending";
 export { goalStatusForBalance, MemoryDocumentStore, MemoryLedgerStore } from "./memory";
 export { SpacetimeLedgerStore } from "./spacetime/ledger";
 export { SpacetimeHttp, SpacetimeError, sqlString, decodeSats, type SpacetimeConfig } from "./spacetime/client";
@@ -21,6 +24,15 @@ export { SpacetimeHttp, SpacetimeError, sqlString, decodeSats, type SpacetimeCon
 const MONGODB_CONFIGURATION_ERROR =
   "MongoDB configuration is invalid. MONGODB_URI must start with mongodb:// or " +
   "mongodb+srv:// and contain URL-encoded credentials.";
+
+function createSpendingStore(env: NodeJS.ProcessEnv, backend: string): SpendingStore {
+  const uri = env.MONGODB_URI?.trim() ?? "";
+  if (backend !== "mongodb" || !/^mongodb(?:\+srv)?:\/\//.test(uri) || /<[^>]+>/.test(uri)) {
+    if (backend === "mongodb" && env.NODE_ENV === "production") throw new Error(MONGODB_CONFIGURATION_ERROR);
+    return new MemorySpendingStore();
+  }
+  return createMongoSpendingStore(uri, env.MONGODB_DB?.trim() || "finvantage");
+}
 
 function createDocumentStore(env: NodeJS.ProcessEnv, backend: string): DocumentStore {
   if (backend !== "mongodb") return new MemoryDocumentStore();
@@ -50,6 +62,7 @@ export function createStores(env: NodeJS.ProcessEnv = process.env): {
   ledger: LedgerStore;
   docs: DocumentStore;
   bankTokens: BankTokenStore;
+  spending: SpendingStore;
 } {
   const spacetime = spacetimeConfig(env);
   return {
@@ -58,6 +71,8 @@ export function createStores(env: NodeJS.ProcessEnv = process.env): {
     docs: createDocumentStore(env, env.DOCUMENT_BACKEND ?? "memory"),
     // Bank tokens live next to the ledger. In Spacetime they are encrypted with PLAID_TOKEN_KEY.
     bankTokens: spacetime ? spacetimeTokenStore(env, spacetime) : new MemoryBankTokenStore(),
+    // Spending settings are per-user documents, so they live with the other documents.
+    spending: createSpendingStore(env, env.DOCUMENT_BACKEND ?? "memory"),
   };
 }
 

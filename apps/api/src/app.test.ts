@@ -295,3 +295,227 @@ test("CORS allows listed origins and wildcard previews, and nothing else", async
   );
   assert.equal((await preflight("https://evil.example")).headers.get("access-control-allow-origin"), null);
 });
+
+test("the bucket summary splits this month's spending into Needs, Wants and Savings", async () => {
+  const { client, deps } = setup();
+  const before = await client.getBucketSummary();
+  assert.deepEqual(before.split, { needs: 0.5, wants: 0.3, savings: 0.2 });
+  assert.deepEqual(before.buckets.map((b) => b.bucket), ["needs", "wants", "savings"]);
+  const needs = before.buckets[0]!;
+  assert.equal(needs.targetCents, Math.round(before.incomeCents * 0.5));
+
+  const [account] = await client.listAccounts();
+  const add = (category: string, subcategory: string | null, amountCents: number) =>
+    client.addTransaction({
+      body: { accountId: account!.id, date: deps.today(), amountCents, merchant: "Test", category, subcategory },
+    });
+  const coffee = await add("dining_out", "dining_out.coffee", -1_250);
+  assert.equal(coffee.subcategory, "dining_out.coffee");
+  await add("transfers", "transfers.credit_card_payment", -50_000);
+  // A subcategory from another category is dropped rather than saved.
+  const mismatched = await add("groceries", "dining_out.coffee", -500);
+  assert.equal(mismatched.subcategory, null);
+
+  const after = await client.getBucketSummary();
+  const wants = (s: typeof after) => s.buckets.find((b) => b.bucket === "wants")!.spentCents;
+  const total = (s: typeof after) => s.buckets.reduce((sum, b) => sum + b.spentCents, 0);
+  assert.equal(wants(after) - wants(before), 1_250);
+  // The credit card payment is a transfer, so only the coffee and the groceries count.
+  assert.equal(total(after) - total(before), 1_750);
+});
+
+test("each user can change their split, and it must add up to 100%", async () => {
+  const { app, client } = setup();
+  const split = await client.updateSpendingSplit({ body: { needs: 0.6, wants: 0.2, savings: 0.2 } });
+  assert.deepEqual(split, { needs: 0.6, wants: 0.2, savings: 0.2 });
+  assert.deepEqual((await client.getBucketSummary()).split, { needs: 0.6, wants: 0.2, savings: 0.2 });
+  const res = await app.request("/v1/spending/split", {
+    method: "PATCH",
+    headers: { authorization: "Bearer demo-token", "content-type": "application/json" },
+    body: JSON.stringify({ needs: 0.5, wants: 0.5, savings: 0.5 }),
+  });
+  assert.equal(res.status, 400);
+});
+
+test("the category list includes every default, with buckets", async () => {
+  const { client } = setup();
+  const categories = await client.listSpendingCategories();
+  assert.ok(categories.some((c) => c.id === "dining_out" && c.bucket === "wants" && c.parentId === null));
+  assert.ok(categories.some((c) => c.id === "dining_out.coffee" && c.parentId === "dining_out"));
+});
+
+/* ─── Spending module: categories, budgets, rules, recurring ──────────────── */
+
+/** Same request with a status, for the error cases the typed client throws on. */
+async function raw(app: ReturnType<typeof setup>["app"], method: string, path: string, body?: unknown) {
+  const res = await app.request(path, {
+    method,
+    headers: { authorization: "Bearer demo-token", "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  return { status: res.status, json: (await res.json()) as { error?: { code: string } } };
+}
+
+test("users can add their own categories up to three levels deep", async () => {
+  const { app, client } = setup();
+  const walmart = await client.createSpendingCategory({ body: { parentId: "shopping.superstores", label: "Walmart" } });
+  assert.match(walmart.id, /^shopping\.superstores\.c[0-9a-f]{8}$/);
+  assert.equal(walmart.bucket, "wants");
+  assert.equal(walmart.custom, true);
+  const kids = await client.createSpendingCategory({ body: { parentId: "shopping", label: "Kids' Clothes", bucket: "needs" } });
+  assert.equal(kids.bucket, "needs");
+
+  assert.equal((await raw(app, "POST", "/v1/spending/categories", { parentId: walmart.id, label: "Too Deep" })).json.error?.code, "too_deep");
+  assert.equal((await raw(app, "POST", "/v1/spending/categories", { parentId: "shopping.superstores", label: "walmart" })).status, 409);
+  assert.equal((await raw(app, "POST", "/v1/spending/categories", { parentId: "nope", label: "X" })).status, 404);
+
+  const list = await client.listSpendingCategories();
+  const at = (id: string) => list.findIndex((c) => c.id === id);
+  // Custom categories sit right under their parent in display order.
+  assert.ok(at(walmart.id) > at("shopping.superstores") && at(walmart.id) < at("shopping.discount_stores"));
+});
+
+test("default categories can be renamed, hidden and moved between buckets, but not deleted", async () => {
+  const { app, client } = setup();
+  const renamed = await client.updateSpendingCategory({ params: { id: "dining_out" }, body: { label: "Eating Out" } });
+  assert.equal(renamed.label, "Eating Out");
+  const hidden = await client.updateSpendingCategory({ params: { id: "entertainment.gambling" }, body: { hidden: true } });
+  assert.equal(hidden.hidden, true);
+
+  // Moving Home & Pets to Needs carries its subcategories with it.
+  await client.updateSpendingCategory({ params: { id: "home_pets" }, body: { bucket: "needs" } });
+  const list = await client.listSpendingCategories();
+  assert.equal(list.find((c) => c.id === "home_pets.vet")?.bucket, "needs");
+
+  assert.equal((await raw(app, "PATCH", "/v1/spending/categories/transfers", { bucket: "wants" })).json.error?.code, "excluded_bucket");
+  assert.equal((await raw(app, "DELETE", "/v1/spending/categories/groceries")).json.error?.code, "default_category");
+});
+
+test("deleting a custom category moves its transactions, rules and budgets up to the parent", async () => {
+  const { client, deps } = setup();
+  const target = await client.createSpendingCategory({ body: { parentId: "shopping.superstores", label: "Target" } });
+  const [account] = await client.listAccounts();
+  const tx = await client.addTransaction({ body: { accountId: account!.id, date: deps.today(), amountCents: -4_200, merchant: "Target #88" } });
+  await client.recategorizeTransaction({ params: { id: tx.id }, body: { categoryId: target.id } });
+  await client.createCategoryRule({ body: { merchantContains: "target", categoryId: target.id } });
+  await client.setBudget({ body: { category: target.id, monthlyLimitCents: 10_000 } });
+
+  const result = await client.deleteSpendingCategory({ params: { id: target.id } });
+  assert.equal(result.movedTransactions, 1);
+  const moved = (await client.listTransactions({ query: { limit: 500 } })).find((t) => t.id === tx.id);
+  assert.equal(moved?.subcategory, "shopping.superstores");
+  assert.equal((await client.listCategoryRules())[0]?.categoryId, "shopping.superstores");
+  assert.ok(!(await client.listBudgets()).some((b) => b.category === target.id));
+});
+
+test("budgets report spending, pace and a suggestion, and work on subcategories", async () => {
+  const { app, client, deps } = setup();
+  deps.today = () => "2026-11-10";
+  const budgets = await client.listBudgets();
+  assert.ok(budgets.some((b) => b.category === "groceries"), "demo budgets are the starting point");
+
+  const [account] = await client.listAccounts();
+  await client.addTransaction({
+    body: { accountId: account!.id, date: "2026-11-09", amountCents: -3_000, merchant: "Bean There", category: "dining_out", subcategory: "dining_out.coffee" },
+  });
+  const coffee = await client.setBudget({ body: { category: "dining_out.coffee", monthlyLimitCents: 5_000 } });
+  assert.equal(coffee.spentCents, 3_000);
+  assert.equal(coffee.remainingCents, 2_000);
+  // $30 in 10 days heads for $90 in a 30-day month, over the $50 limit.
+  assert.equal(coffee.projectedCents, 9_000);
+  assert.equal(coffee.status, "at_risk");
+
+  const tight = await client.setBudget({ body: { category: "dining_out.coffee", monthlyLimitCents: 2_000 } });
+  assert.equal(tight.status, "over");
+  assert.equal((await client.listBudgets()).filter((b) => b.category === "dining_out.coffee").length, 1);
+
+  assert.equal((await raw(app, "POST", "/v1/budgets", { category: "income", monthlyLimitCents: 100 })).json.error?.code, "excluded_budget");
+  await client.deleteBudget({ params: { category: "dining_out.coffee" } });
+  assert.equal((await raw(app, "DELETE", "/v1/budgets/dining_out.coffee")).status, 404);
+});
+
+test("merchant rules re-categorise past transactions and new ones without a category", async () => {
+  const { client, deps } = setup();
+  const walmart = await client.createSpendingCategory({ body: { parentId: "shopping.superstores", label: "Walmart" } });
+  const [account] = await client.listAccounts();
+  const old = await client.addTransaction({
+    body: { accountId: account!.id, date: deps.today(), amountCents: -2_500, merchant: "WALMART SUPERCENTER", category: "groceries" },
+  });
+
+  const { rule, updatedTransactions } = await client.createCategoryRule({ body: { merchantContains: "Walmart", categoryId: walmart.id } });
+  assert.equal(updatedTransactions, 1);
+  const after = (await client.listTransactions({ query: { limit: 500 } })).find((t) => t.id === old.id);
+  assert.deepEqual([after?.category, after?.subcategory], ["shopping", walmart.id]);
+
+  const fresh = await client.addTransaction({ body: { accountId: account!.id, date: deps.today(), amountCents: -900, merchant: "Walmart #4410" } });
+  assert.equal(fresh.subcategory, walmart.id);
+  // An explicit category on a new transaction wins over the rule.
+  const chosen = await client.addTransaction({
+    body: { accountId: account!.id, date: deps.today(), amountCents: -900, merchant: "Walmart #4410", category: "groceries" },
+  });
+  assert.equal(chosen.category, "groceries");
+
+  await client.deleteCategoryRule({ params: { id: rule.id } });
+  assert.equal((await client.listCategoryRules()).length, 0);
+});
+
+test("a transaction can be moved to any category, or cleared", async () => {
+  const { app, client, deps } = setup();
+  const [account] = await client.listAccounts();
+  const tx = await client.addTransaction({ body: { accountId: account!.id, date: deps.today(), amountCents: -1_000, merchant: "Somewhere" } });
+  const moved = await client.recategorizeTransaction({ params: { id: tx.id }, body: { categoryId: "travel.lodging" } });
+  assert.deepEqual([moved.category, moved.subcategory], ["travel", "travel.lodging"]);
+  const cleared = await client.recategorizeTransaction({ params: { id: tx.id }, body: { categoryId: null } });
+  assert.deepEqual([cleared.category, cleared.subcategory], [null, null]);
+  assert.equal((await raw(app, "PATCH", `/v1/transactions/${tx.id}/category`, { categoryId: "made.up" })).status, 404);
+});
+
+test("recurring charges and bills come from the bank's streams and due dates", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const recurring = await client.listRecurring();
+  assert.ok(recurring.length > 0 && recurring.every((r) => r.source === "bank"));
+  assert.equal(recurring.find((r) => r.merchant === "StreamFlix")?.category, "entertainment.streaming");
+
+  const bills = await client.listUpcomingBills();
+  const names = bills.map((b) => b.merchant);
+  // Within 14 days: the card and mortgage due dates, and streams with no due date of their own.
+  assert.ok(names.includes("Cash Rewards Card") && names.includes("Condo Mortgage"), names.join(", "));
+  assert.ok(names.includes("Demo Auto Finance") && names.includes("StreamFlix"), names.join(", "));
+  // The mortgage stream duplicates the mortgage due date, so it is left out.
+  assert.ok(!names.includes("Demo Mortgage Servicing"), names.join(", "));
+  // Past the 14-day window.
+  assert.ok(!names.includes("Tunewave"), names.join(", "));
+  assert.deepEqual(bills.map((b) => b.nextDate), [...bills.map((b) => b.nextDate)].sort());
+});
+
+test("top expenses are this month's largest purchases, without transfers", async () => {
+  const { client, deps } = setup();
+  const [account] = await client.listAccounts();
+  await client.addTransaction({ body: { accountId: account!.id, date: deps.today(), amountCents: -900_000, merchant: "Card Payment", category: "transfers" } });
+  await client.addTransaction({ body: { accountId: account!.id, date: deps.today(), amountCents: -800_000, merchant: "Big TV", category: "shopping" } });
+  const top = await client.listTopExpenses({ query: { limit: 10 } });
+  assert.equal(top[0]?.merchant, "Big TV");
+  assert.ok(!top.some((t) => t.merchant === "Card Payment"));
+  assert.ok(top.length <= 10);
+  assert.deepEqual(top.map((t) => t.amountCents), [...top.map((t) => t.amountCents)].sort((a, b) => a - b));
+});
+
+test("the spending breakdown lists this month's spending at each transaction's most specific category", async () => {
+  const { client, deps } = setup();
+  const walmart = await client.createSpendingCategory({ body: { parentId: "shopping.superstores", label: "Walmart" } });
+  const [account] = await client.listAccounts();
+  const add = (merchant: string, amountCents: number, category: string, subcategory: string | null) =>
+    client.addTransaction({ body: { accountId: account!.id, date: deps.today(), amountCents, merchant, category, subcategory } });
+  const tx = await add("Walmart #1", -2_000, "shopping", null);
+  await client.recategorizeTransaction({ params: { id: tx.id }, body: { categoryId: walmart.id } });
+  await add("Some Store", -700, "shopping", null);
+  await add("Card Payment", -90_000, "transfers", null);
+
+  const rows = await client.getSpendingBreakdown();
+  const at = (id: string) => rows.find((r) => r.categoryId === id)?.spentCents;
+  assert.equal(at(walmart.id), 2_000);
+  assert.equal(at("shopping"), 700);
+  assert.equal(at("transfers"), undefined);
+  assert.deepEqual(rows.map((r) => r.spentCents), [...rows.map((r) => r.spentCents)].sort((a, b) => b - a));
+});

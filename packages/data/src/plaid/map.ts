@@ -10,7 +10,7 @@
  *   user-entered `AccountDetails`. A value the user entered always wins over the bank's.
  */
 import { z } from "zod";
-import { Account, IsoDate, Rate, Transaction, type AccountType } from "@finvantage/contracts";
+import { Account, IsoDate, Rate, Transaction, categorizePlaid, type AccountType } from "@finvantage/contracts";
 import type {
   PlaidAccount,
   PlaidItemSnapshot,
@@ -63,39 +63,12 @@ export function accountTypeFor(account: Pick<PlaidAccount, "type" | "subtype">):
 }
 
 /**
- * Rule-based categorization from Plaid's personal finance category (PRD feature 2). Detailed
- * rules win over primary ones. Null means unknown: the LLM fallback's job.
+ * Rule-based categorization from Plaid's personal finance category (PRD feature 2), using the
+ * spending categories in `@finvantage/contracts`. Returns the top-level category. Null means
+ * unknown: the LLM fallback's job.
  */
-const DETAILED_CATEGORY: Record<string, string> = {
-  RENT_AND_UTILITIES_RENT: "housing",
-  LOAN_PAYMENTS_MORTGAGE_PAYMENT: "housing",
-  FOOD_AND_DRINK_GROCERIES: "groceries",
-  ENTERTAINMENT_TV_AND_MOVIES: "subscriptions",
-  ENTERTAINMENT_MUSIC_AND_AUDIO: "subscriptions",
-  GENERAL_SERVICES_INSURANCE: "insurance",
-};
-const PRIMARY_CATEGORY: Record<string, string> = {
-  INCOME: "income",
-  TRANSFER_IN: "transfer",
-  TRANSFER_OUT: "transfer",
-  LOAN_PAYMENTS: "debt",
-  BANK_FEES: "fees",
-  FOOD_AND_DRINK: "dining",
-  RENT_AND_UTILITIES: "utilities",
-  TRANSPORTATION: "transport",
-  TRAVEL: "travel",
-  ENTERTAINMENT: "entertainment",
-  GENERAL_MERCHANDISE: "shopping",
-  HOME_IMPROVEMENT: "home",
-  MEDICAL: "health",
-  PERSONAL_CARE: "personal_care",
-  GENERAL_SERVICES: "services",
-  GOVERNMENT_AND_NON_PROFIT: "giving",
-};
-
 export function categoryFor(pfc: PlaidPersonalFinanceCategory | null): string | null {
-  if (!pfc) return null;
-  return DETAILED_CATEGORY[pfc.detailed] ?? PRIMARY_CATEGORY[pfc.primary] ?? null;
+  return categorizePlaid(pfc).category;
 }
 
 interface LiabilityTerms {
@@ -189,7 +162,7 @@ export function mapTransaction(transaction: PlaidTransaction, recurringIds: Set<
     date: transaction.date,
     amountCents: -toCents(transaction.amount),
     merchant: transaction.merchant_name ?? transaction.name,
-    category: categoryFor(transaction.personal_finance_category),
+    ...categorizePlaid(transaction.personal_finance_category),
     isRecurring: recurringIds.has(transaction.transaction_id),
     pending: transaction.pending,
     categoryDetailed: transaction.personal_finance_category?.detailed ?? null,

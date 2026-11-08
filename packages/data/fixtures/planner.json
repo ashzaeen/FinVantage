@@ -774,11 +774,11 @@
       "monthlyLimitCents": 50000
     },
     {
-      "category": "dining",
+      "category": "dining_out",
       "monthlyLimitCents": 25000
     },
     {
-      "category": "subscriptions",
+      "category": "entertainment",
       "monthlyLimitCents": 10000
     },
     {
@@ -790,11 +790,11 @@
       "monthlyLimitCents": 30000
     },
     {
-      "category": "transport",
+      "category": "transportation",
       "monthlyLimitCents": 25000
     },
     {
-      "category": "debt",
+      "category": "debt_payments",
       "monthlyLimitCents": 100000
     }
   ],

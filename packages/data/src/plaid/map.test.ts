@@ -28,6 +28,7 @@ test("Plaid's money-out-positive dollars become negative cents", () => {
   assert.equal(refund.amountCents, 500);
   assert.equal(out.merchant, "Green Grocer");
   assert.equal(out.category, "groceries");
+  assert.equal(out.subcategory, "groceries.groceries");
   assert.equal(out.categoryDetailed, "FOOD_AND_DRINK_GROCERIES");
   assert.equal(out.paymentChannel, "in_store");
   // Without a merchant name, Plaid's raw name is used.
@@ -35,10 +36,12 @@ test("Plaid's money-out-positive dollars become negative cents", () => {
 });
 
 test("categories: detailed rules win, then primary, then unknown", () => {
-  assert.equal(categoryFor({ primary: "FOOD_AND_DRINK", detailed: "FOOD_AND_DRINK_RESTAURANT" }), "dining");
-  assert.equal(categoryFor({ primary: "ENTERTAINMENT", detailed: "ENTERTAINMENT_TV_AND_MOVIES" }), "subscriptions");
+  assert.equal(categoryFor({ primary: "FOOD_AND_DRINK", detailed: "FOOD_AND_DRINK_RESTAURANT" }), "dining_out");
+  assert.equal(categoryFor({ primary: "ENTERTAINMENT", detailed: "ENTERTAINMENT_TV_AND_MOVIES" }), "entertainment");
   assert.equal(categoryFor({ primary: "LOAN_PAYMENTS", detailed: "LOAN_PAYMENTS_MORTGAGE_PAYMENT" }), "housing");
-  assert.equal(categoryFor({ primary: "LOAN_PAYMENTS", detailed: "LOAN_PAYMENTS_CAR_PAYMENT" }), "debt");
+  assert.equal(categoryFor({ primary: "LOAN_PAYMENTS", detailed: "LOAN_PAYMENTS_CAR_PAYMENT" }), "debt_payments");
+  // A detailed category we have no rule for falls back to its primary.
+  assert.equal(categoryFor({ primary: "TRAVEL", detailed: "TRAVEL_SOMETHING_NEW" }), "travel");
   assert.equal(categoryFor({ primary: "SOMETHING_NEW", detailed: "SOMETHING_NEW_OTHER" }), null);
   assert.equal(categoryFor(null), null);
 });

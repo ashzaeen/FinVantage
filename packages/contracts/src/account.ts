@@ -96,8 +96,10 @@ export const Transaction = z.object({
   exchangeRateToUsd: Rate.nullable().default(null),
   exchangeRateDate: IsoDate.nullable().default(null),
   merchant: z.string(),
-  /** The app's spending category, such as "groceries". Rule-based from the bank's category. */
+  /** The top-level spending category id, such as "dining_out". See `categories.ts`. */
   category: z.string().nullable(),
+  /** The most specific subcategory id under `category`, such as "dining_out.coffee". */
+  subcategory: z.string().nullable().default(null),
   isRecurring: z.boolean(),
   // From the bank connection (Plaid). Defaults for manual entries.
   /** Not yet posted. Pending transactions can change or disappear. */

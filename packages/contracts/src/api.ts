@@ -32,7 +32,17 @@ import {
   SimulationRun,
   SimulationRunSummary,
 } from "./simulation";
-import { Budget, CreditScore, Portfolio, RecurringCharge, SpendingSummary } from "./spending";
+import {
+  BucketSummary,
+  CategoryRule,
+  NewCategoryRule,
+  NewSpendingCategory,
+  RecategorizeTransaction,
+  SpendingCategory,
+  SpendingSplit,
+  UpdateSpendingCategory,
+} from "./categories";
+import { Budget, BudgetLimit, CreditScore, Portfolio, RecurringCharge, SpendingBreakdownRow, SpendingSummary } from "./spending";
 import { AuthResponse, ExtensionSettings, LogInRequest, SignUpRequest, User } from "./user";
 
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
@@ -244,6 +254,76 @@ export const routes = {
     method: "GET",
     path: "/v1/spending/summary",
     response: SpendingSummary,
+  }),
+  listSpendingCategories: route({
+    method: "GET",
+    path: "/v1/spending/categories",
+    response: z.array(SpendingCategory),
+  }),
+  getBucketSummary: route({
+    method: "GET",
+    path: "/v1/spending/buckets",
+    response: BucketSummary,
+  }),
+  createSpendingCategory: route({
+    method: "POST",
+    path: "/v1/spending/categories",
+    body: NewSpendingCategory,
+    response: SpendingCategory,
+  }),
+  updateSpendingCategory: route({
+    method: "PATCH",
+    path: "/v1/spending/categories/:id",
+    body: UpdateSpendingCategory,
+    response: SpendingCategory,
+  }),
+  /** Custom categories only. Their transactions move to the parent. */
+  deleteSpendingCategory: route({
+    method: "DELETE",
+    path: "/v1/spending/categories/:id",
+    response: z.object({ deleted: z.literal(true), movedTransactions: z.number().int() }),
+  }),
+  updateSpendingSplit: route({
+    method: "PATCH",
+    path: "/v1/spending/split",
+    body: SpendingSplit,
+    response: SpendingSplit,
+  }),
+  setBudget: route({ method: "POST", path: "/v1/budgets", body: BudgetLimit, response: Budget }),
+  deleteBudget: route({
+    method: "DELETE",
+    path: "/v1/budgets/:category",
+    response: z.object({ deleted: z.literal(true) }),
+  }),
+  getSpendingBreakdown: route({
+    method: "GET",
+    path: "/v1/spending/breakdown",
+    response: z.array(SpendingBreakdownRow),
+  }),
+  /** This month's largest purchases, biggest first. Income and transfers are left out. */
+  listTopExpenses: route({
+    method: "GET",
+    path: "/v1/spending/top-expenses",
+    query: z.object({ limit: z.coerce.number().int().positive().max(50).default(10) }),
+    response: z.array(Transaction),
+  }),
+  listCategoryRules: route({ method: "GET", path: "/v1/spending/rules", response: z.array(CategoryRule) }),
+  createCategoryRule: route({
+    method: "POST",
+    path: "/v1/spending/rules",
+    body: NewCategoryRule,
+    response: z.object({ rule: CategoryRule, updatedTransactions: z.number().int() }),
+  }),
+  deleteCategoryRule: route({
+    method: "DELETE",
+    path: "/v1/spending/rules/:id",
+    response: z.object({ deleted: z.literal(true) }),
+  }),
+  recategorizeTransaction: route({
+    method: "PATCH",
+    path: "/v1/transactions/:id/category",
+    body: RecategorizeTransaction,
+    response: Transaction,
   }),
 
   // Mocked views (P2)

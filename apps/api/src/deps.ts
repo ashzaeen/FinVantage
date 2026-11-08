@@ -4,6 +4,7 @@ import {
   type BankDataProvider,
   type BankTokenStore,
   type DocumentStore,
+  type SpendingStore,
   type LedgerStore,
 } from "@finvantage/data";
 import { createLiveBus, type LiveBus } from "@finvantage/live";
@@ -20,6 +21,8 @@ import {
 export interface AppDeps {
   ledger: LedgerStore;
   docs: DocumentStore;
+  /** Spending categories, budgets, rules and the split: MongoDB in production, else memory. */
+  spending: SpendingStore;
   llm: LlmClient;
   live: LiveBus;
   bank: BankDataProvider;
