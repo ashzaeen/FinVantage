@@ -36,11 +36,13 @@ function setBalance(source: DemoProfileSource, accountId: string, dollars: numbe
   }
 }
 
-test("the demo user: the laptop puts their top flexible goal at risk, fixed with their 0% card", () => {
+test("the demo user: the laptop dips under their cushion and nudges a goal; their 0% card fixes it", () => {
   const { metrics, card } = copilotFor(loadDemoProfileSource());
   assert.equal(metrics.verdict, "caution");
-  assert.match(card.impact, /Japan trip/);
-  assert.match(card.smartMove, /0% Promo Card/);
+  assert.equal(metrics.liquidBufferAfterCents, 190_100, "$3,400 - $1,499");
+  // $900 of the $1,499 is spare checking; only $599 comes out of goal savings.
+  assert.notEqual(metrics.headline.kind, "none");
+  assert.match(card.smartMove, /\$900 now.*\$599 on your 0% Promo Card/);
 });
 
 test("a different person: more cash, no promo card, a pricier card, other goals -> the advice follows them", () => {
@@ -57,14 +59,12 @@ test("a different person: more cash, no promo card, a pricier card, other goals 
   source.user.preferences.bufferTargetCents = 100_000;
   source.goals = [{ ...source.goals[0]!, id: "goal_wedding", name: "Wedding", priorityRank: 1 }];
 
-  // Lots of cash, but the laptop still pushes back this person's only goal: the $1,499 would
-  // otherwise have gone to it. The verdict comes from their goals, not just their balance.
+  // $15,000 in checking, $14,000 above the cushion: the laptop comes out of idle cash, so no goal
+  // moves and nothing needs splitting.
   const laptopCard = copilotFor(source);
-  assert.equal(laptopCard.metrics.verdict, "caution");
-  assert.equal(laptopCard.metrics.headline.goalName, "Wedding");
-  assert.equal(laptopCard.metrics.headline.kind, "delay");
-  assert.match(laptopCard.card.impact, /Wedding back/);
-  assert.equal(laptopCard.metrics.splitPlan, null, "no promo card, so no split");
+  assert.equal(laptopCard.metrics.verdict, "good");
+  assert.equal(laptopCard.metrics.headline.kind, "none");
+  assert.equal(laptopCard.metrics.splitPlan, null);
 
   // A small purchase fits, and the advice uses this person's own card, rate, and cushion.
   const { metrics, card } = copilotFor(source, { ...laptop, priceCents: 4_999 });

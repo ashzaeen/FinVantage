@@ -178,9 +178,9 @@ function oddsMeter(headline: Headline): HTMLElement | null {
 const SERIOUS = new Set(["at risk", "unlikely", "out of reach"]);
 
 /**
- * The math decides caution, good, or neutral. A caution is red when a goal ends at risk or worse,
- * or the purchase is more than checking holds; a milder hit (still likely, a short delay, a dip
- * under the cushion) stays an amber heads-up.
+ * The math decides caution, good, or neutral. A caution is red when this purchase moves a goal to
+ * at risk or worse, or costs more than checking holds; a milder hit (still likely, a short delay,
+ * a goal that was already struggling slipping a little, a dip under the cushion) is amber.
  */
 export function toneFor(metrics: Pick<CopilotMetrics, "verdict" | "headline" | "liquidBufferAfterCents">): Tone {
   if (metrics.verdict === "good") return "ok";
@@ -188,7 +188,8 @@ export function toneFor(metrics: Pick<CopilotMetrics, "verdict" | "headline" | "
   const h = metrics.headline;
   const serious =
     h.kind === "out_of_reach" ||
-    (h.kind !== "gain" && h.statusAfter !== null && SERIOUS.has(h.statusAfter)) ||
+    // Red only when this purchase moves a goal into trouble, not when it was already there.
+    (h.kind !== "gain" && h.statusAfter !== null && h.statusAfter !== h.statusBefore && SERIOUS.has(h.statusAfter)) ||
     (metrics.liquidBufferAfterCents !== null && metrics.liquidBufferAfterCents < 0);
   return serious ? "danger" : "warn";
 }

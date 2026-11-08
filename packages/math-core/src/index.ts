@@ -81,10 +81,22 @@ export function liquidCash(snapshot: FinancialSnapshot): number {
     .reduce((sum, a) => sum + a.balanceCents, 0);
 }
 
+/**
+ * Spendable checking: the bank's available balance (which excludes pending charges) when it
+ * reports one, otherwise the current balance. "Can I pay for this now" is about what's spendable.
+ */
 export function checkingBalance(snapshot: FinancialSnapshot): number {
   return snapshot.accounts
     .filter((a) => a.type === "checking")
-    .reduce((sum, a) => sum + a.balanceCents, 0);
+    .reduce((sum, a) => sum + (a.availableBalanceCents ?? a.balanceCents), 0);
+}
+
+/**
+ * Checking above the safety cushion: money that is not set aside for anything. A purchase spends
+ * this first, so only the part beyond it cuts into the savings that fund goals.
+ */
+export function spareChecking(snapshot: FinancialSnapshot): number {
+  return Math.max(0, checkingBalance(snapshot) - snapshot.bufferTargetCents);
 }
 
 export function totalDebt(snapshot: FinancialSnapshot): number {
@@ -157,7 +169,9 @@ export function purchaseForSimulator(
 ): { amountCents: number; monthlyCents: number } {
   switch (context.pageType) {
     case "checkout":
-      return { amountCents: context.priceCents, monthlyCents: 0 };
+      // Spare checking covers the purchase first; only the rest has to be rebuilt from savings
+      // before goals see new money. Someone with plenty of idle cash doesn't delay a goal.
+      return { amountCents: Math.max(0, context.priceCents - spareChecking(snapshot)), monthlyCents: 0 };
     case "rental":
       return { amountCents: 0, monthlyCents: context.priceCents - currentHousingPayment(snapshot) };
     case "vehicle_financing":
@@ -170,7 +184,7 @@ export function purchaseForSimulator(
       const monthlyBack = plan.paysOffInFull
         ? plan.freedMonthlyCents
         : Math.round(plan.annualInterestSavedCents / 12);
-      return { amountCents: plan.paidCents, monthlyCents: -monthlyBack };
+      return { amountCents: Math.max(0, plan.paidCents - spareChecking(snapshot)), monthlyCents: -monthlyBack };
     }
   }
 }
@@ -229,14 +243,22 @@ export function rankAlternatives(snapshot: FinancialSnapshot): CopilotMetrics["a
 /**
  * Checkout Smart Move: pay from checking down to the buffer target, put the rest on a 0% promo
  * card, and pay it off in equal monthly amounts before the promo ends. Null when checking
- * covers it without dipping under the buffer, or when no usable promo card exists.
+ * covers it without dipping under the buffer, or when no promo card works: one whose 0% rate
+ * runs at least 2 more months, whose remaining credit (when the bank reports it) fits the
+ * amount, and whose monthly payment fits within what the user saves each month.
  */
 export function splitPlan(
   snapshot: FinancialSnapshot,
   priceCents: number,
 ): CopilotMetrics["splitPlan"] {
-  const spare = Math.max(0, checkingBalance(snapshot) - snapshot.bufferTargetCents);
+  const spare = spareChecking(snapshot);
   if (spare >= priceCents) return null;
+
+  // Round the checking share down to whole dollars, so the card shows clean figures.
+  const fromCheckingCents = Math.floor(spare / 100) * 100;
+  const onPromoCardCents = priceCents - fromCheckingCents;
+  // Whole-dollar payment, rounded up so the balance clears before the promo ends.
+  const paymentFor = (months: number) => Math.ceil(onPromoCardCents / months / 100) * 100;
 
   const promo = snapshot.accounts
     .filter(
@@ -244,17 +266,15 @@ export function splitPlan(
         a.type === "credit_card" &&
         a.annualRate === 0 &&
         a.promoRateEndsOn !== null &&
-        monthsBetween(snapshot.asOf, a.promoRateEndsOn) >= 2,
+        monthsBetween(snapshot.asOf, a.promoRateEndsOn) >= 2 &&
+        (a.availableBalanceCents === null || a.availableBalanceCents >= onPromoCardCents) &&
+        paymentFor(monthsBetween(snapshot.asOf, a.promoRateEndsOn)) <= snapshot.monthlySavingsCents,
     )
     .sort((a, b) => (b.promoRateEndsOn ?? "").localeCompare(a.promoRateEndsOn ?? ""))[0];
   if (!promo || !promo.promoRateEndsOn) return null;
 
-  // Round the checking share down to whole dollars, so the card shows clean figures.
-  const fromCheckingCents = Math.floor(spare / 100) * 100;
-  const onPromoCardCents = priceCents - fromCheckingCents;
   const months = monthsBetween(snapshot.asOf, promo.promoRateEndsOn);
-  // Whole-dollar payment, rounded up so the balance clears before the promo ends.
-  const monthlyPaymentCents = Math.ceil(onPromoCardCents / months / 100) * 100;
+  const monthlyPaymentCents = paymentFor(months);
   return {
     fromCheckingCents,
     onPromoCardCents,

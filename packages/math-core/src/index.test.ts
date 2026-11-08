@@ -18,6 +18,7 @@ test("opportunity cost excludes the principal", () => {
 // Scenario tests on a profile shaped like the demo fixture.
 import type { FinancialSnapshot, Goal, GoalImpact } from "@finvantage/contracts";
 import {
+  checkingBalance,
   computeCopilotMetrics,
   debtPaymentPlan,
   loanPayment,
@@ -25,6 +26,7 @@ import {
   purchaseForSimulator,
   rankAlternatives,
   safeRentThreshold,
+  spareChecking,
   splitPlan,
 } from "./index";
 
@@ -182,8 +184,32 @@ test("paying more than the balance only counts the balance", () => {
   assert.equal(debtPaymentPlan(snapshot, 200_000)!.paidCents, 86_000);
 });
 
-test("the simulator sees cash out now and money back each month", () => {
-  assert.deepEqual(purchaseForSimulator(snapshot, cardPayment), { amountCents: 86_000, monthlyCents: -3_500 });
+test("the simulator sees money back each month, and only the cash beyond spare checking", () => {
+  // $3,400 checking - $2,500 cushion = $900 spare covers the $860 payment: no goal savings used.
+  assert.deepEqual(purchaseForSimulator(snapshot, cardPayment), { amountCents: 0, monthlyCents: -3_500 });
+  const tight = { ...snapshot, bufferTargetCents: 300_000 }; // $400 spare
+  assert.deepEqual(purchaseForSimulator(tight, cardPayment), { amountCents: 46_000, monthlyCents: -3_500 });
+});
+
+test("a purchase spends spare checking first; only the rest reaches goal savings", () => {
+  const laptop = { pageType: "checkout" as const, itemType: "retail_purchase" as const, priceCents: 149_900, merchant: "x" };
+  assert.deepEqual(purchaseForSimulator(snapshot, laptop), { amountCents: 59_900, monthlyCents: 0 });
+  const flush = { ...snapshot, accounts: snapshot.accounts.map((a) => (a.type === "checking" ? { ...a, balanceCents: 1_500_000 } : a)) };
+  assert.deepEqual(purchaseForSimulator(flush, laptop), { amountCents: 0, monthlyCents: 0 });
+});
+
+test("spendable checking uses the bank's available balance when it reports one", () => {
+  const pending = { ...snapshot, accounts: snapshot.accounts.map((a) => (a.type === "checking" ? { ...a, availableBalanceCents: 300_000 } : a)) };
+  assert.equal(checkingBalance(pending), 300_000);
+  assert.equal(spareChecking(pending), 50_000);
+});
+
+test("the 0% split is offered only if it fits the card's credit and the monthly budget", () => {
+  const promoWith = (over: object) => ({ ...snapshot, accounts: snapshot.accounts.map((a) => (a.annualRate === 0 && a.type === "credit_card" ? { ...a, ...over } : a)) });
+  assert.ok(splitPlan(snapshot, 149_900), "baseline: the split works");
+  assert.equal(splitPlan(promoWith({ availableBalanceCents: 50_000 }), 149_900), null, "$500 of credit can't take $599");
+  assert.ok(splitPlan(promoWith({ availableBalanceCents: 60_000 }), 149_900), "$600 of credit can");
+  assert.equal(splitPlan({ ...snapshot, monthlySavingsCents: 5_000 }, 149_900), null, "a payment above monthly savings isn't a plan");
 });
 
 test("alternatives rank the 23% card above investing above savings", () => {

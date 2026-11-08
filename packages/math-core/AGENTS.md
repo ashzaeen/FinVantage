@@ -12,6 +12,8 @@ Known limits:
 
 - Current housing is the mortgage payment. Someone who rents today has no rent field in the snapshot, so it counts as 0.
 - Vehicle total cost includes interest, not insurance or running costs.
+- A purchase spends spare checking (above the safety cushion) before goal savings. Savings balances are not counted as spare, because goals are funded from them.
+- A car purchase does not count toward a "next car" goal.
 
 ## Rules
 

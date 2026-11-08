@@ -110,7 +110,11 @@ export function cardFigures(context: CopilotContext, metrics: CopilotMetrics): R
     f.debtPaid = formatUsd(d.paidCents);
     f.debtSaved = formatUsd(d.annualInterestSavedCents);
     f.debtRate = formatPercent(d.annualRate);
-    f.checkingAfter = formatUsd(d.checkingAfterCents);
+    // A payment bigger than checking: say how short, never show a negative balance.
+    delete f.checkingAfter;
+    delete f.checkingShort;
+    if (d.checkingAfterCents < 0) f.checkingShort = formatUsd(-d.checkingAfterCents);
+    else f.checkingAfter = formatUsd(d.checkingAfterCents);
     if (d.freedMonthlyCents > 0) f.debtFreed = formatUsd(d.freedMonthlyCents);
     if (d.remainingCents > 0) f.debtRemaining = formatUsd(d.remainingCents);
     f.debtBalance = formatUsd(d.balanceCents);
@@ -138,11 +142,17 @@ export function cardFigures(context: CopilotContext, metrics: CopilotMetrics): R
 }
 
 /**
- * True when a goal stops being realistic. Financing would only hide the cost then, so the card
- * points to a cheaper option or waiting, and the split figures are not offered to the model.
+ * True when this purchase makes a goal stop being realistic. Financing would only hide the cost
+ * then, so the card points to a cheaper option or waiting, and the split figures are not offered
+ * to the model.
  */
 function goalBeyondFinancing(h: Headline): boolean {
-  return !!h.goalName && (h.kind === "out_of_reach" || h.statusAfter === "unlikely" || h.statusAfter === "out of reach");
+  if (!h.goalName) return false;
+  if (h.kind === "out_of_reach") return true;
+  // Only when this purchase is what pushed the goal there. A goal that was already unlikely and
+  // only slips a little doesn't make the split bad advice.
+  const fellTo = (status: string) => h.statusAfter === status && h.statusBefore !== status;
+  return fellTo("unlikely") || fellTo("out of reach");
 }
 
 /** The one figure the card leads with, shown large and on the badge. */
@@ -330,7 +340,9 @@ function debtCard(
   }
 
   let smartMove: string;
-  if (underBuffer) {
+  if (f.checkingShort) {
+    smartMove = `Checking would be ${f.checkingShort} short. Pay what you can now and the rest on payday.`;
+  } else if (underBuffer) {
     smartMove = `It drops checking to ${f.checkingAfter}, below your ${f.bufferTarget} safety cushion. Splitting it across two paydays avoids that.`;
   } else if (f.debtFreed) {
     smartMove =

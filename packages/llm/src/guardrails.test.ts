@@ -134,6 +134,14 @@ test("a purchase bigger than checking says how short, never a negative balance",
   assert.ok(card.keyFigures.some((k) => k.label === "Short in checking" && k.value === "$299"));
 });
 
+test("a goal that was already unlikely and only slips a little still gets the 0% split", () => {
+  const slip: CopilotMetrics = {
+    ...metrics,
+    headline: { ...metrics.headline, kind: "delay", delayMonths: 0.5, statusBefore: "unlikely", statusAfter: "unlikely" },
+  };
+  assert.match(templateCard(context, slip).smartMove, /0% Promo Card/);
+});
+
 test("when a goal falls out of reach, no card suggests financing it", async () => {
   assert.doesNotMatch(templateCard(pricey, outOfReach).smartMove, /Promo Card|\$2,799/);
   // A model that tries the split anyway is rejected: those figures and the card name were never offered.

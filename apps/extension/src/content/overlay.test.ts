@@ -34,6 +34,11 @@ test("a purchase bigger than checking is a red warning", () => {
   assert.equal(toneFor(caution({ statusAfter: "likely" }, -29_900)), "danger");
 });
 
+test("a goal that was already struggling and slips a little is amber, not red", () => {
+  // The demo's House down payment: unlikely before and after, pushed back 2 weeks by a laptop.
+  assert.equal(toneFor(caution({ kind: "delay", delayMonths: 0.5, statusBefore: "unlikely", statusAfter: "unlikely" })), "warn");
+});
+
 test("a milder hit stays an amber heads-up", () => {
   assert.equal(toneFor(caution({ statusAfter: "likely" })), "warn");
   assert.equal(toneFor(caution({ kind: "delay", statusAfter: null, delayMonths: 0.8 })), "warn");
