@@ -346,3 +346,40 @@ test("the demo profile's purchases keep their verdicts", () => {
     assert.notEqual(m.verdict, "neutral", `$${price / 100}`);
   }
 });
+
+// Plaid Sandbox's debts outside the mortgage: student loan, auto loan, two cards (~$93,900).
+const deepInDebt: FinancialSnapshot = {
+  ...savingsRich,
+  accounts: [
+    ...savingsRich.accounts,
+    account({ id: "student", type: "loan", loanKind: "personal", name: "Plaid Student Loan", balanceCents: 6_526_200, annualRate: 0.0525 }),
+    account({ id: "auto", type: "loan", loanKind: "auto", name: "Plaid Auto Loan", balanceCents: 2_321_133 }),
+    account({ id: "biz", type: "credit_card", name: "Plaid Business Credit Card", balanceCents: 502_000 }),
+  ],
+};
+
+test("a big purchase while carrying debt above a year's income is a stretch: a heads-up", () => {
+  // The live $5,399 MacBook Pro, 2026-11-08: 87% of a month's income, affordable from savings.
+  const m = computeCopilotMetrics(deepInDebt, { ...laptop, priceCents: 539_900 }, [], [emergency]);
+  assert.equal(m.purchaseSize?.stretch, true);
+  assert.equal(m.verdict, "caution");
+  assert.ok((m.purchaseSize?.nonMortgageDebtCents ?? 0) > 9_000_000);
+});
+
+test("the same purchase with healthy finances stays worth a look", () => {
+  const m = computeCopilotMetrics(savingsRich, { ...laptop, priceCents: 539_900 }, [], [emergency]);
+  assert.equal(m.purchaseSize?.stretch, false);
+  assert.equal(m.verdict, "neutral");
+});
+
+test("a full month's income or more is a stretch even without debt", () => {
+  const m = computeCopilotMetrics(savingsRich, { ...laptop, priceCents: 620_000 }, [], [emergency]);
+  assert.equal(m.purchaseSize?.stretch, true);
+  assert.equal(m.verdict, "caution");
+});
+
+test("a small purchase is never a stretch, however much debt", () => {
+  const m = computeCopilotMetrics(deepInDebt, { ...laptop, priceCents: 24_499 }, [], [emergency]);
+  assert.equal(m.purchaseSize?.stretch, false);
+  assert.equal(m.verdict, "good");
+});

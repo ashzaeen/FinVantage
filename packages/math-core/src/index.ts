@@ -25,6 +25,13 @@ export const VEHICLE_ANNUAL_RATE = 0.07;
  */
 export const BIG_PURCHASE_INCOME_SHARE = 0.5;
 export const BIG_PURCHASE_SPARE_SHARE = 0.25;
+/**
+ * A big purchase is a stretch when debt outside a mortgage is at least a year's income, or the
+ * purchase alone is a full month's income, or half of the person's spare cash.
+ */
+export const HEAVY_DEBT_INCOME_YEARS = 1;
+export const STRETCH_INCOME_SHARE = 1;
+export const STRETCH_SPARE_SHARE = 0.5;
 
 /** Safe rent is rounded down to this step so it reads like a real search filter. */
 export const SAFE_RENT_ROUNDING_CENTS = 5_000;
@@ -135,7 +142,18 @@ export function purchaseSize(snapshot: FinancialSnapshot, goals: Goal[], priceCe
   const big =
     (monthlyIncomeShare !== null && monthlyIncomeShare >= BIG_PURCHASE_INCOME_SHARE) ||
     (spareCashShare !== null && spareCashShare >= BIG_PURCHASE_SPARE_SHARE);
-  return { monthlyIncomeShare, spareCashShare, big };
+  const nonMortgageDebtCents = snapshot.accounts
+    .filter((a) => isLiability(a.type) && a.type !== "mortgage")
+    .reduce((sum, a) => sum + a.balanceCents, 0);
+  const heavyDebt =
+    snapshot.monthlyIncomeCents > 0 &&
+    nonMortgageDebtCents >= snapshot.monthlyIncomeCents * 12 * HEAVY_DEBT_INCOME_YEARS;
+  const stretch =
+    big &&
+    (heavyDebt ||
+      (monthlyIncomeShare !== null && monthlyIncomeShare >= STRETCH_INCOME_SHARE) ||
+      (spareCashShare !== null && spareCashShare >= STRETCH_SPARE_SHARE));
+  return { monthlyIncomeShare, spareCashShare, big, nonMortgageDebtCents, heavyDebt, stretch };
 }
 
 /**
@@ -471,7 +489,8 @@ export function pickVerdict(
       const underBuffer =
         after !== null &&
         (afterTransfer < 0 || (before >= metrics.bufferTargetCents && afterTransfer < metrics.bufferTargetCents));
-      if (hurts || underBuffer) return "caution";
+      // A stretch (big while deep in debt, or very big) gets a heads-up even when it's affordable.
+      if (hurts || underBuffer || metrics.purchaseSize?.stretch) return "caution";
       // Affordable, but big for this person: a second look, not an automatic yes.
       return metrics.purchaseSize?.big ? "neutral" : "good";
     }

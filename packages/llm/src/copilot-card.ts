@@ -132,6 +132,9 @@ export function cardFigures(context: CopilotContext, metrics: CopilotMetrics): R
   // The cushion only means something next to what checking would be left at. Without that
   // figure, a model would pair the cushion with rent or a car loan, which the math never said.
   if (metrics.transfer) f.transferAmount = formatUsd(metrics.transfer.amountCents);
+  if (metrics.purchaseSize?.stretch && metrics.purchaseSize.heavyDebt) {
+    f.nonMortgageDebt = formatUsd(metrics.purchaseSize.nonMortgageDebtCents);
+  }
   if (metrics.purchaseSize?.big) {
     if (metrics.purchaseSize.monthlyIncomeShare !== null) f.incomeShare = formatPercent(metrics.purchaseSize.monthlyIncomeShare);
     if (metrics.purchaseSize.spareCashShare !== null && metrics.purchaseSize.spareCashShare <= 1) {
@@ -201,7 +204,11 @@ function leadFigure(context: CopilotContext, metrics: CopilotMetrics, f: Record<
     if (f.goalSooner) return { label: h.goalName, value: `${f.goalSooner} sooner` };
     if (statusChange(h)) return { label: h.goalName, value: statusChange(h)! };
   }
-  if (metrics.verdict === "neutral" && context.pageType === "checkout" && (f.incomeShare || f.spareShare)) {
+  if (
+    (metrics.verdict === "neutral" || (metrics.verdict === "caution" && metrics.purchaseSize?.stretch && h.kind === "none")) &&
+    context.pageType === "checkout" &&
+    (f.incomeShare || f.spareShare)
+  ) {
     return f.incomeShare
       ? { label: "Big purchase", value: `${f.incomeShare} of monthly income` }
       : { label: "Big purchase", value: `${f.spareShare} of spare savings` };
@@ -224,6 +231,7 @@ function keyFigures(metrics: CopilotMetrics, f: Record<string, string>): Copilot
   if (f.debtFreed) figures.push({ label: "Freed up each month", value: f.debtFreed });
   if (f.incomeShare) figures.push({ label: "Share of a month's income", value: f.incomeShare });
   if (f.spareShare) figures.push({ label: "Share of your spare savings", value: f.spareShare });
+  if (f.nonMortgageDebt) figures.push({ label: "Debt outside your mortgage", value: f.nonMortgageDebt });
   if (f.checkingBefore) figures.push({ label: "Available in checking", value: f.checkingBefore });
   if (f.checkingAfter) figures.push({ label: "Left in checking", value: f.checkingAfter });
   if (f.checkingShort) figures.push({ label: "Short in checking", value: f.checkingShort });
@@ -307,6 +315,21 @@ export function templateCard(context: CopilotContext, metrics: CopilotMetrics): 
           : cardIsCostly
           ? `Pay from checking, not your ${top.label}. That card charges ${f.topDebtRate} interest if you carry a balance.`
           : "If you planned for it, enjoy it.",
+      };
+    }
+    if (metrics.verdict === "caution" && metrics.purchaseSize?.stretch && h.kind === "none") {
+      // Affordable, but a stretch: very big, or big while carrying heavy debt. Say so plainly.
+      const size = f.incomeShare ? `It's ${f.incomeShare} of a month's income` : `It's ${f.spareShare} of your spare savings`;
+      const heavy = metrics.purchaseSize.heavyDebt && Boolean(f.nonMortgageDebt);
+      return {
+        ...base,
+        impact: heavy
+          ? "This is a big purchase while you're carrying a lot of debt."
+          : "This is a very big purchase for your budget.",
+        tradeOff: heavy ? `${size}, and you owe ${f.nonMortgageDebt} outside your mortgage.` : `${size}.`,
+        smartMove: metrics.payFirst
+          ? `A less expensive option, or paying off your ${metrics.payFirst.accountName} (${f.payFirstRate}) first, keeps your plan on track.`
+          : "A less expensive option, or waiting until you've saved for it, keeps your plan on track.",
       };
     }
     if (metrics.verdict === "neutral" && metrics.purchaseSize?.big) {
@@ -468,6 +491,7 @@ const SYSTEM_PROMPT = [
   "If `figures.checkingShort` is given, the reader doesn't have enough in checking: say they'd be that amount short. Never write a negative dollar amount.",
   "If `transferFrom` is given, the reader has savings no goal is using: the next step is moving `figures.transferAmount` from that account to checking first. Prefer it over any card or financing.",
   "If the verdict is \"good\", don't dwell on the safety cushion: the purchase itself is fine.",
+  "If `stretch` is true, the purchase is a stretch for this reader: very big, or big while carrying heavy debt (`figures.nonMortgageDebt`). Say so plainly, don't encourage it, and suggest a less expensive option, waiting, or paying `payFirst` first.",
   "For a purchase with verdict \"neutral\": the reader can afford it, but it's big for them. Say so using `figures.incomeShare` or `figures.spareShare`. If `payFirst` is given, suggest paying that debt off first (`figures.payFirstBalance` at `figures.payFirstRate`), because it's a guaranteed return.",
   "Plain words only, like you'd text a friend. Short sentences. Call `bufferTarget` the reader's \"safety cushion\" (money they keep in checking), and mention it only when `figures.checkingAfter` is given. `checkingAfter` is what would be left in checking; the cushion is the amount they like to keep. Never call one by the other's name. If `figures.underCushionBy` is given, that is how far below the cushion they'd be. Say \"bills\" for fixed costs and \"debt payments\" for debt-to-income. Never use: buffer, liquidity, fixed costs, debt-to-income, allocate, financial health, optimize, leverage.",
   "Copy figures exactly as given, including symbols. Never calculate, round, invent, or alter a number. Do not mention any number that is not in `figures`.",
@@ -525,6 +549,7 @@ export async function generateCopilotCard(
     splitPlanCard: figures.splitOnCard ? (metrics.splitPlan?.promoCardName ?? null) : null,
     transferFrom: metrics.transfer?.fromAccountName ?? null,
     payFirst: metrics.payFirst?.accountName ?? null,
+    stretch: metrics.purchaseSize?.stretch ?? false,
     exampleCard: { impact: fallback.impact, tradeOff: fallback.tradeOff, smartMove: fallback.smartMove },
   });
 

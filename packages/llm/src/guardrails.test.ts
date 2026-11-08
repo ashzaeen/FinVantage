@@ -187,13 +187,32 @@ test("a big but affordable purchase: worth a look, with the debt to pay first", 
     liquidBufferAfterCents: -469_900,
     splitPlan: null,
     transfer: { fromAccountName: "Plaid Money Market", amountCents: 469_900 },
-    purchaseSize: { monthlyIncomeShare: 0.774, spareCashShare: 0.135, big: true },
+    purchaseSize: { monthlyIncomeShare: 0.774, spareCashShare: 0.135, big: true, nonMortgageDebtCents: 41_000, heavyDebt: false, stretch: false },
     payFirst: { accountName: "Plaid Credit Card", balanceCents: 41_000, annualRate: 0.125 },
   });
   assert.equal(card.impact, "You can afford this, but it's a big purchase for you.");
   assert.equal(card.tradeOff, "It's 77% of a month's income and 14% of your spare savings.");
   assert.match(card.smartMove, /Pay off your Plaid Credit Card \(\$410 at 12.5%\) first.*Then move \$4,699 from your Plaid Money Market/);
   assert.deepEqual(card.lead, { label: "Big purchase", value: "77% of monthly income" });
+  assert.ok(wordCount(cardText(card)) <= MAX_CARD_WORDS);
+});
+
+test("a big purchase while deep in debt reads as a stretch, not an invitation", () => {
+  // The live $5,399 MacBook Pro for Plaid Sandbox's user, about $93,900 in debt outside the mortgage.
+  const card = templateCard({ ...context, priceCents: 539_900 }, {
+    ...metrics,
+    verdict: "caution",
+    headline: { ...metrics.headline, kind: "none", goalName: null, statusBefore: null, statusAfter: null },
+    liquidBufferAfterCents: -529_900,
+    splitPlan: null,
+    transfer: { fromAccountName: "Plaid Money Market", amountCents: 529_900 },
+    purchaseSize: { monthlyIncomeShare: 0.871, spareCashShare: 0.152, big: true, nonMortgageDebtCents: 9_390_000, heavyDebt: true, stretch: true },
+    payFirst: { accountName: "Plaid Credit Card", balanceCents: 41_000, annualRate: 0.125 },
+  });
+  assert.equal(card.impact, "This is a big purchase while you're carrying a lot of debt.");
+  assert.equal(card.tradeOff, "It's 87% of a month's income, and you owe $93,900 outside your mortgage.");
+  assert.match(card.smartMove, /less expensive option, or paying off your Plaid Credit Card \(12\.5%\) first/);
+  assert.deepEqual(card.lead, { label: "Big purchase", value: "87% of monthly income" });
   assert.ok(wordCount(cardText(card)) <= MAX_CARD_WORDS);
 });
 

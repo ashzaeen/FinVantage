@@ -69,7 +69,20 @@ export const CopilotMetrics = z.object({
    * purchase "neutral" (worth a look) instead of "good".
    */
   purchaseSize: z
-    .object({ monthlyIncomeShare: z.number().nullable(), spareCashShare: z.number().nullable(), big: z.boolean() })
+    .object({
+      monthlyIncomeShare: z.number().nullable(),
+      spareCashShare: z.number().nullable(),
+      big: z.boolean(),
+      /** Debt owed outside a mortgage (cards, auto, student, personal loans). */
+      nonMortgageDebtCents: Cents.default(0),
+      /** Debt outside a mortgage is at least a year's income. */
+      heavyDebt: z.boolean().default(false),
+      /**
+       * A stretch for this person: big while carrying heavy debt, or a full month's income or more,
+       * or half their spare cash or more. Makes the purchase "caution" even if it is affordable.
+       */
+      stretch: z.boolean().default(false),
+    })
     .nullable()
     .default(null),
   /** Checkout: the highest-rate card or personal loan above the assumed investing return, to pay first. */
