@@ -22,8 +22,9 @@ page -> content/detect.ts -> content/index.ts -> background.ts -> API
 | `src/content/detect.ts` | Builds the `CopilotContext` |
 | `src/content/price.ts` | USD parsing |
 | `src/content/overlay.ts` | Badge and card |
+| `src/content/index.ts` | Runs detection on load and again whenever the price element changes |
 | `src/popup.ts`, `popup.html` | On/off toggle |
-| `mock-pages/` | Demo pages. The demo runs on these |
+| `mock-pages/` | Demo pages. The demo runs on these: `index.html` (start page), `shop.html` and `product.html?id=` (store, catalog in `store.js`), `checkout.html?id=`, `rental.html`, `car-quote.html`, `card-payment.html`, plus edge cases |
 | `scripts/build.mjs` | Build, watch, and the port 4100 demo server |
 
 ## Rules

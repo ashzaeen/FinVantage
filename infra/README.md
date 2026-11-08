@@ -1,43 +1,97 @@
 # Infrastructure
 
-Nothing here has been deployed yet. This is the plan from the PRD, for the platform owner to fill in as it becomes real. Check each vendor's current docs and pricing.
-
-| Piece | Where | Notes |
+| Piece | Where | Deploys |
 | --- | --- | --- |
-| Web app | Vercel, free tier | Root directory `apps/web`. Set `NEXT_PUBLIC_API_URL` |
-| API and simulator | Vultr instance | Must be public HTTPS, because the extension calls it |
-| Relational data | Tiger Data Postgres | Start from `packages/data/src/tiger/schema.sql` |
-| Documents | MongoDB Atlas | Collections are listed in `packages/data/src/mongo/index.ts` |
-| Domain | GoDaddy Registry | Slide code `MLHUTD84`. Confirm the rules |
+| Web app | Vercel project `finvantage-web` (platform owner's account), root directory `apps/web`. Live at https://finvantage-web-ten.vercel.app | `.github/workflows/deploy.yml`, on pushes to `main` that touch it |
+| API | Vercel project `finvantage-api` (same account), root directory `apps/api`. Live at https://finvantage-api.vercel.app | Same workflow |
+| Relational data, auth, live updates | SpacetimeDB Maincloud, database `finvantage` | Published from the platform owner's laptop with `spacetime publish`. Planned, see `SPRINTS.md` |
+| Documents | MongoDB Atlas | Planned. See `SPRINTS.md`, Sprint 7 |
+| CI | `.github/workflows/ci.yml` | Manual only (Actions tab > CI > Run workflow) |
 | LLM | Gemini API | Server-side key only |
 
-## API environment
+Tiger Data and Vultr are no longer used. See `docs/DECISIONS.md`.
 
-See `.env.example`. A real deployment sets `WEB_ORIGIN`, `DEMO_API_TOKEN`, `DATA_BACKEND=real`, the connection strings, and `LLM_PROVIDER=gemini` with its key and model names.
+## How the API runs on Vercel
+
+`npm run build` in `apps/api` runs `scripts/build-vercel.mjs`. It bundles `src/vercel.ts` and every workspace package into one Node function, written to `.vercel/output` (the [Build Output API](https://vercel.com/docs/build-output-api/v3)). Vercel serves that directory as-is, and every route goes to the one function. Local dev still uses `src/server.ts`.
+
+To check a bundle locally: run `npm run build -w @finvantage/api`, then serve the default export of `apps/api/.vercel/output/functions/index.func/index.mjs` with `node:http`'s `createServer`.
 
 ## Scheduled report email
 
-Keep the Hono API as the persistent worker and configure the hosting provider's cron service to
-call it every five minutes:
+Configure an external cron service to call the deployed API every five minutes:
 
 ```bash
 curl --fail --silent --show-error --request POST \
   --header "Authorization: Bearer $SCHEDULER_SECRET" \
-  https://api.example.com/internal/reports/schedule/run
+  https://finvantage-api.vercel.app/internal/reports/schedule/run
 ```
 
 The endpoint is protected separately from the public demo token. MongoDB atomically leases each
 due schedule, so concurrent cron calls or multiple API instances do not process the same scheduled
 occurrence. Every attempt is stored in `email_schedule_logs`; failed Gmail SMTP authentication is
-shown in the Reports UI and retried after 15 minutes.
+recorded and retried after 15 minutes.
 
-## Extension for a deployed API
+## How deploys work
 
-1. Add the API origin to `host_permissions` in `apps/extension/manifest.json`.
-2. Build with `EXTENSION_API_URL`, `EXTENSION_WEB_URL`, and `EXTENSION_API_TOKEN` set.
+The repo belongs to Ashzaeen, but the Vercel projects belong to the platform owner, so the Vercel GitHub app isn't used. Instead, `.github/workflows/deploy.yml` deploys on each push to `main`:
 
-The token in the extension is public, so it only ever protects demo data.
+1. Each app (`api`, `web`) deploys only if its paths changed.
+2. The workflow links the project by name (`vercel link --project finvantage-api`), then runs `vercel deploy --prod` from the repo root.
+3. Vercel uploads the repo (minus `.vercelignore`) and builds remotely on Linux, using the project's Root Directory. Build logs are in the Vercel dashboard.
+4. A smoke step checks `/health` (API) or `/` (web), and fails the job if there's no 200.
+
+You can also run it by hand: Actions tab > Deploy > Run workflow.
+
+## First-time setup
+
+### 1. Platform owner: create the projects (once)
+
+From the repo root, with the Vercel CLI (`npx vercel@65.2.0 ...`):
+
+1. `npx vercel@65.2.0 login`
+2. Create and configure each project in the Vercel dashboard (**Add New > Project**, skip the Git import), or with `vercel link`:
+   - `finvantage-api`: Root Directory `apps/api`, Framework **Other**. Env vars for Production and Preview:
+     - `WEB_ORIGIN` = `https://finvantage-web-ten.vercel.app,http://localhost:3000`
+     - `DEMO_API_TOKEN` = `demo-token`
+   - `finvantage-web`: Root Directory `apps/web`, Framework **Next.js**. Env vars:
+     - `NEXT_PUBLIC_API_URL` = `https://finvantage-api.vercel.app`
+     - `NEXT_PUBLIC_DEMO_TOKEN` = `demo-token`
+3. First deploy, from the repo root: `npx vercel@65.2.0 link --yes --project finvantage-api`, then `npx vercel@65.2.0 deploy --prod`. Repeat for `finvantage-web`.
+4. Create a token at vercel.com/account/tokens and send it privately to the repo owner.
+
+Vercel gave the web project `finvantage-web-ten.vercel.app`, because `finvantage-web` was taken. If a domain changes, update the env vars above and the `smoke` URLs in `deploy.yml`.
+
+Only production is deployed. Vercel's preview URLs sit behind Vercel Authentication, so the `*` wildcard in `WEB_ORIGIN` is there if previews are ever needed.
+
+- **The web build reports that TypeScript is missing:** Vercel installs only the web workspace's own dependencies, so anything `next build` needs must be listed in `apps/web/package.json`, not just the root. This already caught `typescript` and `@types/node`.
+
+### 2. Repo owner: add the secret (once, about 2 minutes)
+
+On GitHub, go to **Settings > Secrets and variables > Actions > New repository secret**. Set Name to `VERCEL_TOKEN` and Value to the platform owner's token. Until this exists, the Deploy workflow skips with a notice instead of failing.
+
+### 3. Extension against the deployed API
+
+```bash
+EXTENSION_API_URL=https://finvantage-api.vercel.app EXTENSION_WEB_URL=https://finvantage-web-ten.vercel.app npm run build -w @finvantage/extension
+```
+
+The build adds the API origin to `host_permissions` automatically. Load `apps/extension/dist` unpacked.
+
+### If a deploy fails
+
+- Open the failed deployment in the Vercel dashboard and read its **Build Logs**.
+- **The API can't find workspace packages:** set the API project's Install Command to `cd ../.. && npm ci`.
+- **API bundling errors:** `npm run build -w @finvantage/api` locally runs the same build.
+
+## Known limits on Vercel
+
+- **Memory stores reset.** Data lives in each function instance until the Spacetime and Mongo stores land, so saved data can vanish or differ between requests. This is fine for the demo profile.
+- **Live updates through SSE are unreliable.** A Copilot event published on one function instance never reaches a dashboard connected to another. Sprint 5 moves live updates to Spacetime subscriptions. Locally, SSE works.
+- **SSE streams end** when they reach the function's maximum duration. The browser's `EventSource` reconnects by itself.
 
 ## Reminder
 
 Synthetic or sandbox data only. Real accounts bring compliance work that is out of scope (PRD section 11).
+
+The demo token is baked into the web app and the extension, so it is public. It only ever protects demo data.

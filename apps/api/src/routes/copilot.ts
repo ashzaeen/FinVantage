@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Hono } from "hono";
 import { routes } from "@finvantage/contracts";
 import { generateCopilotCard } from "@finvantage/llm";
-import { computeCopilotMetrics } from "@finvantage/math-core";
+import { computeCopilotMetrics, purchaseForSimulator } from "@finvantage/math-core";
 import { evaluatePurchase } from "@finvantage/simulator";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
@@ -14,12 +14,8 @@ export function registerCopilotRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     if (!inputs) return { status: "no_data" as const };
 
     // Order matters: simulator, then math core, then LLM. Words come last.
-    const isOneTime = body.pageType === "checkout";
-    const goalImpacts = evaluatePurchase(inputs, {
-      amountCents: isOneTime ? body.priceCents : 0,
-      monthlyCents: body.pageType === "rental" ? body.priceCents : 0,
-    });
-    const metrics = computeCopilotMetrics(inputs.snapshot, body, goalImpacts);
+    const goalImpacts = evaluatePurchase(inputs, purchaseForSimulator(inputs.snapshot, body));
+    const metrics = computeCopilotMetrics(inputs.snapshot, body, goalImpacts, inputs.goals);
     const card = await generateCopilotCard(deps.llm, body, metrics);
 
     const event = await deps.docs.saveCopilotEvent({

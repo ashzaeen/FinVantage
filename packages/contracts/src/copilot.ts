@@ -2,10 +2,16 @@ import { z } from "zod";
 import { Cents, Id, IsoDateTime } from "./common";
 import { GoalImpact } from "./simulation";
 
-export const PageType = z.enum(["rental", "checkout", "vehicle_financing"]);
+export const PageType = z.enum(["rental", "checkout", "vehicle_financing", "debt_payment"]);
 export type PageType = z.infer<typeof PageType>;
 
-export const ItemType = z.enum(["rent_monthly", "home_listing", "retail_purchase", "vehicle"]);
+export const ItemType = z.enum([
+  "rent_monthly",
+  "home_listing",
+  "retail_purchase",
+  "vehicle",
+  "credit_card_payment",
+]);
 export type ItemType = z.infer<typeof ItemType>;
 
 /**
@@ -36,6 +42,86 @@ export const CopilotMetrics = z.object({
   opportunityCostCents: Cents.nullable(),
   opportunityHorizonYears: z.number().int().nullable(),
   goalImpacts: z.array(GoalImpact),
+  /** Rental: the housing payment the new rent would replace. */
+  currentHousingCents: Cents.nullable(),
+  /** Rental and vehicle: the change in monthly costs that the simulator applied. */
+  monthlyChangeCents: Cents.nullable(),
+  /** Vehicle: the assumed financing terms, so the card can explain them. */
+  vehicle: z
+    .object({
+      termMonths: z.number().int(),
+      annualRate: z.number(),
+      monthlyPaymentCents: Cents,
+      totalInterestCents: Cents,
+    })
+    .nullable(),
+  /** Checkout: pay part from checking down to the buffer, the rest on a 0% promo card. */
+  splitPlan: z
+    .object({
+      fromCheckingCents: Cents,
+      onPromoCardCents: Cents,
+      promoCardName: z.string(),
+      monthlyPaymentCents: Cents,
+      payoffMonths: z.number().int(),
+      promoEndsOn: z.string(),
+    })
+    .nullable(),
+  /**
+   * The one goal hit the card leads with, chosen in code. "odds" when the purchase mostly
+   * changes the chance of hitting the date, "delay" when it moves the date, "out_of_reach" when
+   * the goal stops being reachable, "gain" when a goal gets more likely or sooner, "none" when no
+   * goal moves enough to mention. For "gain", `delayMonths` is negative (sooner).
+   */
+  headline: z.object({
+    kind: z.enum(["delay", "odds", "out_of_reach", "gain", "none"]),
+    goalName: z.string().nullable(),
+    delayMonths: z.number().nullable(),
+    oddsBeforeLow: z.number().nullable(),
+    oddsBeforeHigh: z.number().nullable(),
+    oddsAfterLow: z.number().nullable(),
+    oddsAfterHigh: z.number().nullable(),
+    /** Plain-language status before and after, such as "on track" and "at risk". */
+    statusBefore: z.string().nullable(),
+    statusAfter: z.string().nullable(),
+  }),
+  /**
+   * The card's stance, decided in code: "caution" when the move hurts a goal or the cash cushion,
+   * "good" when it fits the plan or beats the alternatives, "neutral" otherwise.
+   */
+  verdict: z.enum(["caution", "good", "neutral"]),
+  /** Debt payment: which debt it pays, and what that is worth. */
+  debtPayment: z
+    .object({
+      accountName: z.string(),
+      annualRate: z.number(),
+      balanceCents: Cents,
+      paidCents: Cents,
+      paysOffInFull: z.boolean(),
+      annualInterestSavedCents: Cents,
+      /** The minimum payment that goes to goals once the balance is cleared, else 0. */
+      freedMonthlyCents: Cents,
+      remainingCents: Cents,
+      checkingAfterCents: Cents,
+      /** The payment is no more than the card's minimum. */
+      isMinimumOnly: z.boolean(),
+      /** Paying the whole balance from checking would still leave the buffer target. */
+      canPayInFull: z.boolean(),
+      /** Interest a year on what stays on the card, and on the whole balance. */
+      remainingAnnualInterestCents: Cents,
+      fullAnnualInterestCents: Cents,
+    })
+    .nullable(),
+  /**
+   * Where this money earns the most, best first: paying each debt (its rate), investing (the
+   * assumed return), or savings (the account's rate). Lets cards compare the choice to others.
+   */
+  alternatives: z.array(
+    z.object({
+      kind: z.enum(["debt", "invest", "savings"]),
+      label: z.string(),
+      annualRate: z.number(),
+    }),
+  ),
 });
 export type CopilotMetrics = z.infer<typeof CopilotMetrics>;
 
@@ -44,6 +130,8 @@ export const CopilotCard = z.object({
   tradeOff: z.string(),
   smartMove: z.string(),
   keyFigures: z.array(z.object({ label: z.string(), value: z.string() })),
+  /** The one figure the card leads with, such as a goal's odds or the interest saved. */
+  lead: z.object({ label: z.string(), value: z.string() }).nullable(),
   /** "template" means the LLM failed or was rejected by the guardrail. */
   source: z.enum(["llm", "template"]),
 });

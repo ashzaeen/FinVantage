@@ -27,8 +27,9 @@
   ],
   "goals": [
     { "id": "goal_emergency", "userId": "user_demo", "name": "Emergency fund", "targetCents": 1800000, "currentCents": 1200000, "targetDate": "2027-12-01", "priorityRank": 1, "flexibility": "non_negotiable", "linkedAccountId": "acc_savings" },
-    { "id": "goal_house", "userId": "user_demo", "name": "House down payment", "targetCents": 6000000, "currentCents": 650000, "targetDate": "2030-06-01", "priorityRank": 2, "flexibility": "flexible", "linkedAccountId": "acc_savings" },
-    { "id": "goal_car", "userId": "user_demo", "name": "Next car", "targetCents": 1200000, "currentCents": 0, "targetDate": "2029-01-01", "priorityRank": 3, "flexibility": "flexible", "linkedAccountId": null }
+    { "id": "goal_japan", "userId": "user_demo", "name": "Japan trip", "targetCents": 450000, "currentCents": 150000, "targetDate": "2027-06-01", "priorityRank": 2, "flexibility": "flexible", "linkedAccountId": "acc_savings" },
+    { "id": "goal_house", "userId": "user_demo", "name": "House down payment", "targetCents": 6000000, "currentCents": 650000, "targetDate": "2030-06-01", "priorityRank": 3, "flexibility": "flexible", "linkedAccountId": "acc_savings" },
+    { "id": "goal_car", "userId": "user_demo", "name": "Next car", "targetCents": 1200000, "currentCents": 0, "targetDate": "2029-01-01", "priorityRank": 4, "flexibility": "flexible", "linkedAccountId": null }
   ],
   "transactions": [
     { "id": "txn_01", "accountId": "acc_checking", "date": "2026-10-15", "amountCents": 310000, "merchant": "Acme Payroll", "category": "income", "isRecurring": true },

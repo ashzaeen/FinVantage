@@ -2,12 +2,135 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Financing quote - Demo Motors</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Your financing quote - Meridian Motors</title>
+    <style>
+      :root {
+        --night: #121417;
+        --panel: #1b1e22;
+        --line: #2c3036;
+        --ink: #f2f0ea;
+        --muted: #9a9ea6;
+        --amber: #f2a93b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; background: var(--night); color: var(--ink);
+        font-family: "Futura", "Century Gothic", "Avenir Next", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      header { border-bottom: 1px solid var(--line); }
+      .head { max-width: 1180px; margin: 0 auto; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; }
+      .logo { display: flex; align-items: center; gap: 12px; font-size: 18px; letter-spacing: 0.14em; }
+      .nav { display: flex; gap: 26px; color: var(--muted); font-size: 15px; }
+
+      main { max-width: 1180px; margin: 0 auto; padding: 36px 24px 90px; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 48px; align-items: start; }
+      .stage {
+        border-radius: 22px; overflow: hidden; aspect-ratio: 16 / 9;
+        background: radial-gradient(120% 90% at 50% 100%, #2e2b26 0%, #17191c 60%);
+      }
+      .stage svg { width: 100%; height: 100%; display: block; }
+      h1 { font-size: 36px; font-weight: 500; letter-spacing: -0.01em; margin: 26px 0 6px; }
+      .sub { color: var(--muted); margin: 0; font-size: 16px; }
+      .specs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border-radius: 14px; overflow: hidden; margin-top: 26px; }
+      .specs div { background: var(--panel); padding: 16px; }
+      .specs span { display: block; color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+      .specs b { font-weight: 500; font-size: 17px; }
+
+      aside { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 26px; position: sticky; top: 24px; }
+      aside h2 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+      aside .note { color: var(--muted); font-size: 14px; margin: 0 0 22px; }
+      .row { display: flex; justify-content: space-between; padding: 13px 0; border-top: 1px solid var(--line); font-size: 16px; font-variant-numeric: tabular-nums; }
+      .row span { color: var(--muted); }
+      .vehicle-price strong { font-size: 22px; font-weight: 600; }
+      .terms { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 6px 0 14px; }
+      .terms span { border: 1px solid var(--line); border-radius: 10px; padding: 9px 0; text-align: center; font-size: 14px; color: var(--muted); }
+      .terms .on { border-color: var(--amber); color: var(--ink); }
+      .payment { background: #23272c; border-radius: 14px; padding: 16px; margin: 14px 0 18px; display: flex; justify-content: space-between; align-items: baseline; }
+      .payment span { color: var(--muted); font-size: 14px; }
+      .payment b { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+      .payment b small { font-size: 14px; color: var(--muted); font-weight: 400; }
+      button { width: 100%; border: 0; border-radius: 12px; padding: 15px; background: var(--amber); color: #1a1408; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+      button:hover { filter: brightness(1.06); }
+      .ghost { margin-top: 10px; background: transparent; color: var(--ink); border: 1px solid var(--line); font-weight: 500; }
+      .fine { color: var(--muted); font-size: 12px; line-height: 1.55; margin: 16px 0 0; }
+
+      @media (max-width: 940px) {
+        main { grid-template-columns: 1fr; }
+        aside { position: static; }
+        .nav { display: none; }
+      }
+      @media (max-width: 560px) { .specs { grid-template-columns: repeat(2, 1fr); } }
+    </style>
   </head>
   <body>
-    <h1>2024 Sedan LX</h1>
-    <p>Vehicle price: <strong data-testid="vehicle-price">$28,000</strong></p>
-    <p>60 months at 6.9% APR: <span>$553/mo</span></p>
-    <button type="button">Submit credit application</button>
+    <header>
+      <div class="head">
+        <div class="logo">
+          <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12" fill="none" stroke="#f2a93b" stroke-width="2"/><path d="M14 2v24M7 6c4 5 4 11 0 16M21 6c-4 5-4 11 0 16" fill="none" stroke="#f2a93b" stroke-width="1.6"/></svg>
+          MERIDIAN
+        </div>
+        <nav class="nav"><span>Inventory</span><span>Financing</span><span>Trade-in</span></nav>
+      </div>
+    </header>
+
+    <main>
+      <div>
+        <div class="stage" aria-label="Photo of the car">
+          <svg viewBox="0 0 960 540" aria-hidden="true">
+            <defs>
+              <linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b6470"/><stop offset="0.5" stop-color="#3b424b"/><stop offset="1" stop-color="#22272d"/></linearGradient>
+              <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9fb0c2"/><stop offset="1" stop-color="#2c3540"/></linearGradient>
+              <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#000" stop-opacity="0.6"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+            </defs>
+            <ellipse cx="480" cy="430" rx="360" ry="26" fill="url(#shadow)"/>
+            <path d="M150 380c-10-30 4-58 40-66l120-22c40-46 96-80 170-84 70-4 128 18 176 60l92 18c48 10 66 40 62 84l-8 22H158z" fill="url(#body)"/>
+            <path d="M330 290c34-40 82-66 146-68 58-2 106 14 146 50z" fill="url(#glass)"/>
+            <path d="M478 222v66" stroke="#22272d" stroke-width="7"/>
+            <path d="M172 344h640" stroke="#7f8995" stroke-opacity="0.5" stroke-width="2"/>
+            <path d="M790 330c18 2 28 10 30 22h-34z" fill="#f2a93b" opacity="0.9"/>
+            <path d="M162 340c-10 2-14 10-12 20h26z" fill="#c4433a" opacity="0.9"/>
+            <g>
+              <circle cx="300" cy="392" r="52" fill="#0d0f11"/>
+              <circle cx="300" cy="392" r="30" fill="#4a525c"/>
+              <circle cx="300" cy="392" r="8" fill="#1b1e22"/>
+              <circle cx="680" cy="392" r="52" fill="#0d0f11"/>
+              <circle cx="680" cy="392" r="30" fill="#4a525c"/>
+              <circle cx="680" cy="392" r="8" fill="#1b1e22"/>
+            </g>
+          </svg>
+        </div>
+        <h1>2024 Sedan LX</h1>
+        <p class="sub">Certified pre-owned, one owner, clean history</p>
+        <div class="specs">
+          <div><span>Mileage</span><b>18,200 mi</b></div>
+          <div><span>Drivetrain</span><b>FWD</b></div>
+          <div><span>Fuel economy</span><b>34 mpg</b></div>
+          <div><span>Color</span><b>Graphite</b></div>
+        </div>
+      </div>
+
+      <aside aria-label="Financing quote">
+        <h2>Your financing quote</h2>
+        <p class="note">Prequalified estimate for Jordan R.</p>
+        <div class="row vehicle-price"><span>Vehicle price</span><strong data-testid="vehicle-price">$28,000</strong></div>
+        <div class="row"><span>Down payment</span><span>$0</span></div>
+        <div class="row"><span>Estimated APR</span><span>7.0%</span></div>
+        <div class="row" style="border-bottom: 0"><span>Term</span><span>60 months</span></div>
+        <div class="terms" aria-label="Loan term"><span>36 mo</span><span>48 mo</span><span class="on">60 mo</span><span>72 mo</span></div>
+        <div class="payment"><span>Estimated payment</span><b>$555<small>/mo</small></b></div>
+        <button type="button" id="apply">Submit credit application</button>
+        <button class="ghost" type="button" id="drive">Schedule a test drive</button>
+        <p class="fine" id="car-note">Estimate only. Final rate and payment depend on credit approval. Submitting an application may affect your credit score.</p>
+      </aside>
+    </main>
+    <script>
+      document.getElementById("apply").addEventListener("click", () => {
+        document.getElementById("car-note").textContent = "Demo site: no credit application was sent.";
+      });
+      document.getElementById("drive").addEventListener("click", (e) => {
+        e.currentTarget.textContent = "Test drive requested";
+      });
+    </script>
   </body>
 </html>

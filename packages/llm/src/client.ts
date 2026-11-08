@@ -10,6 +10,13 @@ export interface LlmRequest {
   prompt: string;
   /** Set for structured output. The provider must return JSON matching this schema. */
   jsonSchema?: Record<string, unknown>;
+  /** Give up after this long, so callers can fall back in time. Defaults per provider. */
+  timeoutMs?: number;
+  /**
+   * How much the model may reason before answering. Omit for the model's default. Gemini 3
+   * models think by default, which can take over 15 seconds; "minimal" answers in about one.
+   */
+  thinking?: "minimal" | "low" | "high";
 }
 
 export interface LlmClient {
@@ -25,48 +32,87 @@ class MockLlmClient implements LlmClient {
   }
 }
 
-class GeminiClient implements LlmClient {
+const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
+const GEMINI_DEFAULT_TIMEOUT_MS = 15_000;
+
+/**
+ * Gemini's REST schema format uses upper-case type names ("OBJECT", "STRING"). Callers write
+ * ordinary JSON Schema, so convert the `type` fields on the way out.
+ */
+export function toGeminiSchema(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(toGeminiSchema);
+  if (!schema || typeof schema !== "object") return schema;
+  return Object.fromEntries(
+    Object.entries(schema as Record<string, unknown>).map(([key, value]) => [
+      key,
+      key === "type" && typeof value === "string" ? value.toUpperCase() : toGeminiSchema(value),
+    ]),
+  );
+}
+
+interface GeminiResponse {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
+  promptFeedback?: { blockReason?: string };
+  error?: { message?: string };
+}
+
+export class GeminiClient implements LlmClient {
   readonly provider = "gemini";
 
   constructor(
     private readonly apiKey: string,
     private readonly models: Record<ModelTier, string>,
+    private readonly fetchImpl: typeof fetch = fetch,
   ) {}
 
   async generate(request: LlmRequest): Promise<string> {
     const model = this.models[request.tier];
-    if (!this.apiKey || !model) {
-      throw new Error(`Gemini ${request.tier} model and API key must be configured.`);
-    }
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        signal: AbortSignal.timeout(15_000),
-        headers: { "content-type": "application/json", "x-goog-api-key": this.apiKey },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: request.system }] },
-          contents: [{ role: "user", parts: [{ text: request.prompt }] }],
-          generationConfig: request.jsonSchema
-            ? { responseMimeType: "application/json", responseJsonSchema: request.jsonSchema }
-            : undefined,
-        }),
+    if (!this.apiKey) throw new Error("Gemini: GEMINI_API_KEY is not set.");
+    if (!model) throw new Error(`Gemini: no model name set for the ${request.tier} tier.`);
+
+    const body = {
+      systemInstruction: { parts: [{ text: request.system }] },
+      contents: [{ role: "user", parts: [{ text: request.prompt }] }],
+      generationConfig: {
+        ...(request.jsonSchema
+          ? { responseMimeType: "application/json", responseSchema: toGeminiSchema(request.jsonSchema) }
+          : {}),
+        ...(request.thinking ? { thinkingConfig: { thinkingLevel: request.thinking } } : {}),
       },
-    );
-    if (!response.ok) throw new Error(`Gemini request failed with status ${response.status}.`);
-    const json = (await response.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
     };
-    const text = json.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("");
-    if (!text) throw new Error("Gemini returned no text.");
-    return text;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), request.timeoutMs ?? GEMINI_DEFAULT_TIMEOUT_MS);
+    try {
+      const res = await this.fetchImpl(`${GEMINI_ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        // The key goes in a header, never the URL, so it stays out of logs.
+        headers: { "content-type": "application/json", "x-goog-api-key": this.apiKey },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      const data = (await res.json().catch(() => ({}))) as GeminiResponse;
+      if (!res.ok) {
+        throw new Error(`Gemini: HTTP ${res.status}${data.error?.message ? `: ${data.error.message}` : ""}`);
+      }
+      if (data.promptFeedback?.blockReason) {
+        throw new Error(`Gemini: prompt blocked (${data.promptFeedback.blockReason}).`);
+      }
+      const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+      if (!text) throw new Error(`Gemini: empty response (${data.candidates?.[0]?.finishReason ?? "no candidates"}).`);
+      return text;
+    } catch (error) {
+      if (controller.signal.aborted) throw new Error("Gemini: timed out.");
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }
 
 export function createLlmClient(env: NodeJS.ProcessEnv = process.env): LlmClient {
-  return env.LLM_PROVIDER === "gemini"
-    ? new GeminiClient(env.GEMINI_API_KEY ?? "", {
-        flash: env.GEMINI_MODEL_FLASH ?? "",
-      })
-    : new MockLlmClient();
+  if (env.LLM_PROVIDER !== "gemini") return new MockLlmClient();
+  return new GeminiClient(env.GEMINI_API_KEY ?? "", {
+    flash: env.GEMINI_MODEL_FLASH ?? "",
+  });
 }

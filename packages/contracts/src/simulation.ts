@@ -98,6 +98,9 @@ export const GoalImpact = z.object({
   goalName: z.string(),
   probabilityLowDelta: z.number(),
   probabilityHighDelta: z.number(),
+  /** The range after the change, so cards can say "from 93-94% to 76-77%". */
+  probabilityLowAfter: z.number(),
+  probabilityHighAfter: z.number(),
   /** Positive means later. Null when the goal has no median completion date. */
   delayMonths: z.number().nullable(),
 });

@@ -32,8 +32,15 @@ The model name comes from `GEMINI_MODEL_FLASH`. Confirm the current name at the 
 
 `LLM_PROVIDER=mock` is the default, and its `generate` always throws. That is deliberate: callers exercise their fallback paths, so the app works with no key. As a result, the parser reports no match, and cards have `source: "template"`.
 
-`GeminiClient.generate` calls the Gemini REST API. Set `LLM_PROVIDER=gemini`, `GEMINI_API_KEY`, and `GEMINI_MODEL_FLASH` to enable it.
-Provider calls time out after 15 seconds so callers can use their deterministic fallback instead of leaving a request open indefinitely.
+`GeminiClient` calls the Gemini REST API directly with `fetch`, so the package needs no SDK. To turn it on, set these in the root `.env` and restart the API:
+
+```
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=...
+GEMINI_MODEL_FLASH=...
+```
+
+The key travels in the `x-goog-api-key` header, never the URL. Pass `jsonSchema` for structured output (ordinary JSON Schema; the client converts it to Gemini's format) and `timeoutMs` when you need an answer fast. Gemini 3 models think by default, which can take more than 15 seconds, so a fast call also needs `thinking: "minimal"`. Every failure (HTTP error, block, empty reply, timeout) throws, so callers fall back. Copilot cards use the configured Flash model with a 2-second timeout and minimal thinking.
 
 Tests inject a fake `LlmClient`. See `src/guardrails.test.ts`.
 

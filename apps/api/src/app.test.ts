@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createApiClient, type CopilotContext } from "@finvantage/contracts";
-import { createApp } from "./app";
+import { createApp, originMatcher } from "./app";
 import { createDeps } from "./deps";
 
 /** A real client against the real app, in process. Every call validates against the contracts. */
@@ -103,7 +103,7 @@ test("runs can be diffed and link to the previous run", async () => {
   const second = await client.runSimulation({ body: {} });
   assert.equal(second.previousRunId, first.id);
   const diff = await client.diffSimulations({ params: { id: first.id, otherId: second.id } });
-  assert.equal(diff.goals.length, 3);
+  assert.equal(diff.goals.length, first.goalOutcomes.length);
 });
 
 test("the Copilot returns a card and records the event", async () => {
@@ -182,9 +182,9 @@ test("a quarterly report compares consecutive quarters, saves a PDF, and emails 
     report.visuals.spendingTrend.map((point) => point.quarter),
     ["2026-Q2", "2026-Q3"],
   );
-  assert.equal(report.visuals.goalComparisons.length, 3);
-  assert.equal(report.visuals.goalPathways.length, 3);
-  assert.equal(report.visuals.suggestions.length, 3);
+  assert.equal(report.visuals.goalComparisons.length, current.goalOutcomes.length);
+  assert.equal(report.visuals.goalPathways.length, current.goalOutcomes.length);
+  assert.equal(report.visuals.suggestions.length, current.goalOutcomes.length);
   assert.ok(
     report.visuals.monthlyBreakdown.every(
       (month) => month.incomeCents === 0 && month.spendingCents === 0,
@@ -221,7 +221,7 @@ test("a first-quarter report generates without a previous simulation", async () 
   assert.deepEqual(report.evidence.map((item) => item.quarter), ["2026-Q1"]);
   assert.deepEqual(report.visuals.spendingTrend.map((point) => point.quarter), ["2026-Q1"]);
   assert.equal(report.visuals.goalComparisons.length, 0);
-  assert.equal(report.visuals.suggestions.length, 3);
+  assert.equal(report.visuals.suggestions.length, current.goalOutcomes.length);
   assert.equal(report.pdf.status, "ready");
 });
 
@@ -254,4 +254,25 @@ test("an unmatched life event sentence returns the supported types", async () =>
   const result = await client.parseLifeEvent({ body: { text: "we adopted a llama" } });
   assert.equal(result.matched, false);
   assert.equal((await client.listLifeEvents()).length, 0);
+});
+
+test("CORS allows listed origins and wildcard previews, and nothing else", async () => {
+  const allow = originMatcher("http://localhost:3000, https://finvantage-web-*.vercel.app");
+  assert.ok(allow("http://localhost:3000"));
+  assert.ok(allow("https://finvantage-web-git-feature-team.vercel.app"));
+  assert.ok(!allow("https://evil.example"));
+  assert.ok(!allow("https://finvantage-web-x.vercel.app.evil.example"));
+  assert.ok(!allow("https://finvantage-web-a.b.vercel.app"), "a wildcard spans one label only");
+
+  const app = createApp(createDeps({}), { WEB_ORIGIN: "https://web.example" });
+  const preflight = (origin: string) =>
+    app.request("/v1/me", {
+      method: "OPTIONS",
+      headers: { origin, "access-control-request-method": "GET" },
+    });
+  assert.equal(
+    (await preflight("https://web.example")).headers.get("access-control-allow-origin"),
+    "https://web.example",
+  );
+  assert.equal((await preflight("https://evil.example")).headers.get("access-control-allow-origin"), null);
 });

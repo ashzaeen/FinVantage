@@ -2,7 +2,7 @@
 
 The math engine behind the dashboard and the Copilot. Read the root `AGENTS.md` first. Brief: `docs/workstreams/simulator.md`.
 
-`src/index.ts` is a closed-form stub with no randomness. Its exports are the contract, so keep these signatures and replace the bodies:
+`src/index.ts` is a seeded Monte Carlo engine. Its exports are the contract, so keep these signatures:
 
 | Export | Used by |
 | --- | --- |
@@ -10,16 +10,18 @@ The math engine behind the dashboard and the Copilot. Read the root `AGENTS.md` 
 | `evaluatePurchase(inputs, purchase)` | The Copilot route |
 | `diffOutcomes(goals, before, after)` | Run diffs, life-event deltas |
 
-## The real engine must
+How it works, the named assumptions (`ASSUMPTIONS`), and how the probability range is derived are documented at the top of `src/index.ts` and in `docs/DECISIONS.md`. A Copilot evaluation (two runs at 5,000 paths) takes well under a second; a test enforces the 2-second limit.
+
+## The engine must
 
 - Sample income changes, spending variation, and market returns. Default to 5,000 paths, configurable.
 - Simulate all goals jointly, funding by `priorityRank` from one pool. Never run them independently.
-- Apply `lifeEvents` and every `whatIf` field, including `eventShifts`, which the stub ignores.
+- Apply `lifeEvents` and every `whatIf` field, including `eventShifts`.
 - Return a probability **range** per goal, and fan chart percentiles that widen over time.
 - Use a seeded PRNG, never `Math.random()`. Same seed and inputs must give the same output.
 - Return a what-if result in under 2 seconds. Cap paths and cache by input hash if needed.
 
-A plain Monte Carlo run gives one estimate per goal, so you must define how the range is derived, for example from a confidence interval or by varying assumptions. Record the choice in `docs/DECISIONS.md`, because the UI presents it to users as "60-85% likely".
+The range comes from assumption terciles (see `docs/DECISIONS.md`). The UI presents it to users as "60-85% likely", so keep it explainable.
 
 ## Rules
 

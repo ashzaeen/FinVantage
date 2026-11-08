@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Circuit &amp; Co.</title>
+    <script src="/store.js"></script>
+    <style id="store-css"></style>
+    <style>
+      main { max-width: 1200px; margin: 0 auto; padding: 18px 24px 0; }
+      .crumbs { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+      .crumbs a:hover { color: var(--ink); }
+      .pdp { display: grid; grid-template-columns: 1.15fr 1fr; gap: 48px; align-items: start; }
+      .gallery { display: grid; gap: 12px; }
+      .gallery .main { aspect-ratio: 4 / 3; border-radius: 18px; overflow: hidden; }
+      .thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+      .thumbs div { aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; opacity: 0.7; border: 2px solid transparent; }
+      .thumbs div:first-child { opacity: 1; border-color: var(--ink); }
+
+      .cat { color: var(--muted); font-size: 14px; }
+      h1 { font-size: 32px; letter-spacing: -0.025em; margin: 6px 0 8px; line-height: 1.15; }
+      .blurb { color: var(--muted); font-size: 17px; margin: 0 0 22px; }
+      .price { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+      .stock { margin: 14px 0 0; display: grid; gap: 6px; font-size: 15px; }
+      .stock .ok { color: var(--ok); font-weight: 600; }
+      .stock span { color: var(--muted); }
+      .buy { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 24px 0 0; }
+      .buy a, .buy button { border-radius: 12px; padding: 14px; font: inherit; font-weight: 600; font-size: 16px; text-align: center; cursor: pointer; }
+      .buy button { border: 1px solid var(--ink); background: #fff; color: var(--ink); }
+      .buy a { background: var(--brand); color: #fff; }
+      .buy a:hover { filter: brightness(1.08); }
+      .buy button.added { border-color: var(--ok); color: var(--ok); }
+      .plan { margin-top: 18px; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 15px; }
+      .plan small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+      .plan b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+      .specs { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 18px; }
+      .specs h2 { font-size: 17px; margin: 0 0 10px; }
+      .specs ul { margin: 0; padding-left: 18px; line-height: 1.9; color: #3b3f48; }
+
+      .also { margin-top: 56px; }
+      .also h2 { font-size: 22px; letter-spacing: -0.02em; margin: 0 0 16px; }
+      .also-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+      .tile { display: grid; gap: 8px; }
+      .tile .pic { aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; }
+      .tile .nm { font-weight: 600; font-size: 15px; }
+      .tile .pr { font-weight: 700; font-variant-numeric: tabular-nums; }
+      .missing { padding: 80px 0; text-align: center; color: var(--muted); }
+      .missing a { color: var(--brand); font-weight: 600; }
+      @media (max-width: 900px) { .pdp { grid-template-columns: 1fr; gap: 24px; } .also-grid { grid-template-columns: repeat(2, 1fr); } }
+      @media (max-width: 640px) { main { padding: 14px 16px 0; } h1 { font-size: 26px; } .price { font-size: 28px; } }
+    </style>
+  </head>
+  <body>
+    <div id="header"></div>
+    <main id="main"></main>
+    <footer class="foot">Circuit &amp; Co. is a fictional store made for the FinVantage demo.</footer>
+
+    <script>
+      document.getElementById("store-css").textContent = STORE_CSS;
+      const product = findProduct(new URLSearchParams(location.search).get("id") || "");
+      document.getElementById("header").innerHTML = storeHeader(product ? product.category : null);
+      const main = document.getElementById("main");
+
+      if (!product) {
+        main.innerHTML = `<div class="missing"><p>We couldn't find that product.</p><a href="/shop.html">Back to the store</a></div>`;
+      } else {
+        document.title = `${product.name} - Circuit & Co.`;
+        // A protection plan is offered on bigger purchases. Its price is a decoy for the Copilot.
+        const plan = product.price >= 30000 ? Math.round(product.price * 0.1 / 100) * 100 - 1 : null;
+        const others = CATALOG.filter((p) => p.id !== product.id && p.category !== product.category)
+          .sort((a, b) => Math.abs(a.price - product.price) - Math.abs(b.price - product.price))
+          .slice(0, 4);
+        main.innerHTML = `
+          <div class="crumbs"><a href="/shop.html">Home</a> / <a href="/shop.html?cat=${encodeURIComponent(product.category)}">${product.category}</a> / ${product.name}</div>
+          <div class="pdp">
+            <div class="gallery">
+              <div class="main">${productArt(product)}</div>
+              <div class="thumbs">${[product.color, "#f5f6f8", "#eef0f4", "#f1efe9"].map((c) => `<div>${productArt({ ...product, color: c })}</div>`).join("")}</div>
+            </div>
+            <div>
+              <div class="cat">${product.category}</div>
+              <h1>${product.name}</h1>
+              <p class="blurb">${product.blurb}</p>
+              <div class="price" data-testid="product-price">${formatPrice(product.price)}</div>
+              <div class="stock">
+                <div class="ok">In stock</div>
+                <span>Free delivery Tuesday, November 10</span>
+                <span>Or pick up today at Riverside</span>
+              </div>
+              <div class="buy">
+                <button type="button" id="add">Add to cart</button>
+                <a href="/checkout.html?id=${product.id}">Buy now</a>
+              </div>
+              ${plan ? `<div class="plan"><div>Add CareShield, 2 years<small>Accidental damage and battery coverage</small></div><b>${formatPrice(plan)}</b></div>` : ""}
+              <div class="specs"><h2>Highlights</h2><ul>${product.specs.map((s) => `<li>${s}</li>`).join("")}</ul></div>
+            </div>
+          </div>
+          <section class="also">
+            <h2>Customers also viewed</h2>
+            <div class="also-grid">${others.map((p) => `
+              <a class="tile" href="/product.html?id=${p.id}">
+                <div class="pic">${productArt(p)}</div>
+                <div class="nm">${p.name}</div>
+                <div class="pr">${formatPrice(p.price)}</div>
+              </a>`).join("")}</div>
+          </section>`;
+        const add = document.getElementById("add");
+        add.addEventListener("click", () => {
+          addToCart(product.id);
+          add.textContent = "Added to cart";
+          add.classList.add("added");
+          document.getElementById("header").innerHTML = storeHeader(product.category);
+        });
+      }
+    </script>
+  </body>
+</html>

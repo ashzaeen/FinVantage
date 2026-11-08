@@ -1,0 +1,83 @@
+name: Deploy
+
+# Deploys to the platform owner's Vercel account on every push to main. Vercel builds remotely
+# with each project's Root Directory (apps/web, apps/api), so build logs are in the Vercel
+# dashboard. Needs one repository secret, VERCEL_TOKEN. Setup: infra/README.md.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_CLI: vercel@65.2.0
+
+jobs:
+  deploy:
+    name: Deploy ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: api
+            project: finvantage-api
+            smoke: https://finvantage-api.vercel.app/health
+            paths: apps/api packages package.json package-lock.json tsconfig.base.json
+          - app: web
+            project: finvantage-web
+            smoke: https://finvantage-web-ten.vercel.app/
+            paths: apps/web packages/contracts package.json package-lock.json tsconfig.base.json
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether this app changed
+        id: changed
+        env:
+          BEFORE: ${{ github.event.before }}
+          PATHS: ${{ matrix.paths }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::notice::VERCEL_TOKEN is not set yet, so nothing deploys. See infra/README.md."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" != "push" ] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$BEFORE" "$GITHUB_SHA" -- $PATHS; then
+            echo "No changes under: $PATHS"
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Link the Vercel project
+        if: steps.changed.outputs.deploy == 'true'
+        run: npx --yes "$VERCEL_CLI" link --yes --project "${{ matrix.project }}" --token "$VERCEL_TOKEN"
+
+      - name: Deploy to production
+        if: steps.changed.outputs.deploy == 'true'
+        run: npx --yes "$VERCEL_CLI" deploy --prod --yes --token "$VERCEL_TOKEN"
+
+      - name: Smoke test
+        if: steps.changed.outputs.deploy == 'true'
+        env:
+          URL: ${{ matrix.smoke }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            code=$(curl -s -o body.txt -w '%{http_code}' --max-time 30 "$URL" || echo 000)
+            if [ "$code" = 200 ]; then echo "OK: $URL"; head -c 300 body.txt; exit 0; fi
+            echo "Attempt $attempt: HTTP $code from $URL"
+            sleep 10
+          done
+          echo "::error::$URL did not answer 200"
+          exit 1

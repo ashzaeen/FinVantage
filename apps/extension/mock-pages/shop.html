@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Circuit &amp; Co. - Electronics, delivered</title>
+    <script src="/store.js"></script>
+    <style id="store-css"></style>
+    <style>
+      main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 0; }
+      .hero {
+        display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; gap: 24px;
+        background: #15154a; color: #fff; border-radius: 20px; overflow: hidden; min-height: 280px;
+      }
+      .hero-copy { padding: 40px 44px; }
+      .hero-copy small { color: #b9b8f7; font-size: 14px; }
+      .hero h1 { font-size: 40px; line-height: 1.08; letter-spacing: -0.03em; margin: 10px 0 12px; }
+      .hero p { color: #d6d5fb; margin: 0 0 22px; font-size: 17px; max-width: 36ch; }
+      .hero a { display: inline-block; background: #fff; color: #15154a; padding: 11px 18px; border-radius: 10px; font-weight: 600; }
+      .hero-art { height: 100%; min-height: 280px; }
+
+      .row-head { display: flex; justify-content: space-between; align-items: baseline; margin: 44px 0 16px; }
+      .row-head h2 { font-size: 24px; letter-spacing: -0.02em; margin: 0; }
+      .row-head span { color: var(--muted); font-size: 14px; }
+      .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+      .tile { display: grid; gap: 10px; }
+      .tile .pic { aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden; transition: transform 160ms ease; }
+      .tile:hover .pic { transform: translateY(-2px); }
+      .tile .cat { color: var(--muted); font-size: 13px; }
+      .tile .nm { font-weight: 600; font-size: 16px; }
+      .tile .pr { font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; }
+      .tile .dl { color: var(--ok); font-size: 13px; }
+      .hero[hidden] { display: none; }
+      .empty { color: var(--muted); padding: 40px 0; }
+      .empty a { color: var(--brand); font-weight: 600; }
+      .perks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 48px; }
+      .perk { background: var(--soft); border-radius: 14px; padding: 18px 20px; font-size: 15px; }
+      .perk b { display: block; margin-bottom: 4px; }
+      .perk span { color: var(--muted); font-size: 14px; }
+      @media (max-width: 900px) { .grid { grid-template-columns: repeat(3, 1fr); } .hero { grid-template-columns: 1fr; } .hero-art { display: none; } }
+      @media (max-width: 640px) { main { padding: 16px 16px 0; } .grid { grid-template-columns: repeat(2, 1fr); gap: 14px; } .perks { grid-template-columns: 1fr; } .hero h1 { font-size: 30px; } }
+    </style>
+  </head>
+  <body>
+    <div id="header"></div>
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <small>Holiday preview</small>
+          <h1>New laptops, ready for the season.</h1>
+          <p>The Arc lineup is here, with free two-day delivery and 30-day returns.</p>
+          <a href="/product.html?id=arc-14">Shop Arc 14</a>
+        </div>
+        <div class="hero-art" id="hero-art"></div>
+      </section>
+
+      <div class="row-head"><h2 id="row-title">Popular right now</h2><span id="row-count"></span></div>
+      <div class="grid" id="grid"></div>
+
+      <div class="perks">
+        <div class="perk"><b>Free two-day delivery</b><span>On orders over $35.</span></div>
+        <div class="perk"><b>30-day returns</b><span>Changed your mind? Send it back.</span></div>
+        <div class="perk"><b>Price match</b><span>Within 14 days of purchase.</span></div>
+      </div>
+    </main>
+    <footer class="foot">Circuit &amp; Co. is a fictional store made for the FinVantage demo.</footer>
+
+    <script>
+      document.getElementById("store-css").textContent = STORE_CSS;
+      const params = new URLSearchParams(location.search);
+      const cat = params.get("cat");
+      const q = (params.get("q") || "").trim();
+      document.getElementById("header").innerHTML = storeHeader(cat);
+      document.getElementById("hero-art").innerHTML = productArt({ ...findProduct("arc-16-pro"), color: "#22216b" });
+      let items = CATALOG;
+      if (cat) items = items.filter((p) => p.category === cat);
+      if (q) {
+        const words = q.toLowerCase().split(/\s+/);
+        items = items.filter((p) => words.every((w) => `${p.name} ${p.category} ${p.blurb}`.toLowerCase().includes(w)));
+        document.querySelector(".sh-search input").value = q;
+      }
+      if (cat || q) {
+        document.querySelector(".hero").hidden = true;
+        document.getElementById("row-title").textContent = q ? `Results for "${q}"` : cat;
+        document.title = `${q ? `"${q}"` : cat} - Circuit & Co.`;
+      }
+      document.getElementById("row-count").textContent = `${items.length} ${items.length === 1 ? "product" : "products"}`;
+      if (items.length === 0) {
+        document.getElementById("grid").outerHTML = `<p class="empty">No matches. <a href="/shop.html">See everything</a></p>`;
+      }
+      const grid = document.getElementById("grid");
+      if (grid) grid.innerHTML = items.map((p) => `
+        <a class="tile" href="/product.html?id=${p.id}">
+          <div class="pic">${productArt(p)}</div>
+          <div class="cat">${p.category}</div>
+          <div class="nm">${p.name}</div>
+          <div class="pr">${formatPrice(p.price)}</div>
+          <div class="dl">Free delivery Tue, Nov 10</div>
+        </a>`).join("");
+    </script>
+  </body>
+</html>
