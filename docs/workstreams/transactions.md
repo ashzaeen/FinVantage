@@ -8,7 +8,9 @@ The synthetic demo profile, then the transaction pipeline: categorization, budge
 
 ## You have now
 
-One demo profile with all account types and ten seed transactions. Spending category totals, month-over-month changes, six-month income/spending trend, and recurring-charge lists now derive from ledger transactions. Budget limits remain demo defaults. Recurring cadence is estimated monthly from the fixture flag and next date is a 30-day estimate. Net worth history and fully inferred recurring cadence remain unfinished.
+One demo profile with all account types and ten seed transactions. Spending category totals, month-over-month changes, six-month income/spending trend, and recurring-charge lists now derive from ledger transactions. Budget limits remain demo defaults. Recurring cadence is estimated monthly from the fixture flag and next date is a 30-day estimate. Net worth history is reconstructed from current account balances and recorded transactions; it cannot include older activity that is not in the ledger.
+
+The Transactions page searches and filters by type and category across loaded rows, then opens a compact editor. Users can add transactions and edit merchant, account, date, amount, currency, category, and recurring status; changes persist through the API. Non-USD entries retain their original amount and use a historical exchange rate to normalize ledger summaries to USD.
 
 **New (2026-11-07): the data to finish these now exists.** Bank data is modeled on Plaid (`docs/DATA-MODEL.md`):
 - `fixtures/planner.json` keeps its bank data in Plaid's format, under `bank`.

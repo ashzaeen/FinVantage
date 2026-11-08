@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { NAV_ITEMS } from "@/lib/nav";
 import { AccountCard } from "./AccountCard";
 
@@ -45,22 +45,6 @@ function GoalsIcon() {
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="6" />
       <circle cx="12" cy="12" r="2" />
-    </svg>
-  );
-}
-
-function SimulatorIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 21v-7" />
-      <path d="M4 10V3" />
-      <path d="M12 21v-9" />
-      <path d="M12 8V3" />
-      <path d="M20 21v-5" />
-      <path d="M20 12V3" />
-      <circle cx="4" cy="12" r="2" />
-      <circle cx="12" cy="10" r="2" />
-      <circle cx="20" cy="14" r="2" />
     </svg>
   );
 }
@@ -145,29 +129,12 @@ function SettingsIcon() {
   );
 }
 
-function SecurityIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-
 function HelpIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10" />
       <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
       <line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
   );
 }
@@ -182,8 +149,6 @@ function getNavIcon(href: string, active: boolean) {
       return <TransactionsIcon />;
     case "/goals":
       return <GoalsIcon />;
-    case "/simulator":
-      return <SimulatorIcon />;
     case "/life-events":
       return <LifeEventsIcon />;
     case "/copilot":
@@ -207,7 +172,6 @@ function getNavIcon(href: string, active: boolean) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [darkMode, setDarkMode] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-[#f8f9fe]">
@@ -245,7 +209,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </Link>
 
-          {/* All 13 Core Navigation Items Restored */}
+          {/* Dashboard navigation */}
           <nav aria-label="Main Navigation" className="flex flex-col gap-1">
             {NAV_ITEMS.map((item) => {
               const active = item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href);
@@ -277,36 +241,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               type="button"
               className="flex items-center gap-3 px-3.5 py-2 rounded-2xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all text-left"
             >
-              <SecurityIcon />
-              <span>Security</span>
-            </button>
-            <button
-              type="button"
-              className="flex items-center gap-3 px-3.5 py-2 rounded-2xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all text-left"
-            >
               <HelpIcon />
               <span>Help Centre</span>
             </button>
 
-            {/* Dark Mode Switch */}
-            <div className="flex items-center justify-between px-3.5 py-2 text-white/70">
-              <span className="flex items-center gap-3 text-sm">
-                <MoonIcon />
-                <span>Dark Mode</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setDarkMode(!darkMode)}
-                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer"
-                style={{ backgroundColor: darkMode ? "#ffffff" : "rgba(255, 255, 255, 0.3)" }}
-                aria-label="Toggle dark mode"
-              >
-                <span
-                  className="inline-block h-4 w-4 transform rounded-full bg-[#544af7] transition-transform"
-                  style={{ transform: darkMode ? "translateX(24px)" : "translateX(4px)" }}
-                />
-              </button>
-            </div>
           </div>
         </div>
 

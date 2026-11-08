@@ -76,12 +76,25 @@ export const Account = z.object({
 });
 export type Account = z.infer<typeof Account>;
 
+export const NewAccount = Account.omit({ id: true, userId: true });
+export type NewAccount = z.infer<typeof NewAccount>;
+
+export const CurrencyCode = z.enum(["USD", "EUR", "GBP", "CAD", "AUD", "CHF", "INR", "MXN"]);
+export type CurrencyCode = z.infer<typeof CurrencyCode>;
+
 export const Transaction = z.object({
   id: Id,
   accountId: Id,
   date: IsoDate,
   /** Negative is money out, positive is money in. */
   amountCents: Cents,
+  /** User-entered denomination. `amountCents` is normalized to USD for app-wide totals. */
+  currency: CurrencyCode.default("USD"),
+  /** Original signed amount in the selected currency's minor units. */
+  originalAmountCents: Cents.nullable().default(null),
+  /** Captured conversion used to normalize to USD; null for legacy transactions. */
+  exchangeRateToUsd: Rate.nullable().default(null),
+  exchangeRateDate: IsoDate.nullable().default(null),
   merchant: z.string(),
   /** The app's spending category, such as "groceries". Rule-based from the bank's category. */
   category: z.string().nullable(),
@@ -96,9 +109,15 @@ export const Transaction = z.object({
 });
 export type Transaction = z.infer<typeof Transaction>;
 
-/** What a person or the extension enters by hand. The rest is filled in by the server. */
-export const NewTransaction = Transaction.pick({ accountId: true, date: true, amountCents: true, merchant: true });
+/** Fields accepted when creating or editing a transaction; normalized values are server-owned. */
+export const NewTransaction = Transaction.omit({ id: true, category: true, isRecurring: true, originalAmountCents: true, exchangeRateToUsd: true, exchangeRateDate: true });
 export type NewTransaction = z.infer<typeof NewTransaction>;
+
+export const CreateTransaction = NewTransaction.extend({
+  category: z.string().nullable().default(null),
+  isRecurring: z.boolean().default(false),
+});
+export type CreateTransaction = z.infer<typeof CreateTransaction>;
 
 /** An account's balance on one day. Saved on each bank sync; net worth history is built from these. */
 export const BalanceSnapshot = z.object({

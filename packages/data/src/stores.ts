@@ -6,8 +6,8 @@ import type {
   EmailScheduleLogEntry,
   Goal,
   LifeEvent,
+  NewAccount,
   NewGoal,
-  NewTransaction,
   QuarterlyReport,
   Recommendation,
   SimulationRun,
@@ -22,11 +22,16 @@ export interface LedgerStore {
   saveUser(user: User): Promise<User>;
   getIncomeProfile(userId: string): Promise<IncomeProfile | null>;
   listAccounts(userId: string): Promise<Account[]>;
+  createAccount(userId: string, account: NewAccount): Promise<Account>;
+  updateAccount(userId: string, id: string, account: NewAccount): Promise<Account | null>;
   replaceAccounts(userId: string, accounts: Account[]): Promise<void>;
   listTransactions(userId: string, limit: number): Promise<Transaction[]>;
-  addTransaction(transaction: NewTransaction): Promise<Transaction>;
+  addTransaction(transaction: Omit<Transaction, "id">): Promise<Transaction>;
+  updateTransaction(userId: string, id: string, transaction: Omit<Transaction, "id">): Promise<Transaction | null>;
   listGoals(userId: string): Promise<Goal[]>;
   createGoal(userId: string, goal: NewGoal): Promise<Goal>;
+  updateGoal(userId: string, id: string, goal: NewGoal): Promise<Goal | null>;
+  deleteGoal(userId: string, id: string): Promise<boolean>;
   /** Clears the user's data and reloads the demo profile. */
   loadDemoProfile(userId: string): Promise<void>;
 }

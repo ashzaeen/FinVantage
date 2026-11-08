@@ -5,21 +5,27 @@ import {
   type CopilotEvent,
   type EmailScheduleLogEntry,
   type Goal,
+  type GoalStatus,
   type LifeEvent,
   type NewGoal,
-  type NewTransaction,
   type QuarterlyReport,
   type Recommendation,
   type SimulationRun,
   Transaction,
   type User,
   type Account,
+  type NewAccount,
 } from "@finvantage/contracts";
 import { DEMO_USER_ID, demoProfileFor, type IncomeProfile } from "./profile";
 import type { DocumentStore, LedgerStore } from "./stores";
 
 function inRange(createdAt: string, range?: { start: string; end: string }) {
   return !range || (createdAt >= range.start && createdAt < range.end);
+}
+
+function goalStatusForBalance(goal: Pick<Goal, "currentCents" | "targetCents">): GoalStatus {
+  if (goal.currentCents >= goal.targetCents) return "achieved";
+  return goal.currentCents > 0 ? "in_progress" : "not_started";
 }
 
 /** Default store: the demo profile in memory, reset on restart. No database needed. */
@@ -65,6 +71,20 @@ export class MemoryLedgerStore implements LedgerStore {
     return this.accounts.filter((a) => a.userId === userId);
   }
 
+  async createAccount(userId: string, account: NewAccount) {
+    const saved: Account = { ...account, id: randomUUID(), userId };
+    this.accounts.push(saved);
+    return saved;
+  }
+
+  async updateAccount(userId: string, id: string, account: NewAccount) {
+    const index = this.accounts.findIndex((item) => item.id === id && item.userId === userId);
+    if (index < 0) return null;
+    const updated: Account = { ...account, id, userId };
+    this.accounts[index] = updated;
+    return updated;
+  }
+
   async replaceAccounts(userId: string, accounts: Account[]) {
     this.accounts = [...this.accounts.filter((a) => a.userId !== userId), ...accounts];
   }
@@ -77,16 +97,22 @@ export class MemoryLedgerStore implements LedgerStore {
       .slice(0, limit);
   }
 
-  async addTransaction(transaction: NewTransaction) {
-    // parse fills the bank-only fields (pending, categoryDetailed, ...) with their defaults.
+  async addTransaction(transaction: Omit<Transaction, "id">) {
     const saved: Transaction = Transaction.parse({
       ...transaction,
       id: randomUUID(),
-      category: null,
-      isRecurring: false,
     });
     this.transactions.push(saved);
     return saved;
+  }
+
+  async updateTransaction(userId: string, id: string, transaction: Omit<Transaction, "id">) {
+    const account = this.accounts.find((item) => item.id === transaction.accountId && item.userId === userId);
+    const index = this.transactions.findIndex((item) => item.id === id && this.accounts.some((a) => a.id === item.accountId && a.userId === userId));
+    if (!account || index < 0) return null;
+    const updated = { ...transaction, id };
+    this.transactions[index] = updated;
+    return updated;
   }
 
   async listGoals(userId: string) {
@@ -96,9 +122,24 @@ export class MemoryLedgerStore implements LedgerStore {
   }
 
   async createGoal(userId: string, goal: NewGoal) {
-    const saved: Goal = { ...goal, id: randomUUID(), userId };
+    const saved: Goal = { ...goal, status: goal.status ?? goalStatusForBalance(goal), id: randomUUID(), userId };
     this.goals.push(saved);
     return saved;
+  }
+
+  async updateGoal(userId: string, id: string, goal: NewGoal) {
+    const index = this.goals.findIndex((item) => item.id === id && item.userId === userId);
+    if (index < 0) return null;
+    const updated: Goal = { ...goal, status: goal.status ?? goalStatusForBalance(goal), id, userId };
+    this.goals[index] = updated;
+    return updated;
+  }
+
+  async deleteGoal(userId: string, id: string) {
+    const index = this.goals.findIndex((item) => item.id === id && item.userId === userId);
+    if (index < 0) return false;
+    this.goals.splice(index, 1);
+    return true;
   }
 
   async loadDemoProfile(userId: string) {

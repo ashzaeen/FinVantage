@@ -4,6 +4,9 @@ import { Cents, Id, IsoDate } from "./common";
 export const Flexibility = z.enum(["flexible", "non_negotiable"]);
 export type Flexibility = z.infer<typeof Flexibility>;
 
+export const GoalStatus = z.enum(["not_started", "in_progress", "achieved", "done"]);
+export type GoalStatus = z.infer<typeof GoalStatus>;
+
 export const Goal = z.object({
   id: Id,
   userId: Id,
@@ -15,6 +18,8 @@ export const Goal = z.object({
   priorityRank: z.number().int().positive(),
   flexibility: Flexibility,
   linkedAccountId: Id.nullable(),
+  /** Board status is separate from the saved balance so users can track goal lifecycle. */
+  status: GoalStatus.optional(),
 });
 export type Goal = z.infer<typeof Goal>;
 

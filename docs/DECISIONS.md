@@ -46,6 +46,8 @@ Append here when you make a call others need to know about. Do not rewrite histo
 | Report PDFs embed Poppins and categorize goal suggestions | The artifact matches the dashboard identity while keeping maintain, review, and explore prompts visibly distinct |
 | An external cron invokes the persistent API for scheduled report email | The planned Vultr API already owns Gmail credentials. MongoDB leases due schedules atomically, which survives restarts and prevents two API instances from claiming the same occurrence |
 | Quarterly UI charts use report-owned monthly transaction aggregates | Recharts renders responsive bars and trends, while every displayed cent remains computed by the API from ledger transactions rather than by the browser or Gemini |
+| Transactions store normalized USD cents alongside the entered currency, signed minor-unit amount, and captured historical USD rate/date | Every existing budget and spending aggregate stays comparable in USD, while the transaction list and editor preserve the user's currency and the conversion can be audited |
+| Net worth history is reconstructed from the current account snapshot and recorded transaction flows | The demo has no historical account snapshots; the chart can show available ledger movement while clearly labeling that older or unrecorded activity is omitted |
 
 ## Platform, decided 2026-11-07
 
