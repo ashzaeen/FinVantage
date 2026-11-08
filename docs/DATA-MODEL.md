@@ -64,7 +64,7 @@ All private. Only the API's admin identity can write.
 | `security` | Security (shared) | `security_id`, `ticker_symbol`, `type`, `close_price_cents` | `/investments/holdings/get` |
 | `holding` | Account and security pair | `account_id`, `security_id`, `quantity`, `institution_value_cents`, `cost_basis_cents` | `/investments/holdings/get` |
 
-Plaid's access token is never stored in these tables. When live Plaid arrives, it goes in its own server-only store.
+Plaid's access token is never stored in these tables. It goes in `bank_item_secret`, encrypted by the API with AES-256-GCM (`PLAID_TOKEN_KEY`), and is read only by the API.
 
 ### Entered by the user or computed by the app
 
@@ -125,7 +125,7 @@ All are nullable or have defaults, so manual entries and old code are unaffected
 
 | Feature | Reads | Status |
 | --- | --- | --- |
-| 1. Account linking, all six types | `bank_item`, `bank_account` | The demo is in Plaid format. Live Plaid Link is not built |
+| 1. Account linking, all six types | `bank_item`, `bank_account`, `bank_item_secret` | Plaid Sandbox linking is live (Accounts → Connect a bank). The demo is in Plaid format |
 | 2. Auto-categorization | `pfc_detailed` and `pfc_primary` through `categoryFor` | Rules done: 100% of demo transactions categorize. LLM fallback for unknown merchants is open |
 | 3. Budget envelopes | `budget` and transactions | Table and fixture limits exist. The route still uses its built-in demo limits: switch it to `budget` |
 | 4. Net worth over time | `balance_snapshot` | Six months of demo history exist. The route still draws a flat line: switch it to snapshots |

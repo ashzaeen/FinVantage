@@ -24,9 +24,10 @@ import {
 import { goalStatusForBalance } from "../memory";
 import { AccountDetails, mapItemSnapshot } from "../plaid/map";
 import type { PlaidItemSnapshot } from "../plaid/schema";
-import { loadProfileArgs, opt, toWire } from "../plaid/spacetime-rows";
+import type { BankItemUpdate } from "../plaid/client";
+import { bankItemLoad, loadProfileArgs, opt, toWire } from "../plaid/spacetime-rows";
 import { demoSourceFor, IncomeProfile } from "../profile";
-import type { LedgerStore } from "../stores";
+import type { BankItemRecord, LedgerStore } from "../stores";
 import { SpacetimeHttp, sqlString, type SpacetimeConfig } from "./client";
 
 // Row shapes as decoded by SpacetimeHttp.sql (camelCase, null for none).
@@ -119,7 +120,7 @@ function snapshotsFromRows(rows: BankRows): PlaidItemSnapshot[] {
             account_id: l.accountId,
             aprs: l.aprs.map((a) => ({
               apr_percentage: a.aprPercentage,
-              apr_type: a.aprType as "balance_transfer_apr" | "cash_apr" | "purchase_apr" | "special",
+              apr_type: a.aprType,
             })),
             is_overdue: l.isOverdue,
             last_payment_amount: dollars(l.lastPaymentAmountCents),
@@ -378,5 +379,59 @@ export class SpacetimeLedgerStore implements LedgerStore {
 
   async loadDemoProfile(userId: string) {
     await this.db.call("load_profile", loadProfileArgs(demoSourceFor(userId)));
+  }
+
+  async listBankItems(userId: string): Promise<BankItemRecord[]> {
+    const [items, accounts] = await Promise.all([
+      this.byUser<ItemRow & { status: string }>("bank_item", userId),
+      this.byUser<BankAccountRow>("bank_account", userId),
+    ]);
+    // The demo profile's built-in banks aren't linked banks: they have no token and can't sync.
+    return items.filter((item) => item.status !== "demo").map((item) => ({
+      itemId: item.itemId,
+      institutionName: item.institutionName,
+      status: item.status,
+      transactionsCursor: item.transactionsCursor,
+      accountCount: accounts.filter((a) => a.itemId === item.itemId).length,
+    }));
+  }
+
+  async applyBankUpdate(userId: string, update: BankItemUpdate) {
+    // Reuse the Plaid-to-row conversion by treating the update as a snapshot of upserts.
+    const rows = bankItemLoad(
+      {
+        item: update.item,
+        accounts: update.accounts,
+        transactions: [...update.added, ...update.modified],
+        transactions_cursor: update.nextCursor,
+        liabilities: update.liabilities,
+        recurring: update.recurring,
+        investments: update.investments,
+      },
+      userId,
+    );
+    await this.db.call(
+      "apply_bank_update",
+      toWire([
+        userId,
+        rows.item,
+        rows.accounts,
+        rows.transactions,
+        update.removedTransactionIds,
+        rows.liabilities,
+        rows.streams,
+        rows.securities,
+        rows.holdings,
+      ]) as unknown[],
+    );
+  }
+
+  async removeBankItem(userId: string, itemId: string) {
+    const [item] = await this.db.sql<ItemRow>(
+      `SELECT * FROM bank_item WHERE item_id = ${sqlString(itemId)} AND user_id = ${sqlString(userId)}`,
+    );
+    if (!item) return false;
+    await this.db.call("remove_bank_item", [itemId]);
+    return true;
   }
 }

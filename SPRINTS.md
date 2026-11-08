@@ -87,7 +87,7 @@ Notes:
 - [x] `Account` and `Transaction` gain Plaid fields, all optional or defaulted: subtype, mask, available balance, credit limit, due date, pending, detailed category, channel, logo
 - [x] Spacetime tables mirror Plaid (`bank_item`, `bank_account`, `bank_transaction`, `liability`, `recurring_stream`, `security`, `holding`), plus `account_detail`, `budget`, and `balance_snapshot` for the PRD. Reducers follow Plaid's endpoints
 - [x] Republished without losing sign-ins, and seeded
-- [ ] Live Plaid Sandbox (Link, token exchange, sync). Not started
+- [x] Live Plaid Sandbox (Link, token exchange, sync). Done 2026-11-08, see Sprint 8
 
 Notes:
 - The full model, and where each PRD feature reads from, is in `docs/DATA-MODEL.md`.
@@ -126,6 +126,22 @@ Notes:
 - The signed-out demo user (`user_demo`) is now shared and persistent, so anyone's edits stick for everyone. `POST /v1/profile/load-demo` resets it.
 
 Notes:
+
+## Sprint 8: Plaid (Sandbox)
+
+- [x] `PlaidClient` over fetch (`packages/data/src/plaid/client.ts`): link token, public token exchange, `/item/get`, `/accounts/get`, `/transactions/sync` (all pages, from the saved cursor), `/liabilities/get`, `/transactions/recurring/get`, `/investments/holdings/get`, `/item/remove`. Products an item lacks come back empty instead of failing
+- [x] `BankDataProvider`: Plaid when `PLAID_CLIENT_ID` and `PLAID_SECRET` are set, otherwise a synthetic stand-in that returns the demo bank through the same flow
+- [x] Access tokens encrypted with AES-256-GCM (`PLAID_TOKEN_KEY`, the item id as associated data) in the private `bank_item_secret` table. Never in a response
+- [x] Ledger stores gain `listBankItems`, `applyBankUpdate` (one atomic `apply_bank_update` reducer in Spacetime), and `removeBankItem`. Covered by the shared contract tests on both backends
+- [x] Routes: link token, exchange, sandbox link, list, sync, and remove. The shared demo user gets a 403, and other users' items return 404
+- [x] Web: a "Linked banks" panel on Accounts, with Connect (Plaid Link from Plaid's CDN), Refresh, and Disconnect
+- [ ] Production Plaid: needs Plaid's production approval, plus OAuth redirect URIs for OAuth banks
+
+Notes:
+- Checked against real Sandbox data (First Platypus Bank): all 14 accounts map, with card, mortgage, and student-loan terms and 13 holdings. Sandbox returns no transactions for the first few seconds, so the panel syncs again at 8 and 23 seconds.
+- Sandbox login in Plaid Link: `user_good` / `pass_good`.
+- The demo profile's built-in banks have status `demo` and are left out of the linked list.
+- Plaid omits `iso_currency_code` in places, so it is optional in every schema. APR type and security type are plain strings, so a new Plaid value can't break a sync.
 
 ## Sprint 7: MongoDB wiring (handoff to the quarterly-agent teammate)
 

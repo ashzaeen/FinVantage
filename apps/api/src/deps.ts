@@ -1,4 +1,11 @@
-import { createBankProvider, createStores, type BankDataProvider, type DocumentStore, type LedgerStore } from "@finvantage/data";
+import {
+  createBankProvider,
+  createStores,
+  type BankDataProvider,
+  type BankTokenStore,
+  type DocumentStore,
+  type LedgerStore,
+} from "@finvantage/data";
 import { createLiveBus, type LiveBus } from "@finvantage/live";
 import { createLlmClient, type LlmClient } from "@finvantage/llm";
 import { createAuth, type Auth } from "./auth";
@@ -16,6 +23,8 @@ export interface AppDeps {
   llm: LlmClient;
   live: LiveBus;
   bank: BankDataProvider;
+  /** Plaid access tokens, encrypted at rest. Never returned to clients. */
+  bankTokens: BankTokenStore;
   mail: MailClient;
   pdf: PdfStore;
   /** Issues and checks sign-in tokens. The demo token is handled separately in app.ts. */

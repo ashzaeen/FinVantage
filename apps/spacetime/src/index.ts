@@ -206,6 +206,19 @@ const bankItem = table(
   },
 );
 
+/**
+ * A bank item's Plaid access token, encrypted by the API (AES-256-GCM, key only in the API's
+ * env). Never read by anything but the API.
+ */
+const bankItemSecret = table(
+  { name: "bank_item_secret" },
+  {
+    itemId: t.string().primaryKey(),
+    userId: t.string().index("btree"),
+    accessTokenCiphertext: t.string(),
+  },
+);
+
 /** Plaid account. Balances are cents. For cards and loans, `current` is the amount owed. */
 const bankAccount = table(
   { name: "bank_account" },
@@ -353,6 +366,7 @@ const spacetimedb = schema({
   appAccount,
   appTransaction,
   bankItem,
+  bankItemSecret,
   bankAccount,
   bankTransaction,
   liability,
@@ -463,6 +477,7 @@ function deleteItem(ctx: Ctx, itemId: string) {
     ctx.db.accountDetail.accountId.delete(accountId);
     ctx.db.bankAccount.accountId.delete(accountId);
   }
+  ctx.db.bankItemSecret.itemId.delete(itemId);
   ctx.db.bankItem.itemId.delete(itemId);
 }
 
@@ -754,6 +769,72 @@ export const deleteUserData = spacetimedb.reducer({ userId: t.string() }, (ctx, 
   ctx.db.incomeProfile.userId.delete(userId);
   ctx.db.appUser.id.delete(userId);
 });
+
+export const saveBankItemSecret = spacetimedb.reducer(
+  { itemId: t.string(), userId: t.string(), accessTokenCiphertext: t.string() },
+  (ctx, { itemId, userId, accessTokenCiphertext }) => {
+    requireAdmin(ctx);
+    const existing = ctx.db.bankItemSecret.itemId.find(itemId);
+    if (existing && existing.userId !== userId) throw new SenderError(`Item ${itemId} belongs to another user.`);
+    const row = { itemId, userId, accessTokenCiphertext };
+    if (existing) ctx.db.bankItemSecret.itemId.update(row);
+    else ctx.db.bankItemSecret.insert(row);
+  },
+);
+
+/**
+ * One whole Plaid sync for an item, atomically: the item, its accounts (replaced), transaction
+ * upserts and removals from /transactions/sync with the new cursor, liabilities, recurring
+ * streams, and holdings (each replaced).
+ */
+export const applyBankUpdate = spacetimedb.reducer(
+  {
+    userId: t.string(),
+    item: BankItemInput,
+    accounts: t.array(bankAccount.rowType),
+    upsertedTransactions: t.array(bankTransaction.rowType),
+    removedTransactionIds: t.array(t.string()),
+    liabilities: t.array(liability.rowType),
+    streams: t.array(recurringStream.rowType),
+    securities: t.array(security.rowType),
+    holdings: t.array(holding.rowType),
+  },
+  (ctx, args) => {
+    requireAdmin(ctx);
+    const { userId, item } = args;
+    const existing = ctx.db.bankItem.itemId.find(item.itemId);
+    if (existing && existing.userId !== userId) throw new SenderError(`Item ${item.itemId} belongs to another user.`);
+    const row = {
+      itemId: item.itemId,
+      userId,
+      institutionId: item.institutionId,
+      institutionName: item.institutionName,
+      transactionsCursor: item.transactionsCursor,
+      status: item.status,
+      updatedAt: ctx.timestamp,
+    };
+    if (existing) ctx.db.bankItem.itemId.update(row);
+    else ctx.db.bankItem.insert(row);
+    replaceItemAccounts(ctx, item.itemId, args.accounts.map((a) => ({ ...a, itemId: item.itemId, userId })));
+    const accounts = itemAccountIds(ctx, item.itemId);
+    for (const tx of args.upsertedTransactions) {
+      // Plaid can report transactions on accounts the item no longer lists. Skip those.
+      if (accounts.has(tx.accountId)) putTransaction(ctx, { ...tx, userId });
+    }
+    for (const id of args.removedTransactionIds) {
+      ctx.db.bankTransaction.transactionId.delete(id);
+      ctx.db.appTransaction.id.delete(id);
+    }
+    replaceItemLiabilities(ctx, item.itemId, args.liabilities.filter((l) => accounts.has(l.accountId)).map((l) => ({ ...l, userId })));
+    replaceItemStreams(ctx, item.itemId, args.streams.filter((s) => accounts.has(s.accountId)).map((s) => ({ ...s, userId })));
+    replaceItemHoldings(
+      ctx,
+      item.itemId,
+      args.securities,
+      args.holdings.filter((h) => accounts.has(h.accountId)).map((h) => ({ ...h, userId })),
+    );
+  },
+);
 
 // ── Live events ──────────────────────────────────────────────────────────────
 

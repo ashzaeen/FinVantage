@@ -1,0 +1,94 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { randomBytes } from "node:crypto";
+import { ApiError, createApiClient } from "@finvantage/contracts";
+import { decryptToken, encryptToken } from "@finvantage/data";
+import { createApp } from "./app";
+import { createDeps } from "./deps";
+
+// No Plaid keys in tests, so the synthetic provider stands in for Plaid with the same flow.
+async function signedIn() {
+  const deps = createDeps({ REPORT_OUTPUT_DIR: "/tmp/finvantage-report-tests" });
+  const app = createApp(deps, {});
+  const fetchImpl = ((url: string, init: RequestInit) => app.request(url, init)) as typeof fetch;
+  const anon = createApiClient({ baseUrl: "http://test", token: "", fetch: fetchImpl });
+  const { token, user } = await anon.signUp({
+    body: { displayName: "Bank Tester", email: `bank-${Date.now()}@example.com`, password: "s3cret-pass" },
+  });
+  return { deps, app, user, client: createApiClient({ baseUrl: "http://test", token, fetch: fetchImpl }) };
+}
+
+const status = async (p: Promise<unknown>) => {
+  try {
+    await p;
+    return 200;
+  } catch (error) {
+    if (error instanceof ApiError) return error.status;
+    throw error;
+  }
+};
+
+test("linking a bank adds its accounts and transactions, and a re-sync doesn't duplicate them", async () => {
+  const { client, deps, user } = await signedIn();
+  const accountsBefore = (await client.listAccounts()).length;
+  const transactionsBefore = (await client.listTransactions({ query: { limit: 500 } })).length;
+
+  const item = await client.linkSandboxBank();
+  assert.equal(item.institutionName, "Demo Bank");
+  assert.equal(item.accountCount, 8);
+  assert.deepEqual((await client.listBankItems()).map((i) => i.itemId), [item.itemId]);
+
+  const accounts = await client.listAccounts();
+  assert.equal(accounts.length, accountsBefore + 8);
+  const linked = accounts.filter((a) => a.id.startsWith(`${item.itemId}__`));
+  assert.ok(linked.some((a) => a.type === "credit_card" && a.annualRate === 0.2299 && a.nextPaymentDueOn === "2026-11-20"));
+  const transactions = await client.listTransactions({ query: { limit: 500 } });
+  assert.equal(transactions.length, transactionsBefore + 10);
+
+  await client.syncBankItem({ params: { id: item.itemId } });
+  assert.equal((await client.listTransactions({ query: { limit: 500 } })).length, transactionsBefore + 10);
+
+  // The access token is stored, but never sent to the client.
+  assert.ok(await deps.bankTokens.get(user.id, item.itemId));
+  assert.ok(!JSON.stringify(await client.listBankItems()).includes("access"));
+});
+
+test("removing a bank removes everything under it", async () => {
+  const { client } = await signedIn();
+  const before = (await client.listAccounts()).length;
+  const item = await client.linkSandboxBank();
+  assert.deepEqual(await client.removeBankItem({ params: { id: item.itemId } }), { deleted: true });
+  assert.equal((await client.listAccounts()).length, before);
+  assert.deepEqual(await client.listBankItems(), []);
+  assert.equal(await status(client.syncBankItem({ params: { id: item.itemId } })), 404);
+});
+
+test("the shared demo user can't link a bank, and nobody can touch another user's bank", async () => {
+  const { app } = await signedIn();
+  const demo = createApiClient({
+    baseUrl: "http://test",
+    token: "demo-token",
+    fetch: ((url: string, init: RequestInit) => app.request(url, init)) as typeof fetch,
+  });
+  assert.equal(await status(demo.createBankLinkToken()), 403);
+  assert.equal(await status(demo.linkSandboxBank()), 403);
+
+  const owner = await signedIn();
+  const item = await owner.client.linkSandboxBank();
+  const other = await signedIn();
+  assert.equal(await status(other.client.syncBankItem({ params: { id: item.itemId } })), 404);
+  assert.equal(await status(other.client.removeBankItem({ params: { id: item.itemId } })), 404);
+});
+
+test("access tokens are encrypted, bound to their item, and tamper-evident", () => {
+  const key = randomBytes(32);
+  const sealed = encryptToken(key, "item_1", "access-sandbox-123");
+  assert.ok(!sealed.includes("access-sandbox"));
+  assert.notEqual(sealed, encryptToken(key, "item_1", "access-sandbox-123"), "fresh IV each time");
+  assert.equal(decryptToken(key, "item_1", sealed), "access-sandbox-123");
+  assert.throws(() => decryptToken(key, "item_2", sealed), "a token can't be moved to another item");
+  assert.throws(() => decryptToken(randomBytes(32), "item_1", sealed), "wrong key");
+  const raw = Buffer.from(sealed, "base64");
+  raw[raw.length - 1] ^= 1;
+  assert.throws(() => decryptToken(key, "item_1", raw.toString("base64")), "tampered ciphertext");
+});

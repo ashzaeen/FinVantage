@@ -58,6 +58,7 @@ From the repo root, with the Vercel CLI (`npx vercel@65.2.0 ...`):
      - `AUTH_PRIVATE_JWK` = a private RSA JWK that signs sign-in tokens. Generate it once and pipe it straight into `vercel env add`, so it never appears on screen. Changing it signs everyone out
      - `SPACETIME_TOKEN`, `SPACETIME_URL`, `SPACETIME_MODULE` = the Spacetime admin token and database (see `apps/spacetime/README.md`)
      - `LEDGER_BACKEND` = `spacetime` (accounts, transactions, and goals in Spacetime)
+     - `PLAID_CLIENT_ID`, `PLAID_SECRET` (Sandbox), `PLAID_ENV` = `sandbox`, `PLAID_TOKEN_KEY` = 32 random bytes as base64, which encrypts Plaid access tokens. Changing the key disconnects every linked bank
      - `DOCUMENT_BACKEND` = `mongodb`, `MONGODB_URI` = the Atlas connection string, `MONGODB_DB` = `finvantage`. In Atlas, Network Access must allow `0.0.0.0/0`, because Vercel has no fixed IPs. A blocked IP shows up in the logs as `SSL alert number 80`
    - `finvantage-web`: Root Directory `apps/web`, Framework **Next.js**. Env vars:
      - `NEXT_PUBLIC_API_URL` = `https://finvantage-api.vercel.app`

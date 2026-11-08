@@ -99,14 +99,15 @@ const streamRow = (s: PlaidRecurringStream, direction: "inflow" | "outflow", use
 });
 
 /** One Plaid Item as a `BankItemLoad` for the `load_profile` reducer (camelCase, options wrapped). */
-export function bankItemLoad(snapshot: PlaidItemSnapshot, userId: string): Wire {
+/** `status` is "good" for a linked bank, or "demo" for the demo profile's built-in banks. */
+export function bankItemLoad(snapshot: PlaidItemSnapshot, userId: string, status = "good"): Wire {
   return {
     item: {
       itemId: snapshot.item.item_id,
       institutionId: opt(snapshot.item.institution_id),
       institutionName: snapshot.item.institution_name,
       transactionsCursor: opt(snapshot.transactions_cursor),
-      status: "good",
+      status,
     },
     accounts: snapshot.accounts.map((a) => ({
       accountId: a.account_id,
@@ -196,7 +197,7 @@ export function loadProfileArgs(source: DemoProfileSource): unknown[] {
       linkedAccountId: opt(g.linkedAccountId),
       status: opt(g.status),
     })),
-    source.bank.map((item) => bankItemLoad(item, userId)),
+    source.bank.map((item) => bankItemLoad(item, userId, "demo")),
     Object.entries(source.accountDetails).map(([accountId, d]) => ({
       accountId,
       userId,

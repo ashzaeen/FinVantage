@@ -14,7 +14,17 @@ import type {
   Transaction,
   User,
 } from "@finvantage/contracts";
+import type { BankItemUpdate } from "./plaid/client";
 import type { IncomeProfile } from "./profile";
+
+/** A linked bank as the store keeps it. `transactionsCursor` is where the next sync starts. */
+export interface BankItemRecord {
+  itemId: string;
+  institutionName: string;
+  status: string;
+  transactionsCursor: string | null;
+  accountCount: number;
+}
 
 /** Relational data. Memory by default; SpacetimeDB in production (spacetime/ledger.ts). */
 export interface LedgerStore {
@@ -34,6 +44,12 @@ export interface LedgerStore {
   deleteGoal(userId: string, id: string): Promise<boolean>;
   /** Clears the user's data and reloads the demo profile. */
   loadDemoProfile(userId: string): Promise<void>;
+  /** Linked banks (Plaid Items). */
+  listBankItems(userId: string): Promise<BankItemRecord[]>;
+  /** Applies one sync's results to an item, creating the item on its first sync. */
+  applyBankUpdate(userId: string, update: BankItemUpdate): Promise<void>;
+  /** Removes a linked bank and everything under it. False if the user has no such item. */
+  removeBankItem(userId: string, itemId: string): Promise<boolean>;
 }
 
 /** Nested, variable-shape records. Backed by MongoDB Atlas. */

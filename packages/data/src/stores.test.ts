@@ -9,6 +9,7 @@
 import assert from "node:assert/strict";
 import { after, describe, test } from "node:test";
 import { randomUUID } from "node:crypto";
+import { createBankProvider } from "./bank";
 import { MemoryLedgerStore } from "./memory";
 import { SpacetimeHttp } from "./spacetime/client";
 import { SpacetimeLedgerStore } from "./spacetime/ledger";
@@ -160,6 +161,51 @@ for (const backend of backends) {
       assert.equal(await store.deleteGoal(userId, goal.id), true);
       assert.equal(await store.deleteGoal(userId, goal.id), false);
       assert.equal((await store.listGoals(userId)).length, goals.length - 1);
+    });
+
+    test("a linked bank syncs incrementally, keeps edits, and can be removed", async () => {
+      const store = backend.make();
+      const userId = newUser();
+      await store.loadDemoProfile(userId);
+      const accountsBefore = (await store.listAccounts(userId)).length;
+      const transactionsBefore = (await store.listTransactions(userId, 1000)).length;
+
+      const bank = createBankProvider({ BANK_PROVIDER: "synthetic" });
+      const { itemId, accessToken } = await bank.exchangePublicToken("synthetic-public-token");
+      const first = await bank.fetchItem(accessToken, null);
+      await store.applyBankUpdate(userId, first);
+      const [item] = await store.listBankItems(userId);
+      assert.equal(item?.itemId, itemId);
+      assert.equal(item?.accountCount, 8);
+      assert.equal(item?.transactionsCursor, "synthetic-cursor");
+      assert.equal((await store.listAccounts(userId)).length, accountsBefore + 8);
+      assert.equal((await store.listTransactions(userId, 1000)).length, transactionsBefore + 10);
+
+      // The user edits a bank transaction, then the next sync removes one and adds one.
+      const groceries = (await store.listTransactions(userId, 1000)).find((t) => t.id === `${itemId}__txn_06`)!;
+      await store.updateTransaction(userId, groceries.id, { ...groceries, category: "household" });
+      const added = { ...first.added[0]!, transaction_id: `${itemId}__txn_new`, date: "2026-11-07", amount: 42 };
+      await store.applyBankUpdate(userId, {
+        ...first,
+        added: [added],
+        modified: [],
+        removedTransactionIds: [`${itemId}__txn_07`],
+        nextCursor: "synthetic-cursor-2",
+      });
+      const after = await store.listTransactions(userId, 1000);
+      assert.equal(after.length, transactionsBefore + 10);
+      assert.equal(after[0]?.id, `${itemId}__txn_new`);
+      assert.equal(after[0]?.amountCents, -4200);
+      assert.ok(!after.some((t) => t.id === `${itemId}__txn_07`));
+      assert.equal(after.find((t) => t.id === groceries.id)?.category, "household", "edits survive a sync");
+      assert.equal((await store.listBankItems(userId))[0]?.transactionsCursor, "synthetic-cursor-2");
+
+      // Another user can't remove it; the owner can, and everything under it goes.
+      assert.equal(await store.removeBankItem(newUser(), itemId), false);
+      assert.equal(await store.removeBankItem(userId, itemId), true);
+      assert.deepEqual(await store.listBankItems(userId), []);
+      assert.equal((await store.listAccounts(userId)).length, accountsBefore);
+      assert.equal((await store.listTransactions(userId, 1000)).length, transactionsBefore);
     });
 
     test("reloading the demo profile resets a user's edits", async () => {

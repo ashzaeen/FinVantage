@@ -29,6 +29,8 @@ export const AccountDetails = z.object({
 export type AccountDetails = z.infer<typeof AccountDetails>;
 
 export const toCents = (dollars: number) => Math.round(dollars * 100);
+/** Plaid percent (3.99) to the app's decimal rate (0.0399), without floating-point tails. */
+const percentToRate = (percent: number) => Math.round(percent * 10_000) / 1_000_000;
 
 const RETIREMENT_SUBTYPES = new Set([
   "ira", "roth", "401k", "roth 401k", "403b", "457b", "401a", "sep ira", "simple ira", "keogh",
@@ -111,21 +113,21 @@ function liabilityTerms(liabilities: PlaidLiabilities): Map<string, LiabilityTer
       card.aprs.find((a) => a.apr_type === "purchase_apr") ??
       card.aprs[0];
     terms.set(card.account_id, {
-      annualRate: apr ? apr.apr_percentage / 100 : null,
+      annualRate: apr ? percentToRate(apr.apr_percentage) : null,
       minimumPaymentCents: card.minimum_payment_amount === null ? null : toCents(card.minimum_payment_amount),
       nextPaymentDueOn: card.next_payment_due_date,
     });
   }
   for (const loan of liabilities.mortgage ?? []) {
     terms.set(loan.account_id, {
-      annualRate: loan.interest_rate.percentage === null ? null : loan.interest_rate.percentage / 100,
+      annualRate: loan.interest_rate.percentage === null ? null : percentToRate(loan.interest_rate.percentage),
       minimumPaymentCents: loan.next_monthly_payment === null ? null : toCents(loan.next_monthly_payment),
       nextPaymentDueOn: loan.next_payment_due_date,
     });
   }
   for (const loan of liabilities.student ?? []) {
     terms.set(loan.account_id, {
-      annualRate: loan.interest_rate_percentage === null ? null : loan.interest_rate_percentage / 100,
+      annualRate: loan.interest_rate_percentage === null ? null : percentToRate(loan.interest_rate_percentage),
       minimumPaymentCents: loan.minimum_payment_amount === null ? null : toCents(loan.minimum_payment_amount),
       nextPaymentDueOn: loan.next_payment_due_date,
     });

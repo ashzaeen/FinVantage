@@ -16,8 +16,11 @@ import {
   type Account,
   type NewAccount,
 } from "@finvantage/contracts";
+import type { BankItemUpdate } from "./plaid/client";
+import { mapItemSnapshot, type AccountDetails } from "./plaid/map";
+import type { PlaidItemSnapshot } from "./plaid/schema";
 import { DEMO_USER_ID, demoProfileFor, type IncomeProfile } from "./profile";
-import type { DocumentStore, LedgerStore } from "./stores";
+import type { BankItemRecord, DocumentStore, LedgerStore } from "./stores";
 
 function inRange(createdAt: string, range?: { start: string; end: string }) {
   return !range || (createdAt >= range.start && createdAt < range.end);
@@ -36,6 +39,10 @@ export class MemoryLedgerStore implements LedgerStore {
   private accounts: Account[] = [];
   private transactions: Transaction[] = [];
   private goals: Goal[] = [];
+  /** Linked banks, kept in Plaid's shape and mapped on read, like the Spacetime store. */
+  private bankItems = new Map<string, { userId: string; snapshot: PlaidItemSnapshot }>();
+  /** Terms the user set on bank-linked accounts. */
+  private bankDetails = new Map<string, AccountDetails>();
 
   constructor() {
     this.seed(DEMO_USER_ID);
@@ -53,6 +60,14 @@ export class MemoryLedgerStore implements LedgerStore {
       ...profile.transactions,
     ];
     this.goals = [...this.goals.filter((g) => g.userId !== userId), ...profile.goals];
+    for (const [itemId, item] of this.bankItems) if (item.userId === userId) this.bankItems.delete(itemId);
+  }
+
+  private bank(userId: string) {
+    const details = Object.fromEntries(this.bankDetails);
+    return [...this.bankItems.values()]
+      .filter((item) => item.userId === userId)
+      .map((item) => mapItemSnapshot(item.snapshot, userId, details));
   }
 
   async getUser(userId: string) {
@@ -69,7 +84,7 @@ export class MemoryLedgerStore implements LedgerStore {
   }
 
   async listAccounts(userId: string) {
-    return this.accounts.filter((a) => a.userId === userId);
+    return [...this.accounts.filter((a) => a.userId === userId), ...this.bank(userId).flatMap((b) => b.accounts)];
   }
 
   async createAccount(userId: string, account: NewAccount) {
@@ -80,7 +95,16 @@ export class MemoryLedgerStore implements LedgerStore {
 
   async updateAccount(userId: string, id: string, account: NewAccount) {
     const index = this.accounts.findIndex((item) => item.id === id && item.userId === userId);
-    if (index < 0) return null;
+    if (index < 0) {
+      // A bank-linked account: only its terms can change. The bank owns the rest.
+      if (!this.bank(userId).some((b) => b.accounts.some((a) => a.id === id))) return null;
+      this.bankDetails.set(id, {
+        annualRate: account.annualRate,
+        minimumPaymentCents: account.minimumPaymentCents,
+        promoRateEndsOn: account.promoRateEndsOn,
+      });
+      return (await this.listAccounts(userId)).find((a) => a.id === id) ?? null;
+    }
     const updated: Account = { ...account, id, userId };
     this.accounts[index] = updated;
     return updated;
@@ -92,7 +116,10 @@ export class MemoryLedgerStore implements LedgerStore {
 
   async listTransactions(userId: string, limit: number) {
     const ids = new Set((await this.listAccounts(userId)).map((a) => a.id));
-    return this.transactions
+    // Bank transactions first, then the user's own: an edit of a bank transaction has its id and wins.
+    const byId = new Map(this.bank(userId).flatMap((b) => b.transactions).map((t) => [t.id, t]));
+    for (const t of this.transactions) if (ids.has(t.accountId)) byId.set(t.id, t);
+    return [...byId.values()]
       .filter((t) => ids.has(t.accountId))
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, limit);
@@ -108,11 +135,13 @@ export class MemoryLedgerStore implements LedgerStore {
   }
 
   async updateTransaction(userId: string, id: string, transaction: Omit<Transaction, "id">) {
-    const account = this.accounts.find((item) => item.id === transaction.accountId && item.userId === userId);
-    const index = this.transactions.findIndex((item) => item.id === id && this.accounts.some((a) => a.id === item.accountId && a.userId === userId));
-    if (!account || index < 0) return null;
-    const updated = { ...transaction, id };
-    this.transactions[index] = updated;
+    const accounts = await this.listAccounts(userId);
+    const current = await this.listTransactions(userId, Number.MAX_SAFE_INTEGER);
+    if (!accounts.some((a) => a.id === transaction.accountId) || !current.some((t) => t.id === id)) return null;
+    const updated = Transaction.parse({ ...transaction, id });
+    const index = this.transactions.findIndex((item) => item.id === id);
+    if (index >= 0) this.transactions[index] = updated;
+    else this.transactions.push(updated);
     return updated;
   }
 
@@ -145,6 +174,52 @@ export class MemoryLedgerStore implements LedgerStore {
 
   async loadDemoProfile(userId: string) {
     this.seed(userId);
+  }
+
+  async listBankItems(userId: string): Promise<BankItemRecord[]> {
+    return [...this.bankItems.values()]
+      .filter((item) => item.userId === userId)
+      .map(({ snapshot }) => ({
+        itemId: snapshot.item.item_id,
+        institutionName: snapshot.item.institution_name,
+        status: "good",
+        transactionsCursor: snapshot.transactions_cursor,
+        accountCount: mapItemSnapshot(snapshot, userId).accounts.length,
+      }));
+  }
+
+  async applyBankUpdate(userId: string, update: BankItemUpdate) {
+    const existing = this.bankItems.get(update.item.item_id);
+    if (existing && existing.userId !== userId) throw new Error(`Item ${update.item.item_id} belongs to another user.`);
+    const accountIds = new Set(update.accounts.map((a) => a.account_id));
+    const transactions = new Map((existing?.snapshot.transactions ?? []).map((t) => [t.transaction_id, t]));
+    for (const t of [...update.added, ...update.modified]) transactions.set(t.transaction_id, t);
+    for (const id of update.removedTransactionIds) {
+      transactions.delete(id);
+      this.transactions = this.transactions.filter((t) => t.id !== id);
+    }
+    this.bankItems.set(update.item.item_id, {
+      userId,
+      snapshot: {
+        item: update.item,
+        accounts: update.accounts,
+        transactions: [...transactions.values()].filter((t) => accountIds.has(t.account_id)),
+        transactions_cursor: update.nextCursor,
+        liabilities: update.liabilities,
+        recurring: update.recurring,
+        investments: update.investments,
+      },
+    });
+  }
+
+  async removeBankItem(userId: string, itemId: string) {
+    const item = this.bankItems.get(itemId);
+    if (!item || item.userId !== userId) return false;
+    const accountIds = new Set(item.snapshot.accounts.map((a) => a.account_id));
+    this.transactions = this.transactions.filter((t) => !accountIds.has(t.accountId));
+    for (const id of accountIds) this.bankDetails.delete(id);
+    this.bankItems.delete(itemId);
+    return true;
   }
 }
 

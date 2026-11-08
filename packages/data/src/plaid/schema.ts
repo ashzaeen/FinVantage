@@ -23,7 +23,7 @@ export const PlaidAccount = z.object({
     available: Dollars.nullable(),
     current: Dollars.nullable(),
     limit: Dollars.nullable(),
-    iso_currency_code: z.string().nullable(),
+    iso_currency_code: z.string().nullable().optional(),
   }),
   mask: z.string().nullable(),
   name: z.string(),
@@ -48,7 +48,7 @@ export const PlaidTransaction = z.object({
   account_id: z.string().min(1),
   /** Positive is money out, negative is money in. */
   amount: Dollars,
-  iso_currency_code: z.string().nullable(),
+  iso_currency_code: z.string().nullable().optional(),
   date: PlaidDate,
   authorized_date: PlaidDate.nullable(),
   /** Deprecated by Plaid in favor of merchant_name, but always present. */
@@ -80,7 +80,8 @@ export const PlaidCreditLiability = z.object({
     z.object({
       /** Percent: 24.99 means 24.99%. */
       apr_percentage: z.number(),
-      apr_type: z.enum(["balance_transfer_apr", "cash_apr", "purchase_apr", "special"]),
+      /** balance_transfer_apr, cash_apr, purchase_apr, special. A string, so a new type can't break a sync. */
+      apr_type: z.string(),
       balance_subject_to_apr: Dollars.nullable().optional(),
     }),
   ),
@@ -123,7 +124,7 @@ export type PlaidLiabilities = z.infer<typeof PlaidLiabilities>;
 export const PlaidRecurringFrequency = z.enum(["UNKNOWN", "WEEKLY", "BIWEEKLY", "SEMI_MONTHLY", "MONTHLY", "ANNUALLY"]);
 export type PlaidRecurringFrequency = z.infer<typeof PlaidRecurringFrequency>;
 
-const PlaidAmount = z.object({ amount: Dollars, iso_currency_code: z.string().nullable() });
+const PlaidAmount = z.object({ amount: Dollars, iso_currency_code: z.string().nullable().optional() });
 
 export const PlaidRecurringStream = z.object({
   stream_id: z.string(),
@@ -148,7 +149,8 @@ export const PlaidSecurity = z.object({
   security_id: z.string(),
   name: z.string().nullable(),
   ticker_symbol: z.string().nullable(),
-  type: z.enum(["cash", "cryptocurrency", "derivative", "equity", "etf", "fixed income", "loan", "mutual fund", "other"]).nullable(),
+  /** cash, cryptocurrency, derivative, equity, etf, fixed income, loan, mutual fund, other. */
+  type: z.string().nullable(),
   close_price: Dollars.nullable(),
   close_price_as_of: PlaidDate.nullable(),
   is_cash_equivalent: z.boolean().nullable(),
@@ -162,7 +164,7 @@ export const PlaidHolding = z.object({
   institution_price: Dollars,
   institution_value: Dollars,
   cost_basis: Dollars.nullable(),
-  iso_currency_code: z.string().nullable(),
+  iso_currency_code: z.string().nullable().optional(),
 });
 export type PlaidHolding = z.infer<typeof PlaidHolding>;
 
