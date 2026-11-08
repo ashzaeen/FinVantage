@@ -4,6 +4,7 @@ export * from "./account";
 export * from "./goal";
 export * from "./life-event";
 export * from "./simulation";
+export * from "./life-scenario";
 export * from "./copilot";
 export * from "./advisory";
 export * from "./advisor-visuals";
