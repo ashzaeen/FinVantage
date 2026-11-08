@@ -8,6 +8,13 @@ export const BudgetLimit = z.object({
 });
 export type BudgetLimit = z.infer<typeof BudgetLimit>;
 
+/**
+ * This month's spending at the most specific category each transaction carries. Add the rows
+ * under an id (`shopping` includes `shopping.superstores.c4f9`) for that category's total.
+ */
+export const SpendingBreakdownRow = z.object({ categoryId: z.string(), spentCents: Cents });
+export type SpendingBreakdownRow = z.infer<typeof SpendingBreakdownRow>;
+
 /** A category's limit next to what was spent this month, and where the month is heading. */
 export const Budget = z.object({
   /** A category or subcategory id. */

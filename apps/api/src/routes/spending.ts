@@ -17,7 +17,7 @@ import {
 import type { RecurringStream, SpendingProfile } from "@finvantage/data";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
-import { buildCatalog, bucketOf, countsToward, isSpending, ruleCategoryFor, type Catalog } from "../spending/catalog";
+import { buildCatalog, bucketOf, categoryIdOf, countsToward, isSpending, ruleCategoryFor, type Catalog } from "../spending/catalog";
 
 const BILL_WINDOW_DAYS = 14;
 const SUGGESTION_MONTHS = 3;
@@ -300,6 +300,18 @@ export function registerSpendingRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     if (budgets.length === profile.budgets.length) throw new HttpError(404, "not_found", "There is no budget for that category.");
     await save({ ...profile, budgets });
     return { deleted: true as const };
+  });
+
+  mount(app, deps, routes.getSpendingBreakdown, async ({ userId }) => {
+    const [{ catalog }, transactions] = await Promise.all([load(userId), transactionsOf(userId)]);
+    const month = monthKey(deps.today());
+    const totals = new Map<string, number>();
+    for (const t of transactions) {
+      const id = categoryIdOf(t);
+      if (!id || monthKey(t.date) !== month || !isSpending(catalog, t)) continue;
+      totals.set(id, (totals.get(id) ?? 0) + Math.abs(t.amountCents));
+    }
+    return [...totals].map(([categoryId, spentCents]) => ({ categoryId, spentCents })).sort((a, b) => b.spentCents - a.spentCents);
   });
 
   mount(app, deps, routes.listTopExpenses, async ({ userId, query }) => {

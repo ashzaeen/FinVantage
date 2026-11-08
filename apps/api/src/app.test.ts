@@ -481,3 +481,22 @@ test("top expenses are this month's largest purchases, without transfers", async
   assert.ok(top.length <= 10);
   assert.deepEqual(top.map((t) => t.amountCents), [...top.map((t) => t.amountCents)].sort((a, b) => a - b));
 });
+
+test("the spending breakdown lists this month's spending at each transaction's most specific category", async () => {
+  const { client, deps } = setup();
+  const walmart = await client.createSpendingCategory({ body: { parentId: "shopping.superstores", label: "Walmart" } });
+  const [account] = await client.listAccounts();
+  const add = (merchant: string, amountCents: number, category: string, subcategory: string | null) =>
+    client.addTransaction({ body: { accountId: account!.id, date: deps.today(), amountCents, merchant, category, subcategory } });
+  const tx = await add("Walmart #1", -2_000, "shopping", null);
+  await client.recategorizeTransaction({ params: { id: tx.id }, body: { categoryId: walmart.id } });
+  await add("Some Store", -700, "shopping", null);
+  await add("Card Payment", -90_000, "transfers", null);
+
+  const rows = await client.getSpendingBreakdown();
+  const at = (id: string) => rows.find((r) => r.categoryId === id)?.spentCents;
+  assert.equal(at(walmart.id), 2_000);
+  assert.equal(at("shopping"), 700);
+  assert.equal(at("transfers"), undefined);
+  assert.deepEqual(rows.map((r) => r.spentCents), [...rows.map((r) => r.spentCents)].sort((a, b) => b - a));
+});

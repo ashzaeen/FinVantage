@@ -80,7 +80,7 @@ function TopExpenses({ expenses, label }: { expenses: Transaction[]; label: (id:
 }
 
 export default async function SpendingPage() {
-  const [buckets, budgets, categories, rules, transactions, bills, recurring, summary, topExpenses] = await Promise.all([
+  const [buckets, budgets, categories, rules, transactions, bills, recurring, summary, topExpenses, breakdown] = await Promise.all([
     api.getBucketSummary(),
     api.listBudgets(),
     api.listSpendingCategories(),
@@ -90,6 +90,7 @@ export default async function SpendingPage() {
     api.listRecurring(),
     api.getSpendingSummary(),
     api.listTopExpenses({ query: { limit: 10 } }),
+    api.getSpendingBreakdown(),
   ]);
   const label = labeler(categories);
   const recentSpending = transactions.filter((t) => t.amountCents < 0).slice(0, 12);
@@ -99,10 +100,7 @@ export default async function SpendingPage() {
       <PageHeader title="Spending" action={<ManageTools categories={categories} rules={rules} transactions={recentSpending} />} />
       <div className="grid gap-5 md:grid-cols-2">
         <BucketSplit initial={buckets} />
-        <SpendingPie
-          month={summary.month}
-          categories={summary.categories.map((row) => ({ id: row.category, label: label(row.category), cents: row.spentCents }))}
-        />
+        <SpendingPie month={summary.month} categories={categories} breakdown={breakdown} />
 
         <BudgetsPanel budgets={budgets} categories={categories} />
 

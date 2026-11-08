@@ -42,7 +42,7 @@ import {
   SpendingSplit,
   UpdateSpendingCategory,
 } from "./categories";
-import { Budget, BudgetLimit, CreditScore, Portfolio, RecurringCharge, SpendingSummary } from "./spending";
+import { Budget, BudgetLimit, CreditScore, Portfolio, RecurringCharge, SpendingBreakdownRow, SpendingSummary } from "./spending";
 import { AuthResponse, ExtensionSettings, LogInRequest, SignUpRequest, User } from "./user";
 
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
@@ -294,6 +294,11 @@ export const routes = {
     method: "DELETE",
     path: "/v1/budgets/:category",
     response: z.object({ deleted: z.literal(true) }),
+  }),
+  getSpendingBreakdown: route({
+    method: "GET",
+    path: "/v1/spending/breakdown",
+    response: z.array(SpendingBreakdownRow),
   }),
   /** This month's largest purchases, biggest first. Income and transfers are left out. */
   listTopExpenses: route({
