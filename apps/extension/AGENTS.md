@@ -50,6 +50,6 @@ The mock rental page has hostile CSS on purpose, to prove styles do not leak int
 
 ## Known gaps
 
-- Live-site selectors are unwritten. Those domains are in the manifest but do nothing until `sites.ts` has a rule.
+- Amazon product pages (`/dp/`, `/gp/product/`, `/gp/aw/d/`, `/exec/obidos/ASIN/`, `/o/ASIN/`) have a rule, checked live on 2026-11-07. Cart and checkout do not. The other live domains are in the manifest but do nothing until `sites.ts` has a rule.
 - On/off and snooze live in `chrome.storage`, and are not synced with `User.extensionSettings` in the API.
 - The context carries no loan term, so the vehicle scenario assumes 60 months. See `docs/DECISIONS.md`.

@@ -21,6 +21,11 @@ export interface AppDeps {
   now: () => string;
   reportEmailOverride: string | null;
   schedulerSecret: string | null;
+  /**
+   * Merchants whose Copilot card Gemini writes, lower-cased. Every other merchant gets the
+   * template card without a model call. Null means every merchant uses the model.
+   */
+  copilotLlmMerchants: ReadonlySet<string> | null;
 }
 
 /** Every stub-or-real switch happens here, from env. See .env.example. */
@@ -37,5 +42,12 @@ export function createDeps(env: NodeJS.ProcessEnv = process.env): AppDeps {
     now,
     reportEmailOverride: env.REPORT_EMAIL_OVERRIDE ?? null,
     schedulerSecret: env.SCHEDULER_SECRET ?? null,
+    copilotLlmMerchants: parseMerchantList(env.COPILOT_GEMINI_MERCHANTS),
   };
+}
+
+/** "Amazon, Best Buy" -> {"amazon", "best buy"}. Unset or blank means no restriction. */
+function parseMerchantList(value: string | undefined): ReadonlySet<string> | null {
+  const names = (value ?? "").split(",").map((n) => n.trim().toLowerCase()).filter(Boolean);
+  return names.length > 0 ? new Set(names) : null;
 }

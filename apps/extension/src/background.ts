@@ -23,7 +23,8 @@ async function getDismissedSites(): Promise<string[]> {
 
 async function evaluate(message: Extract<ExtensionMessage, { type: "evaluate" }>): Promise<EvaluateReply> {
   const [state, dismissed] = await Promise.all([getLocalState(), getDismissedSites()]);
-  const blocked = state.snoozedSites.includes(message.site) || dismissed.includes(message.site);
+  // Dismissed is per page; snoozed is per site. See content/index.ts.
+  const blocked = state.snoozedSites.includes(message.site) || dismissed.includes(message.page);
   if (!state.enabled || blocked) return { kind: "silent" };
 
   try {
@@ -38,7 +39,7 @@ async function evaluate(message: Extract<ExtensionMessage, { type: "evaluate" }>
 async function recordAction(message: Extract<ExtensionMessage, { type: "action" }>) {
   if (message.action === "dismissed") {
     const dismissed = await getDismissedSites();
-    await chrome.storage.session.set({ dismissedSites: [...dismissed, message.site] });
+    await chrome.storage.session.set({ dismissedSites: [...dismissed, message.page] });
   }
   if (message.action === "snoozed") {
     const { snoozedSites } = await getLocalState();

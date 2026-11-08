@@ -6,13 +6,14 @@ import { isCardOpen, removeOverlay, showCard, showNoDataPrompt } from "./overlay
 /** Wait for the page to settle before re-evaluating, so typing an amount sends one request. */
 const RECHECK_DELAY_MS = 600;
 
-// Dismiss and snooze are per site. The demo pages all share localhost, so there each page
-// (and each product, which differ only by ?id=) counts as its own site; otherwise closing one
-// demo card would silence the others.
-const site =
-  location.hostname === "localhost"
-    ? `${location.host}${location.pathname}${location.search}`
-    : location.hostname;
+// Closing a card (dismiss) hides it on that page only, so closing one Amazon product's card
+// leaves the next product's card alone. Snooze covers the whole site, as its label says. The demo
+// pages all share localhost, so there each page (and each product, which differ only by ?id=)
+// counts as its own site too. Read at send time: picking another option on Amazon changes the
+// URL without a reload.
+const onLocalhost = location.hostname === "localhost";
+const currentPage = () => `${location.host}${location.pathname}${onLocalhost ? location.search : ""}`;
+const currentSite = () => (onLocalhost ? currentPage() : location.hostname);
 
 let lastKey: string | null = null;
 let latestRequest = 0;
@@ -20,7 +21,7 @@ let latestRequest = 0;
 async function evaluate(context: CopilotContext) {
   const requestId = ++latestRequest;
   const keepOpen = isCardOpen();
-  const request: ExtensionMessage = { type: "evaluate", context, site };
+  const request: ExtensionMessage = { type: "evaluate", context, site: currentSite(), page: currentPage() };
   const reply = (await chrome.runtime.sendMessage(request)) as EvaluateReply;
   // A newer price arrived while this one was in flight: its card would be stale.
   if (requestId !== latestRequest) return;
@@ -36,7 +37,7 @@ async function evaluate(context: CopilotContext) {
 
   const { eventId, card, metrics, simulationPath } = reply.result;
   const send = (action: CopilotAction) => {
-    const message: ExtensionMessage = { type: "action", eventId, action, site };
+    const message: ExtensionMessage = { type: "action", eventId, action, site: currentSite(), page: currentPage() };
     void chrome.runtime.sendMessage(message);
   };
   showCard(
