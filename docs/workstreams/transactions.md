@@ -10,6 +10,15 @@ The synthetic demo profile, then the transaction pipeline: categorization, budge
 
 One demo profile with all account types and ten seed transactions. Spending category totals, month-over-month changes, six-month income/spending trend, and recurring-charge lists now derive from ledger transactions. Budget limits remain demo defaults. Recurring cadence is estimated monthly from the fixture flag and next date is a 30-day estimate. Net worth history and fully inferred recurring cadence remain unfinished.
 
+**New (2026-11-07): the data to finish these now exists.** Bank data is modeled on Plaid (`docs/DATA-MODEL.md`):
+- `fixtures/planner.json` keeps its bank data in Plaid's format, under `bank`.
+- Budget limits are in `budgets`.
+- Six months of balance snapshots are in `balanceHistory`.
+- Plaid recurring streams carry the real frequency and next date.
+- Transactions carry Plaid's detailed category (`categoryDetailed`), and accounts carry `nextPaymentDueOn`.
+
+The budgets, net-worth history, recurring, and bills routes can switch to this data. The table at the end of `docs/DATA-MODEL.md` says which route reads what. The store methods to read budgets, snapshots, and streams arrive with the Spacetime ledger store (`SPRINTS.md`, Sprint 6).
+
 ## Start here
 
 1. Grow `fixtures/planner.json` to several months of realistic transactions. Everything downstream looks better for it.

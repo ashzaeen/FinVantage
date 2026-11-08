@@ -115,3 +115,4 @@ Changing a contract affects other people's work. Keep changes additive when you 
 | Understand a request end to end | `docs/ARCHITECTURE.md` |
 | Know why something is the way it is | `docs/DECISIONS.md` |
 | Know what a feature must do | `docs/workstreams/<slug>.md`, then `docs/PRD.md` |
+| Touch accounts, transactions, bank data, budgets, or any database table | `docs/DATA-MODEL.md`. Bank data is modeled on Plaid; `packages/data/src/plaid/map.ts` is the only code that knows Plaid's conventions |
