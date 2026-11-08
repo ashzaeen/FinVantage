@@ -32,7 +32,7 @@ Notes:
 - [x] `.github/workflows/deploy.yml`: deploys each changed app to Vercel with the CLI on pushes to `main`, then smoke-tests it
 - [x] Two Vercel projects on the platform owner's account (`finvantage-api`, `finvantage-web`), with their env vars
 - [x] First deploy of both from the laptop: https://finvantage-api.vercel.app and https://finvantage-web-ten.vercel.app
-- [ ] Ashzaeen adds the `VERCEL_TOKEN` repository secret
+- [x] Ashzaeen adds the `VERCEL_TOKEN` repository secret
 - [x] Extension: the build adds the API origin to `host_permissions`. CI builds against the `EXTENSION_API_URL` repository variable
 - [ ] Done when: `/health` returns 200 publicly, and the deployed dashboard loads data from the deployed API
 
@@ -57,14 +57,21 @@ Notes:
 
 ## Sprint 4: Spacetime module and publish pipeline
 
-- [ ] `apps/spacetime/`: a TypeScript module with tables for `user`, `user_identity`, `income_profile`, `account`, `transaction`, `goal`, and `live_event`
-- [ ] Reducers: `save_user`, `replace_accounts`, `add_transaction`, `create_goal`, `load_demo_profile`, `publish_live_event`. Only the API's identity can write
-- [ ] Publish from the platform owner's laptop: `spacetime publish finvantage --server maincloud -p apps/spacetime`. Never use `--delete-data` without warning the team
-- [ ] Put the API's Spacetime token into Vercel without displaying it: `spacetime login show --token | npx vercel env add SPACETIME_TOKEN production`
-- [ ] Generated TS bindings committed in `apps/web/src/spacetime/`
-- [ ] Done when: `spacetime sql` against Maincloud returns seeded rows
+- [x] `apps/spacetime/`: a TypeScript module with tables `app_user`, `user_identity`, `income_profile`, `account`, `ledger_transaction`, `goal`, `live_event`, and `admin`
+- [x] Reducers: `save_user`, `save_income_profile`, `replace_accounts`, `add_transaction`, `create_goal`, `load_profile`, `publish_live_event`, `link_identity`, `add_admin`. Only admins can write
+- [x] Published from the platform owner's laptop: `npm run publish:maincloud -w @finvantage/spacetime`. Never use `--delete-data` without warning the team
+- [x] `SPACETIME_TOKEN`, `SPACETIME_URL`, and `SPACETIME_MODULE` set on the Vercel API project, without displaying the token
+- [ ] Generated TS bindings committed in `apps/web/src/spacetime/`. Moved to Sprint 5
+- [x] Done when: `spacetime sql` against Maincloud returns seeded rows
 
 Notes:
+- Database `finvantage` on Maincloud. Dashboard: https://spacetimedb.com/finvantage. How-to: `apps/spacetime/README.md`.
+- `user` and `transaction` are SQL keywords, so the tables are `app_user` and `ledger_transaction`.
+- The demo profile loads with `npm run seed:maincloud -w @finvantage/spacetime`, which calls `load_profile` with the fixture. The API's `loadDemoProfile` will call the same reducer in Sprint 6.
+- Checked: an anonymous reducer call gets "Only the API can write", and anonymous SQL can't see the private tables.
+- The HTTP wire format uses snake_case field names. Sprint 6's HTTP client must convert.
+- The bindings wait for Sprint 5. They import `spacetimedb`, which `apps/web` doesn't depend on yet, so committing them now would break the web build. They also need the per-user views that Sprint 5 adds.
+- `spacetime login show --token` prints a sentence, not a bare token. Extract the token before piping it anywhere.
 
 ## Sprint 5: Live subscriptions with the TS SDK
 

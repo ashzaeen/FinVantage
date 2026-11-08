@@ -1,0 +1,17 @@
+// The SpacetimeDB module runs in Spacetime's own JS runtime, not Node, so it does not extend
+// tsconfig.base.json (no Node types). The target, lib, and module values are what
+// `spacetime init --lang typescript` requires.
+{
+  "compilerOptions": {
+    "strict": true,
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "target": "ESNext",
+    "lib": ["ES2021", "dom"],
+    "module": "ESNext",
+    "isolatedModules": true,
+    "noEmit": true,
+    "types": []
+  },
+  "include": ["src"]
+}

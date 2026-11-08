@@ -21,6 +21,7 @@ The repo is a running skeleton. **Most logic is a stub by design.** A passing te
 | `apps/api` | Hono server that wires it all together | Port 4000 |
 | `apps/web` | Next.js dashboard | Port 3000 |
 | `apps/extension` | Manifest V3 extension and demo pages | Port 4100 for demo pages |
+| `apps/spacetime` | SpacetimeDB module: ledger tables and live events. Imports only `spacetimedb` | Maincloud database `finvantage` |
 | `docs` | Architecture, recipes, decisions, PRD, workstream briefs | |
 | `infra` | Deployment notes: Vercel setup, limits | |
 
