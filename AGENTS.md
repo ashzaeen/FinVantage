@@ -90,6 +90,7 @@ These come from the PRD and they are the product's safety story. If a task seems
 - **Dates** are ISO strings: `2026-11-07`. Timestamps are full ISO datetimes.
 - **Schemas** are PascalCase Zod values with a same-named type: `Goal` is both.
 - **Imports** between packages use the package name, such as `@finvantage/contracts`. Packages export TypeScript source, so there is no build step between them.
+- **UI text:** interface labels in the web app and extension use Title Case, and body copy stays as sentences. The full rule is in `apps/web/AGENTS.md`.
 - **Stub or real** is chosen by env in one place, `apps/api/src/deps.ts`. Do not add env checks elsewhere.
 
 ## Change contracts first

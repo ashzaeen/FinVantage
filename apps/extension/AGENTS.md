@@ -31,6 +31,7 @@ page -> content/detect.ts -> content/index.ts -> background.ts -> API
 
 - `extractContext` builds the only thing that leaves the browser. Read only the rule's price element.
 - If the price is missing, unclear, or not USD, return null and show nothing. Never guess.
+- Interface labels use Title Case, as in `apps/web/AGENTS.md`. The card's Impact, Trade-off and Smart Move text stays as sentences.
 - Set card text with `textContent`, never `innerHTML`. Keep all styles inside the Shadow DOM.
 - Never click, fill, or change anything on the host page.
 - Keep the overlay keyboard-navigable with readable contrast.

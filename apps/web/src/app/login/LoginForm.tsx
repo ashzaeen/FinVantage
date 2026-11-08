@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { ApiError } from "@finvantage/contracts";
 import { api } from "@/lib/api";
 import { nextPath, saveSession } from "@/lib/session";
@@ -24,7 +24,14 @@ function messageFor(error: unknown, mode: Mode): string {
   return "Something went wrong. Please try again.";
 }
 
-export function LoginForm() {
+interface LoginFormProps {
+  /** Drops the page margins and uses an h2, for placing the form inside another page. */
+  embedded?: boolean;
+  /** Replaces the "Just looking?" note under the card. */
+  footer?: ReactNode;
+}
+
+export function LoginForm({ embedded = false, footer }: LoginFormProps = {}) {
   const [mode, setMode] = useState<Mode>("signin");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +57,8 @@ export function LoginForm() {
     }
   }
 
+  const Heading = embedded ? "h2" : "h1";
+
   const tab = (value: Mode, label: string) => (
     <button
       type="button"
@@ -69,26 +78,29 @@ export function LoginForm() {
   );
 
   return (
-    <div className="mx-auto mt-6 w-full max-w-md md:mt-16">
+    <div className={embedded ? "w-full" : "mx-auto mt-6 w-full max-w-md md:mt-16"}>
       <section
-        className="rounded-3xl border bg-white p-7"
+        className={`rounded-3xl border bg-white ${embedded ? "p-6" : "p-7"}`}
         style={{ borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
       >
-        <h1 className="font-poppins text-2xl font-bold tracking-tight" style={{ color: "var(--ink)" }}>
-          {mode === "signin" ? "Welcome back" : "Create your account"}
-        </h1>
+        <Heading
+          className={`font-poppins font-bold tracking-tight ${embedded ? "text-xl" : "text-2xl"}`}
+          style={{ color: "var(--ink)" }}
+        >
+          {mode === "signin" ? "Welcome Back" : "Create Your Account"}
+        </Heading>
         <p className="mt-1 font-roboto text-sm" style={{ color: "var(--ink-muted)" }}>
           {mode === "signin"
             ? "Sign in to see your own FinVantage dashboard."
             : "New accounts start with a demo profile you can explore."}
         </p>
 
-        <div className="mt-6 flex gap-1 rounded-2xl p-1" style={{ background: "var(--surface-inset)" }}>
-          {tab("signin", "Sign in")}
-          {tab("signup", "Create account")}
+        <div className={`${embedded ? "mt-4" : "mt-6"} flex gap-1 rounded-2xl p-1`} style={{ background: "var(--surface-inset)" }}>
+          {tab("signin", "Sign In")}
+          {tab("signup", "Create Account")}
         </div>
 
-        <form onSubmit={onSubmit} className="mt-5 flex flex-col gap-4 font-roboto">
+        <form onSubmit={onSubmit} className={`${embedded ? "mt-4 gap-3" : "mt-5 gap-4"} flex flex-col font-roboto`}>
           {mode === "signup" && (
             <label className="text-sm font-medium" style={{ color: "var(--ink-secondary)" }}>
               Name
@@ -133,13 +145,15 @@ export function LoginForm() {
             className="mt-1 rounded-xl py-3 text-sm font-bold text-white transition-colors disabled:opacity-60"
             style={{ background: "var(--accent)" }}
           >
-            {busy ? "One moment…" : mode === "signin" ? "Sign in" : "Create account"}
+            {busy ? "One Moment…" : mode === "signin" ? "Sign In" : "Create Account"}
           </button>
         </form>
       </section>
-      <p className="mt-4 text-center font-roboto text-xs" style={{ color: "var(--ink-muted)" }}>
-        Just looking? The dashboard works without an account, using the demo profile.
-      </p>
+      {footer ?? (
+        <p className="mt-4 text-center font-roboto text-xs" style={{ color: "var(--ink-muted)" }}>
+          Just looking? The dashboard works without an account, using the demo profile.
+        </p>
+      )}
     </div>
   );
 }

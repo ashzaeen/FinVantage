@@ -17,8 +17,8 @@ export function signOut(): void {
   window.location.reload();
 }
 
-/** Where to go after signing in: the `next` query value if it is a local path, else home. */
+/** Where to go after signing in: the `next` query value if it is a local path, else the dashboard. */
 export function nextPath(): string {
-  const next = new URLSearchParams(window.location.search).get("next") ?? "/";
-  return next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/login") ? next : "/";
+  const next = new URLSearchParams(window.location.search).get("next") ?? "/app";
+  return next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/login") ? next : "/app";
 }

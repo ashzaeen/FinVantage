@@ -15,7 +15,8 @@ npm run dev
 
 | What | Where |
 | --- | --- |
-| Dashboard | http://localhost:3000 |
+| Landing page | http://localhost:3000 |
+| Dashboard | http://localhost:3000/app |
 | API | http://localhost:4000/health |
 | Demo pages for the extension | http://localhost:4100 |
 

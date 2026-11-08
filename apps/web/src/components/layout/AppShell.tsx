@@ -174,7 +174,7 @@ function MoonIcon() {
 
 function getNavIcon(href: string, active: boolean) {
   switch (href) {
-    case "/":
+    case "/app":
       return <OverviewIcon active={active} />;
     case "/accounts":
       return <AccountsIcon />;
@@ -225,7 +225,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <div className="flex flex-col flex-1 overflow-y-auto no-scrollbar pr-0.5">
           {/* Logo / Brand Header */}
-          <Link href="/" className="flex items-center gap-3 px-3 mb-6">
+          <Link href="/app" className="flex items-center gap-3 px-3 mb-6">
             <span
               className="flex h-10 w-10 items-center justify-center rounded-2xl shadow-sm shrink-0"
               style={{ background: "rgba(255, 255, 255, 0.22)" }}
@@ -248,7 +248,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {/* All 13 Core Navigation Items Restored */}
           <nav aria-label="Main Navigation" className="flex flex-col gap-1">
             {NAV_ITEMS.map((item) => {
-              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              const active = item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
@@ -320,12 +320,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         style={{ height: "64px", backgroundColor: "#544af7", color: "white" }}
       >
         <div className="flex items-center justify-between">
-          <Link href="/" className="font-poppins text-lg font-bold text-white">
+          <Link href="/app" className="font-poppins text-lg font-bold text-white">
             FinVantage
           </Link>
           <nav className="flex gap-1.5 overflow-x-auto max-w-[75vw] py-1 font-roboto no-scrollbar">
             {NAV_ITEMS.map((item) => {
-              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              const active = item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}

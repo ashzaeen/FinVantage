@@ -4,14 +4,22 @@ import { useState, type MouseEvent } from "react";
 import { formatUsd, type FanPoint } from "@finvantage/contracts";
 
 const WIDTH = 640;
-const HEIGHT = 220;
 const PAD = { top: 8, right: 8, bottom: 22, left: 8 };
 
 /**
  * Placeholder fan chart: one hue, darker toward the median, with a hover readout.
- * The design-track version replaces this file. Keep the props.
+ * The design-track version replaces this file. Keep the props. `height` is in chart units at a
+ * 640-unit width; lower it for a shorter chart without distorting the labels.
  */
-export function FanChart({ points, className = "" }: { points: FanPoint[]; className?: string }) {
+export function FanChart({
+  points,
+  className = "",
+  height: HEIGHT = 220,
+}: {
+  points: FanPoint[];
+  className?: string;
+  height?: number;
+}) {
   const [hover, setHover] = useState<number | null>(null);
   if (points.length < 2) return null;
 
