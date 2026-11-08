@@ -122,6 +122,12 @@ export function AccountsClient({ accounts, netWorth, transactions }: { accounts:
       annualRate,
       minimumPaymentCents: minimumPayment === null ? null : Math.round(minimumPayment * 100),
       promoRateEndsOn: String(form.get("promoRateEndsOn")) || null,
+      // Bank-connection fields: unknown for a manually entered account.
+      subtype: null,
+      mask: null,
+      availableBalanceCents: null,
+      creditLimitCents: null,
+      nextPaymentDueOn: null,
     };
     setSaving(true);
     setError("");

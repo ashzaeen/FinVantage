@@ -79,7 +79,10 @@ Claim a workstream by putting your name in the table, then read its brief.
 | Platform: auth, data, deploy | P0 | _unclaimed_ | [platform](docs/workstreams/platform.md) | `apps/api`, `packages/data`, `packages/live`, `infra` |
 | Life-event entry | P0 form, P1 parser | _unclaimed_ | [life-events](docs/workstreams/life-events.md) | `packages/llm`, `apps/web` |
 | Ledger and transactions | P0 data, P1 pipeline | _unclaimed_ | [transactions](docs/workstreams/transactions.md) | `packages/data`, `apps/api` |
-| Advisory and report agents | P1, P2 | _unclaimed_ | [advisory](docs/workstreams/advisory.md) | `packages/llm` |
+| Advisory Agent | P1 | Ashzaeen | [advisory](docs/workstreams/advisory.md) | `packages/llm/src/advisory.ts`, `apps/web/src/app/(app)/advisor` |
+| Quarterly reports | P2 | Samyog | [advisory](docs/workstreams/advisory.md) | `apps/api/src/reporting`, `apps/web/src/app/(app)/reports` |
+| Spending: budgets, recurring, bills, summary | P1 | Ashzaeen | [spending](docs/workstreams/spending.md) | spending routes in `apps/api/src/routes/transactions.ts`, `apps/web/src/app/(app)/spending` |
+| Portfolio (mocked) | P2 | Ashzaeen | [portfolio](docs/workstreams/portfolio.md) | `apps/api/src/routes/mocked.ts`, `apps/web/src/app/(app)/portfolio` |
 | Spacetime live push | Stretch | _unclaimed_ | [spacetime](docs/workstreams/spacetime.md) | `packages/live` |
 
 ## Docs

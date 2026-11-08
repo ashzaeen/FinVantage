@@ -19,7 +19,7 @@ Platform work (CI/CD, hosting, auth, data) in evenly sized slices of about 1 to 
 - [x] `.github/workflows/ci.yml`: runs `npm ci`, `npm run check`, and `npm run build` on pull requests and on pushes to `main`
 - [x] Upload the built extension (`apps/extension/dist`) as a downloadable artifact
 - [x] `.nvmrc` pins Node 22
-- [ ] Done when: a PR shows a green check, and a deliberately broken type turns it red
+- [ ] Done when: a PR shows a green check, and a deliberately broken type turns it red. Dropped: CI is manual-only for the hackathon
 
 Notes:
 - `next build` doesn't need the API: every page is rendered on request, so CI runs without one.
@@ -34,7 +34,7 @@ Notes:
 - [x] First deploy of both from the laptop: https://finvantage-api.vercel.app and https://finvantage-web-ten.vercel.app
 - [x] Ashzaeen adds the `VERCEL_TOKEN` repository secret
 - [x] Extension: the build adds the API origin to `host_permissions`. CI builds against the `EXTENSION_API_URL` repository variable
-- [ ] Done when: `/health` returns 200 publicly, and the deployed dashboard loads data from the deployed API
+- [x] Done when: `/health` returns 200 publicly, and the deployed dashboard loads data from the deployed API
 
 Notes:
 - Went straight to an esbuild bundle in Vercel's Build Output format (`apps/api/scripts/build-vercel.mjs`), so Vercel never has to compile the workspace's raw `.ts` packages. The bundle was tested locally: health, accounts, Copilot, and CORS all work.
@@ -51,7 +51,7 @@ Notes:
 - [x] Accounts live in Spacetime: a private `credential` table, with passwords hashed by scrypt
 - [x] The first sign-in loads the demo profile for that user
 - [x] The demo token stays as a fallback for signed-out visitors, the extension, and tests
-- [ ] Done when: sign-up and sign-in work on the deployed site, a bad token gets a 401, and the API tests pass
+- [x] Done when: sign-up and sign-in work on the deployed site, a bad token gets a 401, and the API tests pass
 
 Notes:
 - **SpacetimeAuth was tried first and dropped.** It offers only magic link, anonymous, Steam, and social logins (its hosted login script only calls the magic-link endpoints), and the team wanted email + password. The SpacetimeAuth project in the dashboard is unused.
@@ -109,20 +109,26 @@ Notes:
 
 - [ ] `packages/data/src/spacetime/`: an HTTP client (SQL and reducer calls) with SATS-JSON decoding, plus `SpacetimeLedgerStore`
 - [ ] Shared store contract tests in `packages/data/src/stores.test.ts`. They always run against the memory store, and against Spacetime when `SPACETIME_TEST_URL` is set
-- [ ] Replace `DATA_BACKEND` with `LEDGER_BACKEND` and `DOCS_BACKEND`, and remove `src/tiger/`
+- [x] `LEDGER_BACKEND` and `DOCUMENT_BACKEND` switches exist (added with the Mongo store)
+- [ ] Remove `DATA_BACKEND` and `src/tiger/`
 - [ ] Production sets `LEDGER_BACKEND=spacetime`
-- [ ] The web app subscribes to `account` and `transaction`, and refetches when they change
+- [ ] Reads map the Plaid-shaped bank tables through `mapItemSnapshot`. Writes go through the Plaid-endpoint reducers
+- [ ] Store methods for budgets, balance snapshots, and recurring streams, so those routes can stop estimating
+- [ ] The web app subscribes to `bank_account` and `bank_transaction`, and refetches when they change
 - [ ] Done when: the contract tests pass on both backends, and `spacetime call ... add_transaction` updates an open dashboard live
 
 Notes:
 
 ## Sprint 7: MongoDB wiring (handoff to the quarterly-agent teammate)
 
-- [ ] `mongodb` driver, a cached client, and `ensureIndexes()` for the five collections
-- [ ] `MongoDocumentStore` methods throw `NotImplementedError`, tagged `STUB(advisory)`
-- [ ] `/health` reports `mongo: "ok" | "unconfigured" | "error"`
-- [ ] Set `MONGODB_URI` in Vercel, and allow `0.0.0.0/0` in Atlas network access
-- [ ] Production keeps `DOCS_BACKEND=memory` until the Mongo contract tests pass
-- [ ] Done when: production `/health` shows `mongo: "ok"`
+- [x] `MongoDocumentStore` written by the quarterly-agent teammate (`packages/data/src/mongo/`), switched on with `DOCUMENT_BACKEND=mongodb`
+- [ ] `/health` reports `mongo: "ok" | "unconfigured" | "error"` (optional)
+- [x] `MONGODB_URI` and `MONGODB_DB` set on Vercel. Atlas network access allows `0.0.0.0/0`
+- [x] Production sets `DOCUMENT_BACKEND=mongodb`
+- [x] Done when: a simulation run and a life event saved through the live API read back on repeated requests, and are in Atlas
+
+Notes:
+- Atlas's error for a blocked IP address looks like a TLS failure (`SSL alert number 80`), not an access error. Vercel has no fixed IPs, so `0.0.0.0/0` is required; the password is the protection.
+- Simulation runs, Copilot events, life events, recommendations, reports, and email schedules now persist in production. Report PDFs are still files in one instance's `/tmp`.
 
 Notes:

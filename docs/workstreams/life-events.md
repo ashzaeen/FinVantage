@@ -1,6 +1,6 @@
 # Life-event entry
 
-**Tier:** P0 form, P1 parser. **Code:** `apps/web/src/app/life-events`, `packages/llm/src/life-event-parser.ts`, `apps/api/src/routes/life-events.ts`. **PRD:** section 8.
+**Tier:** P0 form, P1 parser. **Code:** `apps/web/src/app/(app)/life-events`, `packages/llm/src/life-event-parser.ts`, `apps/api/src/routes/life-events.ts`. **PRD:** section 8.
 
 ## Scope
 

@@ -1,6 +1,6 @@
 # Advisory and report agents
 
-**Tier:** P1 Advisory Agent, P2 Quarterly Report. **Code:** `packages/llm/src/advisory.ts`, `packages/llm/src/quarterly.ts`, `apps/api/src/routes/agents.ts`, `apps/web/src/app/advisor`. **PRD:** section 7.
+**Owners:** Ashzaeen (Advisory Agent), Samyog (Quarterly Report). **Tier:** P1 Advisory Agent, P2 Quarterly Report. **Code:** Advisory: `packages/llm/src/advisory.ts`, `apps/api/src/routes/agents.ts`, `apps/web/src/app/(app)/advisor`. Quarterly Report: `apps/api/src/reporting`, `apps/web/src/app/(app)/reports`. **PRD:** section 7.
 
 ## Scope
 

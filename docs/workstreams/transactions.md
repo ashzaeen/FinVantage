@@ -4,7 +4,7 @@
 
 ## Scope
 
-The synthetic demo profile, then the transaction pipeline: categorization, budgets, recurring detection, bill reminders, and the monthly summary.
+The synthetic demo profile, then the transaction pipeline: categorization and the ledger data that budgets, recurring charges, bills and the monthly summary read. Those four views, from route to page, are now the [spending](spending.md) workstream, owned by Ashzaeen.
 
 ## You have now
 
