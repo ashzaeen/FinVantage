@@ -5,14 +5,15 @@ import { createApp } from "./app";
 import { createDeps } from "./deps";
 
 /** A real client against the real app, in process. Every call validates against the contracts. */
-function setup() {
-  const app = createApp(createDeps({}), {});
+function setup(env: Record<string, string> = {}) {
+  const deps = createDeps({ REPORT_OUTPUT_DIR: "/tmp/finvantage-report-tests", ...env });
+  const app = createApp(deps, {});
   const client = createApiClient({
     baseUrl: "http://test",
     token: "demo-token",
     fetch: ((url: string, init: RequestInit) => app.request(url, init)) as typeof fetch,
   });
-  return { app, client };
+  return { app, client, deps };
 }
 
 const rental: CopilotContext = {
@@ -25,6 +26,17 @@ const rental: CopilotContext = {
 test("requests without the token are rejected", async () => {
   const { app } = setup();
   assert.equal((await app.request("/v1/me")).status, 401);
+});
+
+test("the scheduler tick requires its separate server secret", async () => {
+  const { app } = setup({ SCHEDULER_SECRET: "scheduler-test-secret" });
+  assert.equal((await app.request("/internal/reports/schedule/run", { method: "POST" })).status, 401);
+  const response = await app.request("/internal/reports/schedule/run", {
+    method: "POST",
+    headers: { authorization: "Bearer scheduler-test-secret" },
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { claimed: 0, sent: 0, failed: 0 });
 });
 
 test("all read routes match their contracts", async () => {
@@ -124,6 +136,117 @@ test("the advisory stub returns at least two options", async () => {
     body: { situation: { kind: "user_question", question: "Can I afford a car?" } },
   });
   assert.ok(advice.options.length >= 2);
+});
+
+test("a quarterly report compares consecutive quarters, saves a PDF, and emails it", async () => {
+  const { app, client, deps } = setup();
+  const baseline = await client.runSimulation({ body: { persist: false, seed: 41 } });
+  const previous = await client.runSimulation({ body: { persist: false, seed: 41 } });
+  const current = await client.runSimulation({
+    body: {
+      persist: false,
+      seed: 41,
+      whatIf: { monthlySavingsDeltaCents: 50_000, purchaseAmountCents: 0, eventShifts: [] },
+    },
+  });
+  await deps.docs.saveSimulationRun({
+    ...baseline,
+    id: "run_2026_q1",
+    createdAt: "2026-02-15T12:00:00.000Z",
+    persisted: true,
+  });
+  await deps.docs.saveSimulationRun({
+    ...previous,
+    id: "run_2026_q2",
+    createdAt: "2026-05-15T12:00:00.000Z",
+    persisted: true,
+  });
+  await deps.docs.saveSimulationRun({
+    ...current,
+    id: "run_2026_q3",
+    createdAt: "2026-08-15T12:00:00.000Z",
+    persisted: true,
+  });
+
+  const report = await client.generateReport({ body: { quarter: "2026-Q3", email: true } });
+  assert.equal(report.previousQuarter, "2026-Q2");
+  assert.deepEqual(
+    report.evidence.map((item) => item.quarter),
+    ["2026-Q2", "2026-Q3"],
+  );
+  assert.ok(report.largestChange);
+  assert.match(report.largestChange.cause, /savings scenario changed/);
+  assert.equal(report.narrativeSource, "template");
+  assert.ok(report.visuals.accountAllocation.length > 0);
+  assert.deepEqual(
+    report.visuals.spendingTrend.map((point) => point.quarter),
+    ["2026-Q2", "2026-Q3"],
+  );
+  assert.equal(report.visuals.goalComparisons.length, 3);
+  assert.equal(report.visuals.goalPathways.length, 3);
+  assert.equal(report.visuals.suggestions.length, 3);
+  assert.ok(
+    report.visuals.monthlyBreakdown.every(
+      (month) => month.incomeCents === 0 && month.spendingCents === 0,
+    ),
+  );
+  assert.ok(report.visuals.goalPathways.every((goal) => goal.points.length >= 2));
+  assert.equal(report.pdf.status, "ready");
+  assert.equal(report.email.status, "sent");
+  assert.deepEqual(
+    (await client.listReports()).map((item) => item.quarter),
+    ["2026-Q3", "2026-Q2", "2026-Q1"],
+  );
+
+  const pdf = await app.request(`/v1/reports/quarterly/${report.id}/pdf?token=demo-token`);
+  assert.equal(pdf.status, 200);
+  assert.equal(pdf.headers.get("content-type"), "application/pdf");
+  const bytes = new Uint8Array(await pdf.arrayBuffer());
+  assert.equal(new TextDecoder().decode(bytes.slice(0, 4)), "%PDF");
+});
+
+test("a first-quarter report generates without a previous simulation", async () => {
+  const { client, deps } = setup();
+  const current = await client.runSimulation({ body: { persist: false, seed: 42 } });
+  await deps.docs.saveSimulationRun({
+    ...current,
+    id: "run_first_quarter",
+    createdAt: "2026-02-15T12:00:00.000Z",
+    persisted: true,
+  });
+
+  const report = await client.generateReport({ body: { quarter: "2026-Q1", email: false } });
+  assert.equal(report.previousQuarter, null);
+  assert.equal(report.largestChange, null);
+  assert.deepEqual(report.evidence.map((item) => item.quarter), ["2026-Q1"]);
+  assert.deepEqual(report.visuals.spendingTrend.map((point) => point.quarter), ["2026-Q1"]);
+  assert.equal(report.visuals.goalComparisons.length, 0);
+  assert.equal(report.visuals.suggestions.length, 3);
+  assert.equal(report.pdf.status, "ready");
+});
+
+test("a saved email schedule can send on demand and records the outcome", async () => {
+  const { client } = setup();
+  await client.loadDemoProfile();
+  const report = await client.generateReport({ body: { email: false } });
+  const schedule = await client.updateEmailSchedule({
+    body: {
+      enabled: true,
+      frequency: "monthly",
+      recipientEmail: "scheduled@example.com",
+    },
+  });
+  assert.equal(schedule.enabled, true);
+  assert.ok(schedule.nextScheduledAt);
+
+  const result = await client.triggerScheduledEmail();
+  assert.equal(result.success, true);
+  assert.equal(result.report?.id, report.id);
+  assert.equal(result.log?.recipient, "scheduled@example.com");
+  assert.equal(result.log?.status, "success");
+  const [log] = await client.listEmailScheduleLogs();
+  assert.equal(log?.id, result.log?.id);
+  assert.equal((await client.getEmailSchedule())?.lastStatus, "success");
 });
 
 test("an unmatched life event sentence returns the supported types", async () => {

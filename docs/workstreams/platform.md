@@ -29,4 +29,4 @@ A complete API with in-memory stores, a demo-token auth stub, working SSE, and a
 ## Later
 
 - Replace the demo token if time allows.
-- P2: Plaid sandbox, in `PlaidProvider` in `packages/data/src/bank.ts`. Sandbox only.
+- Bank data uses the synthetic demo provider. Plaid Sandbox integration is out of scope for the current build.

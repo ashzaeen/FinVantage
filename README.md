@@ -27,6 +27,44 @@ Before you push, run:
 npm run check   # typecheck and tests, everywhere
 ```
 
+## Quarterly reports
+
+The default setup uses the in-memory document store, template report writer, and mock email
+provider. Reloading the demo profile seeds three synthetic quarterly simulation runs; the Reports
+page then generates the latest completed quarter without asking the user to select a period.
+
+To use the real services, copy `.env.example` to `.env` and configure:
+
+```bash
+DOCUMENT_BACKEND=mongodb
+MONGODB_URI=mongodb+srv://...
+MONGODB_DB=finvantage
+
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=...
+GEMINI_MODEL_FLASH=...
+
+MAIL_PROVIDER=smtp
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=youraccount@gmail.com
+SMTP_PASSWORD=your-google-app-password
+REPORT_EMAIL_FROM=FinVantage <youraccount@gmail.com>
+REPORT_EMAIL_OVERRIDE=your-demo-recipient@example.com
+SCHEDULER_SECRET=replace-with-a-long-random-secret
+```
+
+`POST /v1/reports/quarterly` automatically resolves the latest completed quarter and is
+idempotent per user and quarter. PDFs are written beneath `REPORT_OUTPUT_DIR` and served through
+the authenticated download route.
+
+Users can save a recipient and hourly, daily, weekly, monthly, or quarterly email frequency on the
+Reports page. The API persists the schedule and its delivery log in the configured document store.
+In production, call `POST /internal/reports/schedule/run` every five minutes with
+`Authorization: Bearer $SCHEDULER_SECRET`; this processes every due schedule. The Reports page's
+**Run now** action exercises the same delivery path locally without waiting for cron.
+
 ## Find your part
 
 Claim a workstream by putting your name in the table, then read its brief.

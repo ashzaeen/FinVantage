@@ -21,14 +21,14 @@ interface SliderProps {
 
 function Slider({ label, value, min, max, step, format, onChange }: SliderProps) {
   return (
-    <label className="block text-sm">
-      <span className="flex justify-between">
-        {label}
-        <span className="tabular-nums text-muted">{format(value)}</span>
+    <label className="block font-roboto text-sm">
+      <span className="flex justify-between items-center text-xs font-medium text-[#16192c]">
+        <span>{label}</span>
+        <span className="font-poppins font-bold tabular-nums text-[#544af7]">{format(value)}</span>
       </span>
       <input
         type="range"
-        className="mt-1 w-full accent-(--accent)"
+        className="mt-2 w-full accent-[#544af7] h-1.5 bg-[#eef1fa] rounded-lg cursor-pointer"
         min={min}
         max={max}
         step={step}
@@ -75,11 +75,11 @@ export function SimulatorClient({ goals, lifeEvents }: { goals: Goal[]; lifeEven
   }, [savingsDelta, purchase, shiftMonths, firstEvent]);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
-      <Card title="What if">
-        <div className="space-y-4">
+    <div className="grid gap-6 lg:grid-cols-[20rem_1fr]">
+      <Card title="What if" subtitle="Model adjustments to savings and events">
+        <div className="space-y-6 pt-1">
           <Slider
-            label="Monthly savings"
+            label="Monthly savings delta"
             value={savingsDelta}
             min={-100_000}
             max={100_000}
@@ -109,12 +109,15 @@ export function SimulatorClient({ goals, lifeEvents }: { goals: Goal[]; lifeEven
           )}
         </div>
       </Card>
-      <div className="space-y-4">
-        {error && <p className="text-sm text-critical">{error}</p>}
+
+      <div className="space-y-6">
+        {error && <p className="font-roboto text-sm text-[#ff4d6d]">{error}</p>}
         {run?.goalOutcomes.map((outcome) => (
           <Card key={outcome.goalId} title={goals.find((g) => g.id === outcome.goalId)?.name}>
-            <ProbabilityRange low={outcome.probabilityLow} high={outcome.probabilityHigh} />
-            <FanChart points={outcome.fan} className="mt-3" />
+            <div className="rounded-2xl bg-[#f4f5fa] p-4 mb-4">
+              <ProbabilityRange low={outcome.probabilityLow} high={outcome.probabilityHigh} />
+            </div>
+            <FanChart points={outcome.fan} className="mt-2" />
           </Card>
         ))}
       </div>

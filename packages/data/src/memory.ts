@@ -1,20 +1,26 @@
 import { randomUUID } from "node:crypto";
-import type {
-  CopilotAction,
-  CopilotEvent,
-  Goal,
-  LifeEvent,
-  NewGoal,
-  NewTransaction,
-  QuarterlyReport,
-  Recommendation,
-  SimulationRun,
-  Transaction,
-  User,
-  Account,
+import {
+  EmailSchedule,
+  type CopilotAction,
+  type CopilotEvent,
+  type EmailScheduleLogEntry,
+  type Goal,
+  type LifeEvent,
+  type NewGoal,
+  type NewTransaction,
+  type QuarterlyReport,
+  type Recommendation,
+  type SimulationRun,
+  type Transaction,
+  type User,
+  type Account,
 } from "@finvantage/contracts";
 import { loadDemoProfileFixture, type IncomeProfile } from "./profile";
 import type { DocumentStore, LedgerStore } from "./stores";
+
+function inRange(createdAt: string, range?: { start: string; end: string }) {
+  return !range || (createdAt >= range.start && createdAt < range.end);
+}
 
 /** Default store: the demo profile in memory, reset on restart. No database needed. */
 export class MemoryLedgerStore implements LedgerStore {
@@ -119,8 +125,8 @@ export class MemoryDocumentStore implements DocumentStore {
     return this.runs.find((r) => r.userId === userId && r.id === id) ?? null;
   }
 
-  async listSimulationRuns(userId: string) {
-    return this.runs.filter((r) => r.userId === userId);
+  async listSimulationRuns(userId: string, range?: { start: string; end: string }) {
+    return this.runs.filter((r) => r.userId === userId && inRange(r.createdAt, range));
   }
 
   async saveCopilotEvent(event: CopilotEvent) {
@@ -138,8 +144,8 @@ export class MemoryDocumentStore implements DocumentStore {
     return event;
   }
 
-  async listCopilotEvents(userId: string) {
-    return this.copilotEvents.filter((e) => e.userId === userId);
+  async listCopilotEvents(userId: string, range?: { start: string; end: string }) {
+    return this.copilotEvents.filter((e) => e.userId === userId && inRange(e.createdAt, range));
   }
 
   async saveRecommendation(recommendation: Recommendation) {
@@ -147,12 +153,82 @@ export class MemoryDocumentStore implements DocumentStore {
     return recommendation;
   }
 
+  async listRecommendations(userId: string, range?: { start: string; end: string }) {
+    return this.recommendations.filter(
+      (recommendation) =>
+        recommendation.userId === userId && inRange(recommendation.createdAt, range),
+    );
+  }
+
   async saveReport(report: QuarterlyReport) {
+    const existing = this.reports.findIndex(
+      (candidate) => candidate.userId === report.userId && candidate.quarter === report.quarter,
+    );
+    if (existing >= 0) this.reports.splice(existing, 1);
     this.reports.unshift(report);
     return report;
   }
 
+  async getReport(userId: string, id: string) {
+    return this.reports.find((report) => report.userId === userId && report.id === id) ?? null;
+  }
+
+  async getReportByQuarter(userId: string, quarter: string) {
+    return (
+      this.reports.find((report) => report.userId === userId && report.quarter === quarter) ?? null
+    );
+  }
+
+  async updateReport(report: QuarterlyReport) {
+    return this.saveReport(report);
+  }
+
   async listReports(userId: string) {
     return this.reports.filter((r) => r.userId === userId);
+  }
+
+  private emailSchedules = new Map<string, EmailSchedule>();
+  private emailScheduleLogs: EmailScheduleLogEntry[] = [];
+
+  async getEmailSchedule(userId: string) {
+    return this.emailSchedules.get(userId) ?? null;
+  }
+
+  async saveEmailSchedule(userId: string, schedule: EmailSchedule) {
+    this.emailSchedules.set(userId, schedule);
+    return schedule;
+  }
+
+  async claimNextDueEmailSchedule(now: string, leaseExpiresAt: string, attemptId: string) {
+    const due = [...this.emailSchedules.values()]
+      .filter(
+        (schedule) =>
+          schedule.enabled &&
+          schedule.nextScheduledAt !== null &&
+          schedule.nextScheduledAt <= now &&
+          (schedule.leaseExpiresAt === null || schedule.leaseExpiresAt <= now),
+      )
+      .sort((left, right) =>
+        (left.nextScheduledAt ?? "").localeCompare(right.nextScheduledAt ?? ""),
+      )[0];
+    if (!due) return null;
+    const claimed = EmailSchedule.parse({
+      ...due,
+      lastStatus: "pending",
+      lastError: null,
+      leaseExpiresAt,
+      activeAttemptId: attemptId,
+      updatedAt: now,
+    });
+    this.emailSchedules.set(claimed.userId, claimed);
+    return claimed;
+  }
+
+  async recordEmailScheduleLog(userId: string, entry: EmailScheduleLogEntry) {
+    this.emailScheduleLogs.unshift(entry);
+  }
+
+  async listEmailScheduleLogs(userId: string, limit = 20) {
+    return this.emailScheduleLogs.filter((l) => l.userId === userId).slice(0, limit);
   }
 }

@@ -7,7 +7,7 @@ export type AppEnv = { Variables: { userId: string } };
 
 export class HttpError extends Error {
   constructor(
-    readonly status: 400 | 404 | 500 | 501,
+    readonly status: 400 | 404 | 409 | 500 | 501,
     readonly code: string,
     message: string,
   ) {

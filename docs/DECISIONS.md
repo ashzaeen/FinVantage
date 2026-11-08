@@ -34,6 +34,18 @@ Append here when you make a call others need to know about. Do not rewrite histo
 | Account balances are always positive | One rule for sums. `isLiability` gives direction |
 | `LlmClient` mock always throws | Fallback paths run by default, so the app needs no key |
 | Only the service worker calls the API | Host permissions apply there, and the content script stays simple |
+| Ledger and document backends can be selected independently | Quarterly reports can use MongoDB Atlas while the unfinished Tiger adapter remains in memory |
+| Quarterly-report PDFs live on the API server | MongoDB stores the report and artifact metadata; authenticated API routes serve the local PDF |
+| Quarterly reports use the configured Gemini Flash model | One model setting is simpler for the demo; deterministic evidence and output validation remain unchanged |
+| Goal pathway labels use probability-range thresholds | Low bound at least 60% is on track; otherwise a high bound at least 40% is watch; lower ranges need attention. Labels are estimates, never guarantees |
+| Invalid MongoDB configuration falls back to memory only in development | A malformed local secret should not take down the whole demo; production still fails closed so persistence is never silently lost |
+| Gemini calls time out after 15 seconds | Report and Copilot requests must reach their deterministic fallback instead of hanging when the provider is unavailable |
+| Advisor chat retrieves only the current user's stored financial context on the server | Context stays behind the API boundary; the browser sends only conversation messages, and Gemini credentials remain server-side |
+| Spending summaries, category totals, and recurring charge lists are derived from ledger transactions | Dashboard aggregates should share transaction data as their source of truth; budget limits remain explicit demo defaults until users can configure budgets |
+| A quarterly report may establish a one-quarter baseline | New users should receive a useful report immediately; comparisons and largest-change analysis appear only when a prior-quarter run exists |
+| Report PDFs embed Poppins and categorize goal suggestions | The artifact matches the dashboard identity while keeping maintain, review, and explore prompts visibly distinct |
+| An external cron invokes the persistent API for scheduled report email | The planned Vultr API already owns Gmail credentials. MongoDB leases due schedules atomically, which survives restarts and prevents two API instances from claiming the same occurrence |
+| Quarterly UI charts use report-owned monthly transaction aggregates | Recharts renders responsive bars and trends, while every displayed cent remains computed by the API from ledger transactions rather than by the browser or Gemini |
 
 ## Open questions
 

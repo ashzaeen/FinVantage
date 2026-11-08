@@ -8,5 +8,5 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
-  "dependencies": { "@finvantage/contracts": "*" }
+  "dependencies": { "@finvantage/contracts": "*", "zod": "^4.6.7" }
 }

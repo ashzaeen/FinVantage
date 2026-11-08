@@ -1,48 +1,128 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;600;700&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css');
 @import "tailwindcss";
 
-/* Placeholder tokens. Design owns these. Components use the names, never raw colors. */
+/* ─── Design tokens ────────────────────────────────────────────────────────── */
 :root {
-  --surface: #fbfaf7;
-  --surface-raised: #ffffff;
-  --border: #e4e1d8;
-  --ink: #1d1d1b;
-  --ink-muted: #66645d;
-  --accent: #2563a8;
-  --fan-outer: #cfe0f2;
-  --fan-inner: #9dbfe3;
-  --fan-line: #1f5a9c;
-  --good: #2c7a4b;
-  --critical: #b3392f;
-}
+  /* Typography */
+  --font-poppins: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-roboto:  'Roboto', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface: #161614;
-    --surface-raised: #1f1f1c;
-    --border: #35342f;
-    --ink: #f1efe9;
-    --ink-muted: #a5a299;
-    --accent: #7fb0e6;
-    --fan-outer: #24405f;
-    --fan-inner: #33608f;
-    --fan-line: #9cc6f2;
-    --good: #6cc48f;
-    --critical: #ef8e84;
-  }
+  /* Surfaces */
+  --surface:         #f8f9fe;   /* Canvas background: light, clean, airy */
+  --surface-raised:  #ffffff;   /* Pure white cards */
+  --surface-card:    #ffffff;
+  --surface-inset:   #f4f5fa;   /* Input backgrounds and table header strips */
+  --sidebar-bg:      #544af7;   /* Vibrant modern royal purple */
+  --sidebar-bg-dark: #453bc9;
+
+  /* Borders */
+  --border:          #edf0f7;
+  --border-subtle:   #f2f4fa;
+
+  /* Text & Hierarchy */
+  --ink:             #16192c;   /* Dark navy/slate for primary high-contrast text */
+  --ink-secondary:   #4a4f68;
+  --ink-muted:       #8d94a8;   /* Soft slate for labels & metadata */
+  --ink-light:       #b3b9cb;
+
+  /* Brand / Primary */
+  --accent:          #544af7;   /* Signature purple */
+  --accent-hover:    #4338e3;
+  --accent-soft:     #eef1fc;   /* Soft lavender for active states / buttons */
+
+  /* Semantic Data Colors */
+  --good:            #00c48c;   /* Green for positive / income / completed */
+  --good-bg:         #e6faf4;
+  --critical:        #ff4d6d;   /* Coral red for expenses / warnings */
+  --critical-bg:     #ffecee;
+  --warning:         #ff9900;
+  --warning-bg:      #fff5e6;
+  --info:            #2979ff;
+  --info-bg:         #e8f3ff;
+  --cyan:            #38d2f0;   /* Outcome bar in analytics chart */
+
+  /* Elevation Shadows */
+  --shadow-sm:       0 1px 3px 0 rgba(22, 25, 44, 0.04);
+  --shadow-card:     0 4px 20px -2px rgba(22, 25, 44, 0.05);
+  --shadow-hover:    0 8px 30px -4px rgba(84, 74, 247, 0.08);
 }
 
 @theme inline {
-  --color-surface: var(--surface);
-  --color-raised: var(--surface-raised);
-  --color-line: var(--border);
-  --color-ink: var(--ink);
-  --color-muted: var(--ink-muted);
-  --color-accent: var(--accent);
-  --color-good: var(--good);
-  --color-critical: var(--critical);
+  --font-heading:       var(--font-poppins);
+  --font-sans:          var(--font-roboto);
+  --color-surface:      var(--surface);
+  --color-raised:       var(--surface-raised);
+  --color-card:         var(--surface-card);
+  --color-inset:        var(--surface-inset);
+  --color-line:         var(--border);
+  --color-ink:          var(--ink);
+  --color-muted:        var(--ink-muted);
+  --color-subtle:       var(--ink-light);
+  --color-accent:       var(--accent);
+  --color-accent-soft:  var(--accent-soft);
+  --color-good:         var(--good);
+  --color-good-bg:      var(--good-bg);
+  --color-critical:     var(--critical);
+  --color-critical-bg:  var(--critical-bg);
+  --color-warning:      var(--warning);
+  --color-warning-bg:   var(--warning-bg);
+}
+
+/* ─── Base Styles ──────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--surface);
+  background-color: var(--surface);
   color: var(--ink);
+  font-family: var(--font-roboto);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+}
+
+/* Headings and key numbers use Poppins */
+h1, h2, h3, h4, h5, h6,
+.font-poppins,
+.heading {
+  font-family: var(--font-poppins);
+  letter-spacing: -0.015em;
+}
+
+/* Body, labels, tables, small metrics use Roboto */
+p, span, label, input, button, table, td, th,
+.font-roboto {
+  font-family: var(--font-roboto);
+}
+
+/* ─── Scrollbars & Utilities ───────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d8dce8;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #bac0d2;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

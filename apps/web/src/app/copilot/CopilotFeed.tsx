@@ -15,17 +15,33 @@ export function CopilotFeed({ initial }: { initial: CopilotEvent[] }) {
   if (events.length === 0) {
     return (
       <Card>
-        <p className="text-sm text-muted">No Copilot events yet. Open a demo page with the extension on.</p>
+        <div className="py-10 text-center">
+          <span className="text-3xl mb-2 block">⚡️</span>
+          <p className="font-poppins font-bold text-base text-[#16192c]">No Copilot events yet</p>
+          <p className="font-roboto text-xs text-[#8d94a8] mt-1">
+            Open any online store or demo listing page with the Chrome extension active to see real-time guidance.
+          </p>
+        </div>
       </Card>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {events.map((event) => (
-        <Card key={event.id} title={`${event.merchant} · ${formatUsd(event.extractedPriceCents)}`}>
-          <p className="text-sm">{event.card.impact}</p>
-          <p className="mt-1 text-sm text-muted">{event.card.smartMove}</p>
+        <Card
+          key={event.id}
+          title={`${event.merchant} · ${formatUsd(event.extractedPriceCents)}`}
+          action={
+            <span className="rounded-full bg-[#eef1fc] px-3 py-1 font-roboto text-[11px] font-semibold text-[#544af7]">
+              Copilot Intervention
+            </span>
+          }
+        >
+          <div className="rounded-2xl bg-[#f8f9fd] p-4 border border-[#edf0f7]">
+            <p className="font-roboto text-sm font-medium text-[#16192c]">{event.card.impact}</p>
+            <p className="font-roboto text-xs text-[#544af7] font-semibold mt-2">{event.card.smartMove}</p>
+          </div>
         </Card>
       ))}
     </div>

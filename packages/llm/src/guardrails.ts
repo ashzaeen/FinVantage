@@ -10,8 +10,19 @@ export function wordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-function numbersIn(text: string): string[] {
+export function numbersIn(text: string): string[] {
   return (text.match(/\d[\d,]*(?:\.\d+)?/g) ?? []).map((n) => n.replaceAll(",", ""));
+}
+
+export function validateNumbers(
+  text: string,
+  allowedFigures: string[],
+): { ok: true } | { ok: false; reason: string } {
+  const allowed = new Set(allowedFigures.flatMap(numbersIn));
+  const invented = numbersIn(text).filter((number) => !allowed.has(number));
+  return invented.length > 0
+    ? { ok: false, reason: `unknown figures: ${invented.join(", ")}` }
+    : { ok: true };
 }
 
 /**
@@ -25,8 +36,5 @@ export function validateCard(
   const text = cardText(card);
   if (wordCount(text) > MAX_CARD_WORDS) return { ok: false, reason: "over word limit" };
 
-  const allowed = new Set(allowedFigures.flatMap(numbersIn));
-  const invented = numbersIn(text).filter((n) => !allowed.has(n));
-  if (invented.length > 0) return { ok: false, reason: `unknown figures: ${invented.join(", ")}` };
-  return { ok: true };
+  return validateNumbers(text, allowedFigures);
 }

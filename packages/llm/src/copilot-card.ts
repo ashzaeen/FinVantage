@@ -78,7 +78,7 @@ export async function generateCopilotCard(
   try {
     // STUB(copilot-backend): tune this prompt. Figures are passed in as fixed inputs.
     const raw = await llm.generate({
-      tier: "pro",
+      tier: "flash",
       system:
         "You write a Copilot card with three short parts: impact, tradeOff, smartMove. " +
         "Under 60 words in total. Use only the figures provided. Never invent or alter a number. " +

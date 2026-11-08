@@ -10,6 +10,7 @@ export type ExtensionSettings = z.infer<typeof ExtensionSettings>;
 export const User = z.object({
   id: Id,
   displayName: z.string(),
+  email: z.string().email().nullable().default(null),
   preferences: z.object({
     /** The "checking buffer target" the Copilot compares against. */
     bufferTargetCents: Cents,

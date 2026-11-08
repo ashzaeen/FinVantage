@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { User } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
 import { api } from "@/lib/api";
 
 export function SettingsClient({ user: initial }: { user: User }) {
+  const router = useRouter();
   const [user, setUser] = useState(initial);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -17,6 +19,7 @@ export function SettingsClient({ user: initial }: { user: User }) {
   async function loadDemo() {
     const result = await api.loadDemoProfile();
     setStatus(`Loaded ${result.accounts} demo accounts.`);
+    router.refresh();
   }
 
   return (

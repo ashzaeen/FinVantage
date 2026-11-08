@@ -5,6 +5,13 @@ import { mount, type AppEnv } from "../mount";
 
 const monthFromToday = (today: string) => today.slice(0, 7);
 
+function monthKey(date: string) { return date.slice(0, 7); }
+function addDays(date: string, days: number) {
+  const next = new Date(`${date}T00:00:00.000Z`);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
 export function registerTransactionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
   mount(app, deps, routes.listTransactions, ({ userId, query }) =>
     deps.ledger.listTransactions(userId, query.limit),
@@ -17,37 +24,75 @@ export function registerTransactionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     return saved;
   });
 
-  // STUB(transactions): the routes below are canned. Compute them from the ledger.
-  mount(app, deps, routes.listBudgets, async () => [
-    { category: "groceries", limitCents: 50_000, spentCents: 8_742 },
-    { category: "dining", limitCents: 25_000, spentCents: 3_210 },
-    { category: "subscriptions", limitCents: 2_000, spentCents: 2_598 },
-  ]);
+  const getTransactions = (userId: string) => deps.ledger.listTransactions(userId, 2000);
 
-  const recurring = async () => [
-    {
-      merchant: "StreamFlix",
-      amountCents: -1_599,
+  mount(app, deps, routes.listBudgets, async ({ userId }) => {
+    const transactions = await getTransactions(userId);
+    const month = monthFromToday(deps.today());
+    const spent = new Map<string, number>();
+    for (const transaction of transactions) {
+      if (monthKey(transaction.date) === month && transaction.amountCents < 0 && transaction.category) {
+        spent.set(transaction.category, (spent.get(transaction.category) ?? 0) + Math.abs(transaction.amountCents));
+      }
+    }
+    // Limits are demo defaults; actual spend always comes from the user's ledger.
+    const demoLimits: Record<string, number> = { groceries: 50_000, dining: 25_000, subscriptions: 10_000, housing: 200_000, utilities: 30_000, transport: 25_000, debt: 100_000 };
+    return [...spent].map(([category, spentCents]) => ({ category, spentCents, limitCents: demoLimits[category] ?? Math.max(spentCents, 1) }));
+  });
+
+  const recurring = async ({ userId }: { userId: string }) => {
+    const [transactions, accounts] = await Promise.all([getTransactions(userId), deps.ledger.listAccounts(userId)]);
+    const latestByRecurring = new Map<string, (typeof transactions)[number]>();
+    for (const transaction of transactions) {
+      if (!transaction.isRecurring || transaction.amountCents >= 0) continue;
+      const key = `${transaction.accountId}:${transaction.merchant.toLocaleLowerCase()}`;
+      const previous = latestByRecurring.get(key);
+      if (!previous || transaction.date > previous.date) latestByRecurring.set(key, transaction);
+    }
+    return [...latestByRecurring.values()].map((transaction) => ({
+      merchant: transaction.merchant,
+      amountCents: transaction.amountCents,
       cadence: "monthly" as const,
-      nextDate: "2026-12-02",
-      accountId: "acc_card",
-    },
-    {
-      merchant: "City Power",
-      amountCents: -12_300,
-      cadence: "monthly" as const,
-      nextDate: "2026-12-05",
-      accountId: "acc_checking",
-    },
-  ];
+      nextDate: addDays(transaction.date, 30),
+      accountId: accounts.find((account) => account.id === transaction.accountId)?.id ?? transaction.accountId,
+    }));
+  };
   mount(app, deps, routes.listRecurring, recurring);
   mount(app, deps, routes.listUpcomingBills, recurring);
 
-  mount(app, deps, routes.getSpendingSummary, async () => ({
-    month: monthFromToday(deps.today()),
-    categories: [
-      { category: "groceries", spentCents: 8_742, changeVsPriorMonthCents: -1_200 },
-      { category: "dining", spentCents: 3_210, changeVsPriorMonthCents: 450 },
-    ],
-  }));
+  mount(app, deps, routes.getSpendingSummary, async ({ userId }) => {
+    const transactions = await getTransactions(userId);
+    const month = monthFromToday(deps.today());
+    const previousDate = new Date(`${month}-01T00:00:00.000Z`);
+    previousDate.setUTCMonth(previousDate.getUTCMonth() - 1);
+    const previousMonth = previousDate.toISOString().slice(0, 7);
+    const current = new Map<string, number>();
+    const prior = new Map<string, number>();
+    const trendKeys = Array.from({ length: 6 }, (_, offset) => {
+      const date = new Date(`${month}-01T00:00:00.000Z`);
+      date.setUTCMonth(date.getUTCMonth() - (5 - offset));
+      return date.toISOString().slice(0, 7);
+    });
+    const monthlyTrend = new Map(trendKeys.map((key) => [key, { incomeCents: 0, spendingCents: 0 }]));
+    for (const transaction of transactions) {
+      const trend = monthlyTrend.get(monthKey(transaction.date));
+      if (trend) {
+        if (transaction.amountCents > 0) trend.incomeCents += transaction.amountCents;
+        else trend.spendingCents += Math.abs(transaction.amountCents);
+      }
+      if (transaction.amountCents >= 0 || !transaction.category) continue;
+      const key = monthKey(transaction.date);
+      const target = key === month ? current : key === previousMonth ? prior : null;
+      if (target) target.set(transaction.category, (target.get(transaction.category) ?? 0) + Math.abs(transaction.amountCents));
+    }
+    const categories = new Set([...current.keys(), ...prior.keys()]);
+    return {
+      month,
+      monthlyTrend: trendKeys.map((key) => ({ month: key, ...monthlyTrend.get(key)! })),
+      categories: [...categories].map((category) => {
+        const spentCents = current.get(category) ?? 0;
+        return { category, spentCents, changeVsPriorMonthCents: spentCents - (prior.get(category) ?? 0) };
+      }).sort((a, b) => b.spentCents - a.spentCents),
+    };
+  });
 }

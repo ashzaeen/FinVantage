@@ -16,9 +16,9 @@ All model use, with Gemini as the provider. Read the root `AGENTS.md` first. Bri
 | Task | Tier |
 | --- | --- |
 | Parse a typed life event | `flash` |
-| Copilot card, advice, quarterly report | `pro` |
+| Copilot card, advice, quarterly report | `flash` |
 
-Model names come from `GEMINI_MODEL_FLASH` and `GEMINI_MODEL_PRO`. Confirm current names at the Google Cloud sponsor table. Do not hardcode them.
+The model name comes from `GEMINI_MODEL_FLASH`. Confirm the current name at the Google Cloud sponsor table. Do not hardcode it.
 
 ## Rules
 
@@ -32,7 +32,8 @@ Model names come from `GEMINI_MODEL_FLASH` and `GEMINI_MODEL_PRO`. Confirm curre
 
 `LLM_PROVIDER=mock` is the default, and its `generate` always throws. That is deliberate: callers exercise their fallback paths, so the app works with no key. As a result, the parser reports no match, and cards have `source: "template"`.
 
-`GeminiClient.generate` is a stub. To enable it, add the Gemini SDK to this package, implement that one method, and set `LLM_PROVIDER=gemini`.
+`GeminiClient.generate` calls the Gemini REST API. Set `LLM_PROVIDER=gemini`, `GEMINI_API_KEY`, and `GEMINI_MODEL_FLASH` to enable it.
+Provider calls time out after 15 seconds so callers can use their deterministic fallback instead of leaving a request open indefinitely.
 
 Tests inject a fake `LlmClient`. See `src/guardrails.test.ts`.
 

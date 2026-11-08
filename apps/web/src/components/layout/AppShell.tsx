@@ -2,39 +2,380 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { NAV_ITEMS } from "@/lib/nav";
+
+/* ─── Navigation SVG Icons (Clean, Consistent 20x20 Stroke) ─────────────────── */
+function OverviewIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
+function AccountsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="20" height="15" rx="3" />
+      <line x1="2" y1="10" x2="22" y2="10" />
+      <circle cx="16" cy="15" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function TransactionsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="7" y1="4" x2="7" y2="20" />
+      <polyline points="3 8 7 4 11 8" />
+      <line x1="17" y1="20" x2="17" y2="4" />
+      <polyline points="13 16 17 20 21 16" />
+    </svg>
+  );
+}
+
+function GoalsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </svg>
+  );
+}
+
+function SimulatorIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 21v-7" />
+      <path d="M4 10V3" />
+      <path d="M12 21v-9" />
+      <path d="M12 8V3" />
+      <path d="M20 21v-5" />
+      <path d="M20 12V3" />
+      <circle cx="4" cy="12" r="2" />
+      <circle cx="12" cy="10" r="2" />
+      <circle cx="20" cy="14" r="2" />
+    </svg>
+  );
+}
+
+function LifeEventsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+      <path d="m9 16 2 2 4-4" />
+    </svg>
+  );
+}
+
+function CopilotIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+}
+
+function AdvisorIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <circle cx="9" cy="10" r="1" fill="currentColor" />
+      <circle cx="12" cy="10" r="1" fill="currentColor" />
+      <circle cx="15" cy="10" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function SpendingIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
+  );
+}
+
+function PortfolioIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  );
+}
+
+function CreditIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="4" width="22" height="16" rx="3" ry="3" />
+      <line x1="1" y1="10" x2="23" y2="10" />
+      <line x1="5" y1="15" x2="9" y2="15" />
+    </svg>
+  );
+}
+
+function ReportsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  );
+}
+
+function SecurityIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+function HelpIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  );
+}
+
+function getNavIcon(href: string, active: boolean) {
+  switch (href) {
+    case "/":
+      return <OverviewIcon active={active} />;
+    case "/accounts":
+      return <AccountsIcon />;
+    case "/transactions":
+      return <TransactionsIcon />;
+    case "/goals":
+      return <GoalsIcon />;
+    case "/simulator":
+      return <SimulatorIcon />;
+    case "/life-events":
+      return <LifeEventsIcon />;
+    case "/copilot":
+      return <CopilotIcon />;
+    case "/advisor":
+      return <AdvisorIcon />;
+    case "/spending":
+      return <SpendingIcon />;
+    case "/portfolio":
+      return <PortfolioIcon />;
+    case "/credit":
+      return <CreditIcon />;
+    case "/reports":
+      return <ReportsIcon />;
+    case "/settings":
+      return <SettingsIcon />;
+    default:
+      return <OverviewIcon active={active} />;
+  }
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const [darkMode, setDarkMode] = useState(false);
 
   return (
-    <div className="min-h-screen md:flex">
-      <nav
-        aria-label="Main"
-        className="flex gap-1 overflow-x-auto border-b border-line p-3 md:w-52 md:shrink-0 md:flex-col md:border-r md:border-b-0"
+    <div className="flex min-h-screen bg-[#f8f9fe]">
+      {/* ── Sidebar (Desktop) ────────────────────────────────────────── */}
+      <aside
+        className="hidden md:flex md:w-[260px] md:flex-col md:shrink-0 justify-between select-none"
+        style={{
+          backgroundColor: "#544af7",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          padding: "24px 14px 20px 14px",
+          color: "white",
+        }}
       >
-        <span className="mr-3 self-center font-semibold md:mr-0 md:mb-4 md:self-start md:px-2">
-          FinVantage
-        </span>
-        {NAV_ITEMS.map((item) => {
-          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? "page" : undefined}
-              className={`shrink-0 rounded px-2 py-1 text-sm ${
-                active ? "bg-raised font-medium text-ink" : "text-muted hover:text-ink"
-              }`}
+        <div className="flex flex-col flex-1 overflow-y-auto no-scrollbar pr-0.5">
+          {/* Logo / Brand Header */}
+          <Link href="/" className="flex items-center gap-3 px-3 mb-6">
+            <span
+              className="flex h-10 w-10 items-center justify-center rounded-2xl shadow-sm shrink-0"
+              style={{ background: "rgba(255, 255, 255, 0.22)" }}
             >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-      <main className="min-w-0 flex-1 p-4 md:p-8">
-        <div className="mx-auto max-w-5xl">{children}</div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 2C8.5 6 6 9.5 6 13.5a6 6 0 0 0 12 0c0-4-2.5-7.5-6-11.5z"
+                  fill="white"
+                />
+                <circle cx="12" cy="14" r="2.5" fill="#544af7" />
+              </svg>
+            </span>
+            <div className="flex items-baseline">
+              <span className="font-poppins text-2xl font-bold tracking-tight text-white">
+                FinVantage
+              </span>
+            </div>
+          </Link>
+
+          {/* All 13 Core Navigation Items Restored */}
+          <nav aria-label="Main Navigation" className="flex flex-col gap-1">
+            {NAV_ITEMS.map((item) => {
+              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-roboto text-sm transition-all duration-150"
+                  style={{
+                    backgroundColor: active ? "#ffffff" : "transparent",
+                    color: active ? "#544af7" : "rgba(255, 255, 255, 0.72)",
+                    boxShadow: active ? "0 4px 14px 0 rgba(0, 0, 0, 0.08)" : "none",
+                    fontWeight: active ? 600 : 400,
+                  }}
+                >
+                  <span className="shrink-0">{getNavIcon(item.href, active)}</span>
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Divider */}
+          <div className="my-4 border-t border-white/10" />
+
+          {/* Utility Actions */}
+          <div className="flex flex-col gap-1 font-roboto">
+            <button
+              type="button"
+              className="flex items-center gap-3 px-3.5 py-2 rounded-2xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all text-left"
+            >
+              <SecurityIcon />
+              <span>Security</span>
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-3 px-3.5 py-2 rounded-2xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all text-left"
+            >
+              <HelpIcon />
+              <span>Help Centre</span>
+            </button>
+
+            {/* Dark Mode Switch */}
+            <div className="flex items-center justify-between px-3.5 py-2 text-white/70">
+              <span className="flex items-center gap-3 text-sm">
+                <MoonIcon />
+                <span>Dark Mode</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setDarkMode(!darkMode)}
+                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer"
+                style={{ backgroundColor: darkMode ? "#ffffff" : "rgba(255, 255, 255, 0.3)" }}
+                aria-label="Toggle dark mode"
+              >
+                <span
+                  className="inline-block h-4 w-4 transform rounded-full bg-[#544af7] transition-transform"
+                  style={{ transform: darkMode ? "translateX(24px)" : "translateX(4px)" }}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* User Profile Card at Bottom */}
+        <div
+          className="mt-4 flex items-center justify-between rounded-2xl p-2.5 transition-all cursor-pointer hover:bg-white/15 shrink-0"
+          style={{ background: "rgba(255, 255, 255, 0.12)" }}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-10 w-10 shrink-0 rounded-full border-2 border-white/40 bg-white/20 flex items-center justify-center font-poppins font-bold text-white text-base overflow-hidden">
+              🧑‍💻
+            </div>
+            <div className="min-w-0">
+              <p className="font-poppins truncate text-sm font-semibold text-white leading-tight">
+                Ali Raza
+              </p>
+              <p className="font-roboto truncate text-xs text-white/60">
+                Web Developer
+              </p>
+            </div>
+          </div>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            className="text-white/60 mr-1 shrink-0"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </aside>
+
+      {/* ── Mobile Header ─────────────────────────────────────────────── */}
+      <div
+        className="md:hidden fixed inset-x-0 top-0 z-50 flex flex-col justify-center px-4"
+        style={{ height: "64px", backgroundColor: "#544af7", color: "white" }}
+      >
+        <div className="flex items-center justify-between">
+          <Link href="/" className="font-poppins text-lg font-bold text-white">
+            FinVantage
+          </Link>
+          <nav className="flex gap-1.5 overflow-x-auto max-w-[75vw] py-1 font-roboto no-scrollbar">
+            {NAV_ITEMS.map((item) => {
+              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="shrink-0 px-2.5 py-1 rounded-xl text-xs font-medium transition-colors"
+                  style={{
+                    backgroundColor: active ? "#ffffff" : "rgba(255, 255, 255, 0.12)",
+                    color: active ? "#544af7" : "#ffffff",
+                  }}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* ── Main Content Area ────────────────────────────────────────── */}
+      <main className={`flex-1 min-w-0 md:pt-0 pt-16 ${pathname === "/advisor" ? "h-dvh min-h-0 overflow-hidden" : ""}`}>
+        <div className={pathname === "/advisor" ? "h-full w-full" : "max-w-[1360px] mx-auto px-6 py-8 md:px-10 md:py-9"}>
+          {children}
+        </div>
       </main>
     </div>
   );

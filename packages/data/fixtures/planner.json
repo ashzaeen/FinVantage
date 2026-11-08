@@ -2,6 +2,7 @@
   "user": {
     "id": "user_demo",
     "displayName": "Jordan Rivera",
+    "email": "jordan@example.com",
     "preferences": { "bufferTargetCents": 250000 },
     "extensionSettings": { "enabled": true, "snoozedSites": [] }
   },

@@ -1,6 +1,17 @@
 import { z } from "zod";
 import { Account, NetWorth, NewTransaction, Transaction } from "./account";
-import { QuarterlyReport, Recommendation, Situation } from "./advisory";
+import {
+  EmailSchedule,
+  EmailScheduleLogEntry,
+  AdvisorChatRequest,
+  AdvisorChatRequestBody,
+  AdvisorChatResponse,
+  Quarter,
+  QuarterlyReport,
+  Recommendation,
+  Situation,
+  UpdateEmailScheduleInput,
+} from "./advisory";
 import {
   CopilotAction,
   CopilotContext,
@@ -152,16 +163,59 @@ export const routes = {
     body: z.object({ situation: Situation }),
     response: Recommendation,
   }),
+  advisorChat: route({ method: "POST", path: "/v1/advisory/chat", body: AdvisorChatRequestBody, response: AdvisorChatResponse }),
   listReports: route({
     method: "GET",
     path: "/v1/reports/quarterly",
     response: z.array(QuarterlyReport),
   }),
+  getLatestReport: route({
+    method: "GET",
+    path: "/v1/reports/quarterly/latest",
+    response: QuarterlyReport.nullable(),
+  }),
+  getReport: route({
+    method: "GET",
+    path: "/v1/reports/quarterly/:id",
+    response: QuarterlyReport,
+  }),
   generateReport: route({
     method: "POST",
     path: "/v1/reports/quarterly",
-    body: z.object({ quarter: z.string() }),
+    body: z.object({ quarter: Quarter.optional(), email: z.boolean().default(true) }),
     response: QuarterlyReport,
+  }),
+  emailReport: route({
+    method: "POST",
+    path: "/v1/reports/quarterly/:id/email",
+    body: z.object({ to: z.string().email().optional() }).optional(),
+    response: QuarterlyReport,
+  }),
+  getEmailSchedule: route({
+    method: "GET",
+    path: "/v1/reports/schedule",
+    response: EmailSchedule.nullable(),
+  }),
+  updateEmailSchedule: route({
+    method: "POST",
+    path: "/v1/reports/schedule",
+    body: UpdateEmailScheduleInput,
+    response: EmailSchedule,
+  }),
+  triggerScheduledEmail: route({
+    method: "POST",
+    path: "/v1/reports/schedule/trigger",
+    response: z.object({
+      success: z.boolean(),
+      message: z.string(),
+      report: QuarterlyReport.nullable(),
+      log: EmailScheduleLogEntry.nullable(),
+    }),
+  }),
+  listEmailScheduleLogs: route({
+    method: "GET",
+    path: "/v1/reports/schedule/logs",
+    response: z.array(EmailScheduleLogEntry),
   }),
 
   // Spending (P1)

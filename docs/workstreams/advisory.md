@@ -10,7 +10,16 @@
 
 ## You have now
 
-Routes, storage, and a basic ask page. Both agents return placeholders in the right shape.
+The Advisor page now provides a multi-turn chat backed by the configured Gemini provider and a small server-side retrieval step over the user's accounts, goals, recent transactions, life events, and latest simulation. When Gemini is unavailable, it returns a clear safe fallback. The ranked Advisory Agent still returns placeholder options. Quarterly reports now aggregate two stored
+quarters, use Gemini only for wording, validate every number, persist in MongoDB, generate a local
+PDF, and support email delivery with a mock default, Gmail SMTP, or the legacy Resend adapter. The PDF uses the dashboard palette
+and renders deterministic KPI cards, an asset-allocation pie, quarter-over-quarter range bars, a
+spending trend, simulator goal pathways with uncertainty bands, categorized planning suggestions,
+and non-guarantee labels. When no prior-quarter run exists, it produces a single-quarter baseline
+instead of blocking report generation.
+The Reports page also persists an automatic delivery frequency and recipient, shows delivery
+attempts, and visualizes the API's real monthly transaction aggregates with responsive charts.
+An external cron calls the API worker; MongoDB leases due schedules to prevent duplicate claims.
 
 ## Start here
 

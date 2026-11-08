@@ -8,8 +8,8 @@ Storage and data sources. Read the root `AGENTS.md` first. Briefs: `docs/workstr
 | `src/memory.ts` | Default in-memory implementations |
 | `src/profile.ts` | Demo profile schema, loader, `buildSnapshot` |
 | `src/tiger/` | Tiger Data stub and `schema.sql` |
-| `src/mongo/` | MongoDB Atlas stub |
-| `src/bank.ts` | Bank providers: synthetic default, Plaid stub |
+| `src/mongo/` | MongoDB Atlas `DocumentStore` implementation |
+| `src/bank.ts` | Bank providers: synthetic demo data |
 | `fixtures/planner.json` | The demo profile |
 
 ## What goes where
@@ -22,7 +22,8 @@ Do not add a third store. Spacetime is for live push only.
 
 ## Rules
 
-- Routes use the interfaces, never a driver. `createStores` picks the implementation from `DATA_BACKEND`.
+- Routes use the interfaces, never a driver. `createStores` picks implementations from `LEDGER_BACKEND` and `DOCUMENT_BACKEND`; `DATA_BACKEND` remains as a compatibility switch.
+- In development, an invalid MongoDB URI logs a credential-safe warning and falls back to the memory document store so the demo remains runnable. Production fails closed.
 - A new store method goes on the interface, in memory, and in the real implementation.
 - Money stays integer cents in every store.
 - Run documents store inputs and outputs in full, so diffs read stored results and never recalculate.

@@ -26,6 +26,7 @@ export const SpendingSummary = z.object({
       changeVsPriorMonthCents: Cents,
     }),
   ),
+  monthlyTrend: z.array(z.object({ month: z.string(), incomeCents: Cents, spendingCents: Cents })).default([]),
 });
 export type SpendingSummary = z.infer<typeof SpendingSummary>;
 

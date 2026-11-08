@@ -2,6 +2,8 @@ import type {
   Account,
   CopilotAction,
   CopilotEvent,
+  EmailSchedule,
+  EmailScheduleLogEntry,
   Goal,
   LifeEvent,
   NewGoal,
@@ -36,14 +38,34 @@ export interface DocumentStore {
   saveSimulationRun(run: SimulationRun): Promise<SimulationRun>;
   getSimulationRun(userId: string, id: string): Promise<SimulationRun | null>;
   /** Newest first. */
-  listSimulationRuns(userId: string): Promise<SimulationRun[]>;
+  listSimulationRuns(userId: string, range?: TimeRange): Promise<SimulationRun[]>;
   saveCopilotEvent(event: CopilotEvent): Promise<CopilotEvent>;
   getCopilotEvent(userId: string, id: string): Promise<CopilotEvent | null>;
   setCopilotAction(userId: string, id: string, action: CopilotAction): Promise<CopilotEvent | null>;
   /** Newest first. */
-  listCopilotEvents(userId: string): Promise<CopilotEvent[]>;
+  listCopilotEvents(userId: string, range?: TimeRange): Promise<CopilotEvent[]>;
   saveRecommendation(recommendation: Recommendation): Promise<Recommendation>;
+  /** Newest first. */
+  listRecommendations(userId: string, range?: TimeRange): Promise<Recommendation[]>;
   saveReport(report: QuarterlyReport): Promise<QuarterlyReport>;
+  getReport(userId: string, id: string): Promise<QuarterlyReport | null>;
+  getReportByQuarter(userId: string, quarter: string): Promise<QuarterlyReport | null>;
+  updateReport(report: QuarterlyReport): Promise<QuarterlyReport>;
   /** Newest first. */
   listReports(userId: string): Promise<QuarterlyReport[]>;
+  getEmailSchedule(userId: string): Promise<EmailSchedule | null>;
+  saveEmailSchedule(userId: string, schedule: EmailSchedule): Promise<EmailSchedule>;
+  claimNextDueEmailSchedule(
+    now: string,
+    leaseExpiresAt: string,
+    attemptId: string,
+  ): Promise<EmailSchedule | null>;
+  recordEmailScheduleLog(userId: string, entry: EmailScheduleLogEntry): Promise<void>;
+  listEmailScheduleLogs(userId: string, limit?: number): Promise<EmailScheduleLogEntry[]>;
+}
+
+/** Inclusive start, exclusive end. */
+export interface TimeRange {
+  start: string;
+  end: string;
 }

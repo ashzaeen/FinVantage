@@ -21,7 +21,7 @@ Both clients call one backend. The math core and simulator produce every figure 
 | --- | --- | --- | --- |
 | `LedgerStore` | In memory | Tiger Data | `DATA_BACKEND` |
 | `DocumentStore` | In memory | MongoDB Atlas | `DATA_BACKEND` |
-| `BankDataProvider` | Synthetic | Plaid sandbox | `BANK_PROVIDER` |
+| `BankDataProvider` | Synthetic demo data only | No external bank connector in this build | Fixed synthetic provider |
 | `LlmClient` | Mock (always fails, so fallbacks run) | Gemini | `LLM_PROVIDER` |
 | `LiveBus` | In-process SSE | Spacetime | `LIVE_TRANSPORT` |
 

@@ -15,6 +15,22 @@ Nothing here has been deployed yet. This is the plan from the PRD, for the platf
 
 See `.env.example`. A real deployment sets `WEB_ORIGIN`, `DEMO_API_TOKEN`, `DATA_BACKEND=real`, the connection strings, and `LLM_PROVIDER=gemini` with its key and model names.
 
+## Scheduled report email
+
+Keep the Hono API as the persistent worker and configure the hosting provider's cron service to
+call it every five minutes:
+
+```bash
+curl --fail --silent --show-error --request POST \
+  --header "Authorization: Bearer $SCHEDULER_SECRET" \
+  https://api.example.com/internal/reports/schedule/run
+```
+
+The endpoint is protected separately from the public demo token. MongoDB atomically leases each
+due schedule, so concurrent cron calls or multiple API instances do not process the same scheduled
+occurrence. Every attempt is stored in `email_schedule_logs`; failed Gmail SMTP authentication is
+shown in the Reports UI and retried after 15 minutes.
+
 ## Extension for a deployed API
 
 1. Add the API origin to `host_permissions` in `apps/extension/manifest.json`.

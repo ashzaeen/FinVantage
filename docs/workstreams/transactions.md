@@ -8,7 +8,7 @@ The synthetic demo profile, then the transaction pipeline: categorization, budge
 
 ## You have now
 
-One demo profile with all account types, and only ten transactions. Income and spending come straight from the fixture. Budgets, recurring charges, bills, the summary, and net worth history are canned.
+One demo profile with all account types and ten seed transactions. Spending category totals, month-over-month changes, six-month income/spending trend, and recurring-charge lists now derive from ledger transactions. Budget limits remain demo defaults. Recurring cadence is estimated monthly from the fixture flag and next date is a 30-day estimate. Net worth history and fully inferred recurring cadence remain unfinished.
 
 ## Start here
 

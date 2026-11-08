@@ -3,7 +3,7 @@ import { loadDemoProfileFixture } from "./profile";
 
 export class NotImplementedError extends Error {}
 
-/** Where account data comes from. Synthetic by default; Plaid sandbox is P2. */
+/** Synthetic demo data only. Live bank connections are not enabled in this version. */
 export interface BankDataProvider {
   readonly name: string;
   createLinkToken(userId: string): Promise<string>;
@@ -13,28 +13,10 @@ export interface BankDataProvider {
 class SyntheticProvider implements BankDataProvider {
   readonly name = "synthetic";
 
-  async createLinkToken() {
-    return "synthetic-link-token";
-  }
-
-  async exchangePublicToken() {
-    return loadDemoProfileFixture().accounts;
-  }
+  async createLinkToken() { return "synthetic-link-token"; }
+  async exchangePublicToken() { return loadDemoProfileFixture().accounts; }
 }
 
-/** STUB(platform): P2, sandbox only. Production bank connections are out of scope for v1. */
-class PlaidProvider implements BankDataProvider {
-  readonly name = "plaid";
-
-  async createLinkToken(): Promise<string> {
-    throw new NotImplementedError("Plaid sandbox is not wired up yet.");
-  }
-
-  async exchangePublicToken(): Promise<Account[]> {
-    throw new NotImplementedError("Plaid sandbox is not wired up yet.");
-  }
-}
-
-export function createBankProvider(env: NodeJS.ProcessEnv = process.env): BankDataProvider {
-  return env.BANK_PROVIDER === "plaid" ? new PlaidProvider() : new SyntheticProvider();
+export function createBankProvider(_env: NodeJS.ProcessEnv = process.env): BankDataProvider {
+  return new SyntheticProvider();
 }
