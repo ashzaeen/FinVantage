@@ -66,6 +66,8 @@
   --series-2:        #0a8fb0;
   --series-3:        #d4691a;
   --series-4:        #1f9e6e;
+  /* Soft background for the cyan category tone, beside --series-2. */
+  --tone-cyan-bg:    #e3f8fd;
 
   /* Budget bars: the lighter bar behind spending shows the projected month end */
   --budget-projected:      #cbc7fc;

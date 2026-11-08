@@ -8,7 +8,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { canonicalCategoryId, parentCategoryId } from "@finvantage/contracts";
+import { canonicalCategoryId, parentCategoryId, topCategoryId } from "@finvantage/contracts";
 
 /**
  * One icon per default category and subcategory. A category the user made has no entry and takes
@@ -64,15 +64,59 @@ export function iconForCategory(id: string | null | undefined): LucideIcon {
 }
 
 /** A category's icon in a soft rounded tile, for lists. `bare` drops the tile. */
+/** Six tones from the design tokens, so a category reads at a glance and themes still apply. */
+const TONES = {
+  purple: { bg: "var(--accent-soft)", fg: "var(--accent)" },
+  blue: { bg: "var(--info-bg)", fg: "var(--info)" },
+  green: { bg: "var(--good-bg)", fg: "var(--good)" },
+  amber: { bg: "var(--warning-bg)", fg: "var(--warning)" },
+  red: { bg: "var(--critical-bg)", fg: "var(--critical)" },
+  cyan: { bg: "var(--tone-cyan-bg)", fg: "var(--series-2)" },
+} as const;
+
+/** Each top-level category's tone. Subcategories and custom categories inherit their top level's. */
+const CATEGORY_TONE: Record<string, keyof typeof TONES> = {
+  housing: "blue",
+  utilities: "amber",
+  groceries: "green",
+  transportation: "cyan",
+  insurance: "blue",
+  health: "red",
+  childcare_education: "purple",
+  debt_payments: "red",
+  taxes_fees: "amber",
+  dining_out: "amber",
+  entertainment: "purple",
+  shopping: "red",
+  personal_care: "purple",
+  travel: "cyan",
+  rides: "cyan",
+  home_pets: "green",
+  giving: "green",
+  other_spending: "purple",
+  unknown: "purple",
+  savings_investing: "green",
+  income: "green",
+  transfers: "blue",
+};
+
+export function categoryTone(id: string | null | undefined) {
+  // Old stored ids are read as their current ones, as everywhere else.
+  return TONES[(id ? CATEGORY_TONE[topCategoryId(canonicalCategoryId(id))] : undefined) ?? "purple"];
+}
+
 export function CategoryIcon({
   id,
   size = 16,
   bare = false,
+  colored = false,
   className = "",
 }: {
   id: string | null | undefined;
   size?: number;
   bare?: boolean;
+  /** Color the tile by category instead of the accent, as on Transactions. */
+  colored?: boolean;
   className?: string;
 }) {
   const Icon = iconForCategory(id);
@@ -81,7 +125,12 @@ export function CategoryIcon({
   return (
     <span
       className={`inline-flex shrink-0 items-center justify-center rounded-xl ${className}`}
-      style={{ width: size + 16, height: size + 16, background: "var(--accent-soft)", color: "var(--accent)" }}
+      style={{
+        width: size + 16,
+        height: size + 16,
+        background: colored ? categoryTone(id).bg : "var(--accent-soft)",
+        color: colored ? categoryTone(id).fg : "var(--accent)",
+      }}
     >
       {icon}
     </span>
