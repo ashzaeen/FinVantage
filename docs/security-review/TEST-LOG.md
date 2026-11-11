@@ -1,7 +1,7 @@
 # Security review test log
 
 Raw, dated notes for every test, including the ones that fail or get blocked.
-`SECURITY_REVIEW.md` is written from this log at the end.
+[`SECURITY_REVIEW.md`](SECURITY_REVIEW.md) is the finished report, written from this log (2026-11-11, after the final check below).
 
 - Branch: `security-review` (local only, not pushed; the repo is public and the live demo is unfixed)
 - Target: local only. API `http://localhost:4000`, web `http://localhost:3000`
