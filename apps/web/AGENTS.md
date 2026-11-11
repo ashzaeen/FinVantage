@@ -19,6 +19,7 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
 | `src/components/finance` | Domain pieces: `ProbabilityRange`, `GoalCard`, `FanChart` |
 | `src/app/(app)/advisor/visuals` | The Advisor's interactive visuals and their shared pieces (`shared.tsx`: chips, sliders, the fan chart, the recompute hook). They never compute figures; they ask `POST /v1/advisory/visuals` |
 | `src/lib/api.ts` | The typed API client |
+| `src/lib/session-fetch.ts` | The fetch behind `api`: sends the visitor's token, and in the browser swaps a refused session for a new guest session (see `docs/DECISIONS.md`, refused sessions). Tested in `session-fetch.test.ts` |
 | `src/lib/useLiveEvents.ts` | Subscribes to pushed updates: SpacetimeDB when signed in, SSE otherwise |
 | `src/spacetime/` | Generated SpacetimeDB client bindings. Do not edit: run `npm run generate -w @finvantage/spacetime` |
 | `src/lib/nav.ts` | Navigation items |
@@ -40,7 +41,8 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
   - Everything respects `prefers-reduced-motion`. The classes live at the end of `src/app/globals.css`.
 - **Title Case for interface labels.** Headings, page titles, buttons, links, tabs, nav items, badges, form labels and card titles use Title Case: "Try the Demo", "Create Your Account", "Life Events". Keep a, an, the, and, but, or, nor, for, so, yet, as, at, by, in, of, on, to and up lowercase unless they come first or last. Body copy, descriptions, helper text and error messages stay as normal sentences. Brand names keep their own casing (FinVantage, GitHub).
 - Dashboard pages are dynamic through `export const dynamic` in `(app)/layout.tsx`, because `no-store` alone no longer keeps them dynamic under `next build --webpack`. They need the API running, and `(app)/error.tsx` handles it being down. The landing page stays static and loads its preview in the browser.
-- The landing hero embeds `LoginForm`, and "Try the demo" opens `/app` signed out, so the API client sends the demo token. After sign-in, `nextPath()` goes to `?next=` or else `/app`.
+- The landing hero embeds `LoginForm`, and "Use a Demo" opens `/app` signed out. `src/proxy.ts` gives each signed-out visitor a private guest session (`POST /auth/guest`) before a dashboard page renders; the shared demo token is read-only and is only a fallback when no guest session can be had. After sign-in, `nextPath()` goes to `?next=` or else `/app`.
+- Plain modules in `src/lib` can have `*.test.ts` beside them; `npm test -w @finvantage/web` runs them, and `npm run check` includes them.
 
 ## Working on it
 

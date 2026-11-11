@@ -288,3 +288,12 @@ Answers to the open questions above. These replace those rows.
 | The API sends `secureHeaders` and `no-store` on `/v1`; the web app sends frame, sniff, referrer and HSTS headers. No script CSP yet | Cheap protection against framing and sniffing. A full CSP needs nonces for Next's inline scripts |
 | `safeNextPath` (contracts) decides the post-sign-in redirect by resolving the URL and comparing origins | `/login?next=/\evil.example` passed the old text check and left the site |
 | Card and report number check: look-alike digits are normalized, commas must group thousands, a money figure must be written with `$`, shorthand (`2k`, `ten grand`, `double`) is refused, and a name is removed only as a whole name. This replaces the F3 wording above | A goal named "7" deleted a digit from "$71,499"; "$14,99", "599 months" and "$2k" passed |
+
+## Refused sessions, decided 2026-11-11 (security review R-4)
+
+| Decision | Why |
+|---|---|
+| In the browser, when the API refuses the saved token (401), or refuses a demo-token write (403 `demo_read_only`), the web client starts a new guest session, saves it in `fv_token`, and retries (`createSessionFetch` in `apps/web/src/lib/session-fetch.ts`). Requests that fail together share one new session. It falls back to the read-only demo token only if no guest session can be started; on the server it falls back to the demo token so the page renders. This replaces "a refused cookie falls back to the demo token" | Since the demo token became read-only, that fallback left a visitor with a still-unexpired but refused cookie (signing key changed, or a local API restart) unable to write: the Advisor failed with `403 demo_read_only`. Setting or rotating the production signing key would do this to every returning visitor |
+| The Advisor shows the cause of a failed send (rate limit, ended session, rejected input) instead of one generic "couldn't reach" message | The generic message hid a 403 and sent debugging toward Gemini and the network |
+| `apps/web` has its own `npm test` (Node's runner through `tsx`) for plain modules in `src/lib`. Components still aren't unit-tested | The session logic needed a regression test, and contracts must stay free of logic |
+

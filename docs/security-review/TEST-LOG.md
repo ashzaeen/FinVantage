@@ -475,3 +475,32 @@ Before writing `SECURITY_REVIEW.md`, every headline claim was re-run rather than
 | FC-05 | `npm run check` | **349/349 pass** (348 + 1), typecheck clean |
 
 Lesson: the second-review fix had a probe and 13 new tests, and the old W2 probe was even listed as re-run (VR-04), yet the control that would catch it was misread. A control case is only useful if its result is actually read.
+
+## Browser check before release (2026-11-11)
+
+Clicked through the local site (`localhost:3000`, real Gemini) before pushing.
+
+| # | Check | Result |
+|---|---|---|
+| BC-01 | Chrome: send an Advisor message | **Failed**: "I couldn't reach the Advisor." Goals and Copilot looked fine in the same session |
+| BC-02 | Same calls by hand with a fresh guest token | `POST /v1/advisory/conversations` 200, then `.../messages` 200: the API was fine |
+| BC-03 | Reproduce: a guest token signed by a second API process (a different throwaway key), set as `fv_token` in the browser | Network: `GET /v1/advisory/conversations` **401** → retry with the demo token 200 → `POST /v1/advisory/conversations` **403 `demo_read_only`** → generic error. Reproduced |
+
+### R-4: a refused session made the dashboard read-only (regression)
+
+- **Cause:** locally the API signs tokens with a throwaway key, and `tsx watch` makes a new one on each restart, so an older `fv_token` stops verifying. `proxy.ts` only checks expiry, so it keeps that cookie. The web client's existing 401 handler then fell back to the shared demo token, which FV-01 made read-only. Reads kept working, so most pages looked fine; the first write failed. Goals "worked" only because reads did.
+- **Impact on real visitors:** production has a fixed signing key, but setting or rotating it (as this deploy may) refuses every existing cookie at once, and every returning visitor would get a read-only dashboard until a full reload.
+- **Fix:** `apps/web/src/lib/session-fetch.ts`. In the browser, a refused session, or a demo-token write refused with `demo_read_only`, starts a new guest session (`POST /auth/guest`), saves it, and retries. Parallel failures share one new session. Only if no guest session can be had does it fall back to the demo token. On the server it still falls back to the demo token so the page renders. `AdvisorClient.tsx` now names the cause: 429, ended session, rejected input, or the old message for anything else.
+- **Regression tests:** six in `apps/web/src/lib/session-fetch.test.ts` (new `test` script in `apps/web`), including "a cookie the API no longer accepts is replaced with a new guest session, so writes still work". **Mutation check:** with the guest-session retry switched off, the three recovery tests fail; the other three cover fallbacks that should not change and pass either way. With the fix, 6 of 6 pass.
+
+| # | Check | Result |
+|---|---|---|
+| BC-04 | BC-03 repeated after the fix | `401` → `POST /auth/guest` 200 → retry 200 → conversation 200 → message 200; the Advisor answered |
+| BC-05 | All 17 pages (landing, sign-in, legal, 14 dashboard pages) | All load with data. Income and Investments briefly show $0 while `CountUp` animates; not a bug |
+| BC-06 | UI writes as a guest | Goal created; New Baby life event analyzed (the new goal appeared in it); quarterly report generated; its PDF link returned a valid PDF |
+| BC-07 | "Use a Demo" from the landing page, signed out | New private `guest_` session, dashboard loads |
+| BC-08 | API sweep through the typed client (15 checks) | Guest isolation (read and delete), add transaction, demo token reads / 403 on write / Copilot allowed, extra Copilot field 400, sign-up, log-in, wrong password 401, report to a stranger 403, garbage token 401: **all pass** |
+| BC-09 | `npm run check` | **355/355 pass** (349 + 6), typecheck clean |
+
+Not covered: the new Advisor error messages were not triggered in the browser (they are shown only on 429, 400/413 or an ended session); the extension was not reloaded.
+

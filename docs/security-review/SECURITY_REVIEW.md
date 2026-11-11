@@ -5,7 +5,7 @@
 | **Application** | FinVantage (HackUTD, 2nd place, PNC track): Next.js dashboard, Chrome extension "Copilot", Hono API, Gemini-backed AI Advisor and Copilot cards |
 | **Reviewer** | Aram, co-builder (Copilot extension, simulator, AI guardrails), assisted by AI coding tools |
 | **Date** | 2026-11-11 |
-| **Code reviewed** | `security-review` branch, commits `9495c84` to `d4c9e09` (base `12ca6bf`) |
+| **Code reviewed** | `security-review` branch, commits `9495c84` to `388b19d` (base `12ca6bf`) |
 | **Status** | All confirmed findings fixed or reduced on the branch. **Not yet deployed**: the live demo still runs the pre-review code |
 | **Raw notes** | [`TEST-LOG.md`](TEST-LOG.md): every test, including failed attempts and mistakes |
 
@@ -25,9 +25,9 @@ Other findings:
 - There was no rate limiting on login, guest sessions or the AI routes.
 - Visitors shared each other's chat history.
 
-An **independent second review** then tested the fixes and found new issues, **three of them caused by the fixes themselves**. Those are fixed too. Some risks remain open and are listed in section 6.
+An **independent second review** then tested the fixes and found new issues, **three of them caused by the fixes themselves**. A browser check before release found a fourth (R-4). Those are fixed too. Some risks remain open and are listed in section 6.
 
-**Tests:** 316 at the start, **349** at the end, all passing. Every security fix has a regression test, and each test was checked by switching its fix off and confirming the test fails.
+**Tests:** 316 at the start, **355** at the end, all passing. Every security fix has a regression test, and each test was checked by switching its fix off and confirming the test fails.
 
 ### Findings at a glance
 
@@ -43,7 +43,7 @@ An **independent second review** then tested the fixes and found new issues, **t
 | FV-08 | Open redirect after sign-in | Low–Medium | Fixed |
 | FV-09 | CPU-heavy simulation routes not limited | Low–Medium | Fixed |
 | FV-10 | Hardening: no security headers, token accepted in URLs, unchecked links, non-constant-time secret compare | Low / Info | Fixed |
-| R-1, R-2, R-3 | **Regressions introduced by the fixes** (section 4) | Medium / Low | Fixed |
+| R-1 to R-4 | **Regressions introduced by the fixes** (section 4) | Medium / Low | Fixed |
 
 ---
 
@@ -179,7 +179,7 @@ Evidence: [before](evidence/W4-burst-35-before-fix.txt), [after](evidence/W4-bur
 Design choices:
 - Everyone on the shared demo token is counted **per address**, so one caller can't use up every extension user's allowance.
 - The guest limit is generous on purpose, because judges at a venue share one Wi-Fi address.
-- When a limit is hit, the clients fail safe: the dashboard falls back to read-only, and the extension stays silent.
+- When a limit is hit, the clients fail safe: the dashboard falls back to read-only, and the extension stays silent. A refused or expired session is different: the dashboard replaces it with a new guest session (R-4).
 
 **Verification:** six tests plus per-account login tests, each mutation-checked, and the burst rerun shown above.
 
@@ -272,8 +272,9 @@ These are the most useful lessons of the review. Each one came from a fix that w
 | **R-1** (Medium) | FV-01 + FV-04 together | The dashboard asks the API for guest sessions **from its own server**, so the API counted every visitor as one address. After 30 visitors in an hour, the demo silently went read-only for everyone, and anyone could cause that on purpose. | Second review: the local API was refusing new guests | The proxy forwards the visitor's address with a shared secret (`WEB_PROXY_SECRET`), and the API trusts that address only when the secret matches |
 | **R-2** (Medium) | FV-05 (names checked separately) | Removing a name from the text before reading numbers: a goal named "7" turned "$71,499" into the allowed "1,499" | Second review probe | Names are removed only as whole names, never inside a number |
 | **R-3** (Low) | FV-05 second-round fix (thousands grouping) | "At $1,200, your bills…" was read as `1,200,`, so a sentence comma got correct AI cards rejected. It fails safe (template shown), but it degraded a common sentence shape. It **likely** explains an unexplained template fallback in the final live check, though that wasn't reproduced | Final check: re-running the original probe showed a control failing (14 of 15), even though the log said 15 of 15 | Commas matched only between digit groups; regression test added and mutation-checked |
+| **R-4** (Medium) | FV-01 (read-only demo token) + an older 401 fallback in the web client | A cookie that looks valid but that the API refuses (signed with an earlier key, for example after the signing key changes) made the web client fall back to the shared demo token. That token is now read-only, so the visitor's next write failed: the Advisor showed "I couldn't reach the Advisor" because starting a chat got `403 demo_read_only`. Production would hit this for every existing visitor the moment the signing key is set or rotated | Browser check before release: in Chrome the Advisor failed while the same calls with a fresh guest token worked. Network log: `401`, then retry with the demo token, then `403 demo_read_only` | In the browser, a refused session (or a refused demo-token write) now starts a fresh guest session and retries; requests that fail at the same moment share one new session. The demo token is used only if no guest session can be started. The Advisor names the cause (rate limit, ended session, rejected input) instead of one generic message. Six regression tests in `apps/web/src/lib/session-fetch.test.ts`; checked in the browser with a refused cookie (`401` → `POST /auth/guest 200` → retry `200`) |
 
-**Takeaway:** security fixes need the same review as features. Two of the three regressions were caught only by an independent reviewer. The third was caught only by re-running old tests instead of trusting the log.
+**Takeaway:** security fixes need the same review as features. Two of the four regressions were caught only by an independent reviewer. The third was caught only by re-running old tests instead of trusting the log. The fourth passed every API-level check and showed up only when the app was clicked through in a real browser with an older cookie.
 
 ---
 
@@ -335,6 +336,6 @@ Everything is in this folder. Run from the repo root, with the API running local
 | Email recipient (FV-03) | `npx tsx docs/security-review/w3-email-probe.ts` | [before](evidence/W3-email-probe-before-fix.txt), [after](evidence/W3-email-probe-after-fix.txt) |
 | Burst (FV-04) | `npx tsx docs/security-review/w4-burst-probe.ts 35` | [before](evidence/W4-burst-35-before-fix.txt), [after](evidence/W4-burst-35-after-fix.txt) |
 | Second review (in process, no network) | `npx tsx docs/security-review/review2-probe.ts` | [before](evidence/R2-probe-before-fix.txt), [after](evidence/R2-probe-after-fix.txt) |
-| All tests | `npm run check` | 349/349 |
+| All tests | `npm run check` | 355/355 |
 
 Screenshots from Burp and the app are in [`evidence/`](evidence/) (`W1-*`, `V1-*`, `S1-*`). The design decisions behind each fix are recorded in [`docs/DECISIONS.md`](../DECISIONS.md).
