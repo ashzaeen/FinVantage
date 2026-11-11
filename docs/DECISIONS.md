@@ -262,3 +262,10 @@ Answers to the open questions above. These replace those rows.
 | The chat money check also reads "N grand", "N bucks", "USD N", "N USD", a bare "Nk" (not before a non-money unit such as "miles"), and spelled-out amounts. Financial names ("401k") are removed first. This widens the forms "Rule 1, narrowed for chat" covers; plain numbers and percentages stay unchecked | These are dollar amounts within that rule's own scope, and each passed unchecked |
 | `validateCard` takes names (accounts, cards, goals) separately and removes them from the text before checking numbers, instead of adding them to the allowed figures. This replaces "names count as allowed text" | A goal named "Trip 2000" approved "$2,000" anywhere in the card. A name's digits now count only where the name is written |
 | On a caution verdict, a Copilot card with a plainly approving phrase ("go ahead", "great choice", "easily afford"...) uses the template (`contradictsVerdict`). Hedged template lines are not on the list | "The math decides the verdict" was only a prompt instruction; a cheerful card on a caution verdict passed every check. This is a tripwire, not a full tone check |
+
+## Report email, decided 2026-11-11 (security review W3)
+
+| Decision | Why |
+|---|---|
+| The server decides who receives a report: `REPORT_EMAIL_OVERRIDE` if set, else the account's own address. A request may still name a recipient (`to`, `recipientEmail`), but it must match, or it gets 403 `recipient_not_allowed`. Scheduled sends look the recipient up again at send time. This replaces "the request's address wins" | Anyone with a token could make FinVantage email a report, with text they wrote into it, to any address, once or monthly. The override was only a fallback, not the lock the README implied |
+| Guests and the shared demo user can't email reports (403 `sign_in_required`); generating a report still works, and its email is recorded as skipped | Same rule as bank linking: they are demo copies whose address is the demo persona's |

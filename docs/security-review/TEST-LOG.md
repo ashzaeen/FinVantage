@@ -17,7 +17,7 @@ Raw, dated notes for every test, including the ones that fail or get blocked.
 | W1 | Shared public demo token: cross-user writes and stored prompt injection | **Confirmed and fixed** (guest sessions + read-only demo token). Tests, mutation check, manual retest done. Commit `9495c84` | High |
 | W5 | Shared Advisor chat history across visitors (found during W1) | **Confirmed and fixed** with W1 | Medium |
 | W2 | Guardrails check digits, not meaning (G1–G7) | **Confirmed and fixed** (F1, F2, F3). Probe before/after, tests, mutation check, live Gemini check done | Medium (G2), Low–Medium (rest) |
-| W3 | Report email to any recipient | Not started | TBD |
+| W3 | Report email to any recipient (email relay) | **Confirmed and fixed** (server picks the recipient; guests and demo can't email). Probe before/after, 4 tests, mutation check | Medium |
 | W4 | No rate limiting on model-backed routes (and now guest creation) | Not started | TBD |
 | Minor | Token in `?token=` URL; 7-day tokens, no revocation | Observed (S2); guest tokens now 1 day. Not started | Low |
 
@@ -178,7 +178,51 @@ Limits of V2-05: one run of 8 scenarios. Accepted cards are cached per identical
 
 ## W3: Report email recipient
 
-_Not started._
+### Root cause (code review)
+
+- `POST /v1/reports/quarterly/:id/email` accepts `{ "to": <any valid email> }` (`packages/contracts/src/api.ts`), and `POST /v1/reports/schedule` accepts any `recipientEmail` (`packages/contracts/src/advisory.ts`).
+- `emailReport` in `apps/api/src/routes/agents.ts` picked the recipient as `recipientOverride ?? deps.reportEmailOverride ?? user.email`. **The request's address came first**, so `REPORT_EMAIL_OVERRIDE` (which the README presents as the demo recipient) was only a fallback and **did not mitigate** this.
+- The web app never uses either option (it generates reports with `email: false`). The capability existed only in the API.
+
+### Test (2026-11-11, local only, mock mail)
+
+`MAIL_PROVIDER` unset, so the mock mailer delivers nothing. The recipient was `someone-else@example.com` (`example.com` is reserved for documentation and can't receive mail). Script: [`w3-email-probe.ts`](w3-email-probe.ts).
+
+| # | Step | Before the fix | After the fix |
+|---|---|---|---|
+| W3-01 | Public `demo-token` generates a report | 403 `demo_read_only` (already blocked by the W1 fix) | 403 |
+| W3-02 | A guest (any signed-out visitor) emails their report to a stranger | **200, `email.status=sent`** | **403 `sign_in_required`** |
+| W3-03 | A guest schedules monthly reports to a stranger | **200, recipient saved** | **403 `sign_in_required`** |
+| W3-04 | The guest's "own" address | `jordan@example.com`, the demo persona's | (same: why guests may not email) |
+
+Evidence: [`evidence/W3-email-probe-before-fix.txt`](evidence/W3-email-probe-before-fix.txt), [`evidence/W3-email-probe-after-fix.txt`](evidence/W3-email-probe-after-fix.txt).
+
+**Impact:** anyone could make FinVantage send official-looking email, carrying report text they partly wrote (goal names, per W1), to any address, once or on a schedule. That's an **email relay**: spam and phishing risk, and damage to the sending domain's reputation. Before the W1 fix it needed only the public token. **Proposed severity: Medium.** It doesn't leak another user's data (after W1, a visitor can only send their own copy), but it's abuse of the server's identity.
+
+### Fix (2026-11-11)
+
+| Change | Where |
+|---|---|
+| The server decides the recipient (`reportRecipient`): `REPORT_EMAIL_OVERRIDE` if set, else the account's own address. The operator's override now **wins** | `apps/api/src/routes/agents.ts` |
+| A request that names a recipient must match it, ignoring case, or gets **403 `recipient_not_allowed`** (`requireAllowedRecipient`). Applies to the email route and to saving a schedule | `agents.ts` |
+| Guests and the shared demo user can't email reports (**403 `sign_in_required`**), the same rule as bank linking. Generating a report still works; with `email: true` the email part is recorded as failed ("Sign in to email reports.") | `agents.ts` |
+| Scheduled sends (on demand and the internal scheduler tick) ignore the stored recipient and look it up again at send time, so a schedule saved before the fix can't reach a stranger | `agents.ts` |
+
+The contracts are unchanged (`to` and `recipientEmail` stay, now validated), so no client breaks.
+
+### Verification
+
+| # | Check | Result |
+|---|---|---|
+| V3-01 | 4 new regression tests in `apps/api/src/app.test.ts`, using a mailer that records each recipient | A stranger as `to` or schedule recipient gets 403 and nothing is sent; the account's own address works (named or not, any case); guests and the demo user get 403; `REPORT_EMAIL_OVERRIDE` wins over account and request; a stored stranger's address is never used by a scheduled send |
+| V3-02 | Mutation check: switched off each safeguard alone | Recipient check off fails 2 W3 tests; guest/demo block off fails the guest test; override-loses fails the override test; trusting the stored address fails the schedule test. Each safeguard is guarded |
+| V3-03 | Existing tests updated | The schedule test now uses a signed-up account sending to its own address. The quarterly report test keeps all its report checks; its last line now expects the demo user's email to be skipped (the new correct behavior) |
+| V3-04 | Same probe against the running API after the fix | Guest email and schedule to a stranger: **403 `sign_in_required`** |
+| V3-05 | `npm run check` | **329/329 pass** (325 + 4), typecheck clean. Note: the first run caught 4 type errors in the new test code that the test runner alone missed (it doesn't typecheck); fixed |
+
+### Residual risk after the W3 fix
+
+- **Sign-up doesn't verify email addresses.** Someone can sign up as `victim@example.com`, and that account's reports go to the victim. Each account reaches only its one address, and creating many accounts is a rate-limit problem (W4). A real banking app would verify the address before sending anything to it.
 
 ## W4: Rate limiting
 

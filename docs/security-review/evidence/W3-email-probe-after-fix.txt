@@ -1,0 +1,6 @@
+API: {"ok":true,"llm":"gemini","live":"sse"}
+demo-token  generate report            -> HTTP 403 demo_read_only
+guest       generate report            -> HTTP 200 pdf=ready id=68bfc717-ebb5-47b4-96ec-ee568d309536
+guest       email report to someone-else@example.com -> HTTP 403 email.status=sign_in_required
+guest       schedule monthly to someone-else@example.com -> HTTP 403 saved recipient=sign_in_required
+guest       account email on file      -> "jordan@example.com"

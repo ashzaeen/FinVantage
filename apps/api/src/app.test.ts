@@ -144,6 +144,91 @@ test("W5: Advisor conversations are private to each guest session", async () => 
   assert.equal(await statusOf(visitorB.getAdvisorConversation({ params: { id: chat.id } })), 404);
 });
 
+/* ─── Security review W3: the server decides who receives a report ───────── */
+
+/** A mailer that records each recipient instead of sending, so tests can see where mail would go. */
+function recordMail(deps: ReturnType<typeof setup>["deps"]): string[] {
+  const sentTo: string[] = [];
+  deps.mail = {
+    sendReport: async ({ to }: { to: string }) => {
+      sentTo.push(to);
+      return { messageId: `test-${sentTo.length}` };
+    },
+  } as unknown as typeof deps.mail;
+  return sentTo;
+}
+
+async function signedUpReport(clientFor: ReturnType<typeof setup>["clientFor"], email: string) {
+  const { token } = await clientFor("").signUp({ body: { displayName: "Owner", email, password: "s3cret-pass" } });
+  const client = clientFor(token);
+  return { client, report: await client.generateReport({ body: { email: false } }) };
+}
+
+test("W3: a report can't be emailed or scheduled to an address the account doesn't own", async () => {
+  const { clientFor, deps } = setup();
+  const sentTo = recordMail(deps);
+  const { client, report } = await signedUpReport(clientFor, "owner@example.com");
+
+  // The attack from the review: name a stranger as the recipient.
+  const stranger = "someone-else@example.com";
+  assert.equal(await statusOf(client.emailReport({ params: { id: report.id }, body: { to: stranger } })), 403);
+  assert.equal(
+    await statusOf(client.updateEmailSchedule({ body: { enabled: true, frequency: "monthly", recipientEmail: stranger } })),
+    403,
+  );
+  assert.deepEqual(sentTo, [], "nothing was sent");
+
+  // The account's own address still works, named or not, ignoring case.
+  assert.equal((await client.emailReport({ params: { id: report.id }, body: { to: "Owner@Example.com" } })).email.status, "sent");
+  assert.equal((await client.emailReport({ params: { id: report.id }, body: undefined })).email.status, "sent");
+  assert.deepEqual(sentTo, ["owner@example.com", "owner@example.com"]);
+});
+
+test("W3: guests and the shared demo user can't email reports at all", async () => {
+  const { app, asDemo, clientFor, deps } = setup();
+  const sentTo = recordMail(deps);
+  const guest = clientFor((await clientFor("").startGuestSession()).token);
+  const report = await guest.generateReport({ body: { email: true } });
+  assert.equal(report.email.status, "failed", "generating still works; only the email is skipped");
+  assert.equal(report.email.error, "Sign in to email reports.");
+  assert.equal(await statusOf(guest.emailReport({ params: { id: report.id }, body: undefined })), 403);
+  assert.equal(
+    await statusOf(guest.updateEmailSchedule({ body: { enabled: true, frequency: "monthly", recipientEmail: "jordan@example.com" } })),
+    403,
+  );
+
+  // The demo user, through a signed session or the public token.
+  const demoReport = (await (await asDemo("/v1/reports/quarterly", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: false }) })).json()) as { id: string };
+  assert.equal((await asDemo(`/v1/reports/quarterly/${demoReport.id}/email`, { method: "POST" })).status, 403);
+  const viaToken = await app.request(`/v1/reports/quarterly/${demoReport.id}/email`, {
+    method: "POST",
+    headers: { authorization: "Bearer demo-token", "content-type": "application/json" },
+    body: JSON.stringify({ to: "someone-else@example.com" }),
+  });
+  assert.equal(viaToken.status, 403);
+  assert.deepEqual(sentTo, []);
+});
+
+test("W3: the operator's REPORT_EMAIL_OVERRIDE wins over the account and any request", async () => {
+  const { clientFor, deps } = setup({ REPORT_EMAIL_OVERRIDE: "demo-inbox@example.com" });
+  const sentTo = recordMail(deps);
+  const { client, report } = await signedUpReport(clientFor, "owner@example.com");
+  assert.equal(await statusOf(client.emailReport({ params: { id: report.id }, body: { to: "someone-else@example.com" } })), 403);
+  await client.emailReport({ params: { id: report.id }, body: undefined });
+  assert.deepEqual(sentTo, ["demo-inbox@example.com"]);
+});
+
+test("W3: a scheduled send looks the recipient up again, so a stored stranger's address is never used", async () => {
+  const { clientFor, deps } = setup();
+  const sentTo = recordMail(deps);
+  const { client } = await signedUpReport(clientFor, "owner@example.com");
+  const saved = await client.updateEmailSchedule({ body: { enabled: true, frequency: "monthly", recipientEmail: "owner@example.com" } });
+  // A schedule saved before the fix could still hold a stranger's address.
+  await deps.docs.saveEmailSchedule(saved.userId, { ...saved, recipientEmail: "someone-else@example.com" });
+  assert.equal((await client.triggerScheduledEmail()).success, true);
+  assert.deepEqual(sentTo, ["owner@example.com"]);
+});
+
 test("the scheduler tick requires its separate server secret", async () => {
   const { app } = setup({ SCHEDULER_SECRET: "scheduler-test-secret" });
   assert.equal((await app.request("/internal/reports/schedule/run", { method: "POST" })).status, 401);
@@ -468,7 +553,7 @@ test("the advisory stub returns at least two options", async () => {
   assert.ok(advice.options.length >= 2);
 });
 
-test("a quarterly report compares consecutive quarters, saves a PDF, and emails it", async () => {
+test("a quarterly report compares consecutive quarters and saves a PDF; the shared demo user's copy is not emailed", async () => {
   const { app, client, deps } = setup();
   const baseline = await client.runSimulation({ body: { persist: false, seed: 41 } });
   const previous = await client.runSimulation({ body: { persist: false, seed: 41 } });
@@ -523,7 +608,10 @@ test("a quarterly report compares consecutive quarters, saves a PDF, and emails 
   );
   assert.ok(report.visuals.goalPathways.every((goal) => goal.points.length >= 2));
   assert.equal(report.pdf.status, "ready");
-  assert.equal(report.email.status, "sent");
+  // W3: the demo user is a shared copy, not an account, so its reports aren't emailed. Emailing an
+  // account's report is covered by the W3 tests.
+  assert.equal(report.email.status, "failed");
+  assert.equal(report.email.error, "Sign in to email reports.");
   assert.deepEqual(
     (await client.listReports()).map((item) => item.quarter),
     ["2026-Q3", "2026-Q2", "2026-Q1"],
@@ -557,8 +645,12 @@ test("a first-quarter report generates without a previous simulation", async () 
 });
 
 test("a saved email schedule can send on demand and records the outcome", async () => {
-  const { client } = setup();
-  await client.loadDemoProfile();
+  // A signed-in account schedules reports to its own address (W3: no other recipient is allowed).
+  const { clientFor } = setup();
+  const { token } = await clientFor("").signUp({
+    body: { displayName: "Scheduled", email: "scheduled@example.com", password: "s3cret-pass" },
+  });
+  const client = clientFor(token);
   const report = await client.generateReport({ body: { email: false } });
   const schedule = await client.updateEmailSchedule({
     body: {
