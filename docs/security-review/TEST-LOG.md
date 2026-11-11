@@ -22,6 +22,7 @@ Raw, dated notes for every test, including the ones that fail or get blocked.
 | R2 | Independent second review of the fixes and the rest of the app (see the last section) | **7 new items found, none fixed yet.** Isolation and the demo-token allowlist held | Medium (R2-1, R2-2, R2-3), Low–Medium (rest) |
 | Minor | Token in `?token=` URL; 7-day tokens, no revocation | `?token=` now limited to the stream and the PDF link; guest tokens 1 day; revocation not built | Low |
 | N/R2 | Second-review findings (size limits, redirect, shared guest limit, email and login limits, headers, guardrail forms) | **11 of 13 fixed**; see "Fixes for the second-review findings" | Low to Medium |
+| F1 | Final check: the second-review guardrail fix rejected correct figures followed by a comma | **Found and fixed**; see "Final check before the writeup" | Low (fails safe; quality regression) |
 
 ## Setup observations
 
@@ -450,3 +451,27 @@ Two reviews ran in parallel and logged overlapping findings under different IDs 
 - **Self-injection** (V1-06b) was never retested. Names are now capped at 80 characters, which limits it but doesn't remove it.
 - N3's fix is tested as a function; the redirect wasn't clicked through in a browser.
 - Not reviewed: the extension on live shopping sites, SpacetimeDB, Plaid and MongoDB backends, the deployed Vercel configuration.
+
+## Final check before the writeup (2026-11-11)
+
+Before writing `SECURITY_REVIEW.md`, every headline claim was re-run rather than copied from the log.
+
+| # | Check | Result |
+|---|---|---|
+| FC-01 | `npm run check` at `572bbf8` | 348/348, typecheck clean: **confirmed** |
+| FC-02 | Original W2 probe at `572bbf8` (VR-04 says "still 15 of 15 as expected") | **Not confirmed: 14 of 15.** Control C3 ("Buying this $1499 laptop drops checking to **$1,901,** under your $2,500 cushion", only correct figures) was **rejected** (`unknown figures: $1,901,`) |
+
+### F1: correct figures followed by a comma were rejected (regression)
+
+- **Cause:** the second-review guardrail rewrite read numbers with `\d[\d,]*`, which swallows a sentence comma after a figure. "At $1,200, your bills..." was read as `1,200,`, and the new "commas must group thousands" check then rejected it. `numbersIn` strips commas, so the older digit check never noticed; only the new grouping check did.
+- **Impact:** fails safe (the user gets the correct template card), but a common sentence shape sent correct Gemini cards to the template. Gemini writes exactly this: V2-05's accepted rent card read "At $1,200, your bills will take up 29%...". VR-06's unexplained fallback on the **rent $1,200** card is **likely** this bug, but that wasn't reproduced live, so it isn't claimed as confirmed.
+- **Fix:** commas are matched only between digit groups (`\d+(?:,\d+)*`), so punctuation after a figure isn't part of it. `$14,99` and `$12,00` are still refused. `packages/llm/src/guardrails.ts`, `validateNumbers`.
+- **Regression test:** "a correct figure followed by a sentence comma passes, while badly grouped digits still fail" (`packages/llm/src/guardrails.test.ts`). **Mutation check:** with the old pattern put back, the test fails; with the fix, it passes.
+
+| # | Check | Result |
+|---|---|---|
+| FC-03 | W2 probe after the fix | **15 of 15 as expected**: [`evidence/W2-probe-after-comma-fix.txt`](evidence/W2-probe-after-comma-fix.txt) |
+| FC-04 | Second-review guardrail probe after the fix | Unchanged: only K16 ("28 large") passes, as VR-03 says |
+| FC-05 | `npm run check` | **349/349 pass** (348 + 1), typecheck clean |
+
+Lesson: the second-review fix had a probe and 13 new tests, and the old W2 probe was even listed as re-run (VR-04), yet the control that would catch it was misread. A control case is only useful if its result is actually read.

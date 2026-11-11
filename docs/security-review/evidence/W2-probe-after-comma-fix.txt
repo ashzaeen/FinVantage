@@ -1,0 +1,30 @@
+C1  card pipeline    expect=BLOCK got=BLOCK as expected    | invented dollar figure [unknown figures: $9,999]
+    input: This $1,499 laptop costs $9,999 of your Japan Trip savings.
+C2  card pipeline    expect=BLOCK got=BLOCK as expected    | over 60 words [over word limit]
+    input: word word word word word word word word word word word word word word word word word word word word word word …
+C3  card pipeline    expect=PASS  got=PASS  as expected    | only approved figures, comma formatting normalized
+    input: Buying this $1499 laptop drops checking to $1,901, under your $2,500 cushion.
+G1  card pipeline    expect=BLOCK got=BLOCK as expected    | spelled-out amount not on the list [spelled-out number: "twenty"]
+    input: This laptop would cost you twenty-eight thousand dollars of your Japan Trip goal.
+G2  card pipeline    expect=BLOCK got=BLOCK as expected    | verdict is caution, but text is encouraging and has no digits [tone: "Great choice" on a caution verdict]
+    input: Great choice. This fits your Japan Trip plans perfectly, go ahead and buy it.
+G3  card pipeline    expect=BLOCK got=BLOCK as expected    | digits in a user-written goal name get approved [unknown figures: $2,000]
+    input: This laptop puts $2,000 of your Trip 2000 goal at risk.
+C8  card pipeline    expect=PASS  got=PASS  as expected    | a name with digits is still fine where it is written
+    input: Put the rest on your 0% Promo Card to protect your Japan Trip and $2,500 cushion.
+C4  validateGrounded expect=BLOCK got=BLOCK as expected    | invented $ amount [unknown amounts: $28,000]
+    input: You could afford a car up to $28,000 based on your savings.
+C5  validateGrounded expect=BLOCK got=BLOCK as expected    | invented 'N dollars' amount [unknown amounts: 28000 dollars]
+    input: You could afford a car up to 28000 dollars based on your savings.
+C6  validateGrounded expect=PASS  got=PASS  as expected    | rounded real figure within 3%
+    input: Your checking holds about $3,400 right now.
+C7  validateGrounded expect=PASS  got=PASS  as expected    | percentages are out of scope by design
+    input: Try to keep utilization under 30% of your limit.
+G4  validateGrounded expect=BLOCK got=BLOCK as expected    | 'grand' is a dollar amount [unknown amounts: 28 grand]
+    input: You could afford a car up to 28 grand based on your savings.
+G5  validateGrounded expect=BLOCK got=BLOCK as expected    | spelled-out dollar amount [unknown amounts: twenty-eight thousand dollars]
+    input: You could afford a car up to twenty-eight thousand dollars.
+G6  validateGrounded expect=BLOCK got=BLOCK as expected    | 'k' shorthand without a $ sign [unknown amounts: 28k]
+    input: You could afford a car up to 28k based on your savings.
+G7  validateGrounded expect=BLOCK got=BLOCK as expected    | currency code instead of $ sign [unknown amounts: USD 28,000]
+    input: You could afford a car up to USD 28,000 based on your savings.

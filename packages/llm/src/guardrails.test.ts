@@ -691,3 +691,14 @@ test("R2-6: a short name can't delete digits, commas must group thousands, and m
   assert.equal(withoutNames("$71,499 of your 7 goal", ["7"]).includes("71,499"), true);
   assert.equal(validateGrounded("You could spend up to 28 K on the car.", groundedFigures({ balanceCents: 340_000 })).ok, false, "C13");
 });
+
+test("a correct figure followed by a sentence comma passes, while badly grouped digits still fail", () => {
+  // Regression from the second-review fixes: "$1,200," was read as one number and rejected.
+  const allowed = ["$1,200", "$1,901", "$2,500", "29%"];
+  const card = (impact: string) => validateCard({ impact, tradeOff: "", smartMove: "" }, allowed);
+  assert.equal(card("At $1,200, your bills take 29% of your income.").ok, true);
+  assert.equal(card("Checking drops to $1,901, under your $2,500 cushion.").ok, true);
+  assert.equal(card("Rent is $1,200; checking stays at $1,901.").ok, true);
+  assert.equal(card("This costs $12,00, which is wrong.").ok, false, "commas must still group thousands");
+  assert.equal(card("This costs $1,2000 a month.").ok, false);
+});

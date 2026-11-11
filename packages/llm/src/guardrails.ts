@@ -55,7 +55,10 @@ export function validateNumbers(
   const moneyOnly = (number: string) =>
     dollars.has(number) && !allowedFigures.some((f) => !plain(f).includes("$") && numbersIn(f).includes(number));
   const invented: string[] = [];
-  for (const m of text.matchAll(/(\$\s?)?(\d[\d,]*(?:\.\d+)?)(\s?%)?/g)) {
+  // Commas only between digits: a sentence comma after a figure ("At $1,200, your bills...") is
+  // punctuation, not part of the number. Reading it as "1,200," failed the grouping check below and
+  // sent correct cards to the template (found re-running the W2 probe after the second-review fixes).
+  for (const m of text.matchAll(/(\$\s?)?(\d+(?:,\d+)*(?:\.\d+)?)(\s?%)?/g)) {
     const number = m[2]!.replaceAll(",", "");
     // Commas must group thousands, so "$14,99" is not read as the allowed 1,499.
     const grouped = !m[2]!.includes(",") || /^\d{1,3}(?:,\d{3})+(?:\.\d+)?$/.test(m[2]!);
