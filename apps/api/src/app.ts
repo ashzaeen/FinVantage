@@ -37,6 +37,22 @@ export function originMatcher(list: string): (origin: string) => boolean {
   return (origin) => patterns.some((pattern) => pattern.test(origin));
 }
 
+/**
+ * The shared demo token is public (it ships in the web bundle and the extension), and every holder
+ * acts as the same demo user. So it may only read, plus the two Copilot calls the extension makes
+ * when nobody is signed in. Writes from a signed-out visitor go through their own guest session
+ * (`POST /auth/guest`). An allowlist, so a route added later is refused until someone adds it here.
+ */
+const DEMO_TOKEN_WRITES: ReadonlyArray<{ method: string; path: RegExp }> = [
+  { method: "POST", path: /^\/v1\/copilot\/evaluate$/ },
+  { method: "POST", path: /^\/v1\/copilot\/events\/[^/]+\/action$/ },
+];
+
+export function demoTokenMayCall(method: string, path: string): boolean {
+  if (method === "GET" || method === "HEAD") return true;
+  return DEMO_TOKEN_WRITES.some((rule) => rule.method === method && rule.path.test(path));
+}
+
 export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   const app = new Hono<AppEnv>();
   const allowOrigin = originMatcher(env.WEB_ORIGIN ?? "http://localhost:3000");
@@ -60,6 +76,12 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   app.use("/v1/*", async (c, next) => {
     const token = c.req.header("authorization")?.replace(/^Bearer /, "") ?? c.req.query("token");
     if (token && token === demoToken) {
+      if (!demoTokenMayCall(c.req.method, c.req.path)) {
+        return c.json(
+          { error: { code: "demo_read_only", message: "The shared demo token is read-only. Start a demo session." } },
+          403,
+        );
+      }
       c.set("userId", DEMO_USER_ID);
       return next();
     }

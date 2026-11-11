@@ -20,8 +20,9 @@ export function AccountCard() {
   useEffect(() => {
     const token = usableToken(readCookie(document.cookie, TOKEN_COOKIE));
     const claims = token ? readClaims(token) : null;
+    // A guest session is the visitor's private demo copy, not an account: show it as the demo.
     setViewer(
-      claims
+      claims && !claims.guest
         ? {
             kind: "user",
             name: claims.name ?? claims.email ?? "Signed in",

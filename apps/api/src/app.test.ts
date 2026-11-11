@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ApiError, createApiClient, type ApiClient, type CopilotContext, type NewLifeScenario } from "@finvantage/contracts";
-import { createApp, originMatcher } from "./app";
+import {
+  ApiError,
+  createApiClient,
+  readClaims,
+  type ApiClient,
+  type CopilotContext,
+  type NewLifeScenario,
+} from "@finvantage/contracts";
+import { DEMO_USER_ID } from "@finvantage/data";
+import { createApp, demoTokenMayCall, originMatcher } from "./app";
 import { createDeps } from "./deps";
 import { monthlyCashFlow } from "./reporting/cashflow";
 
@@ -15,8 +23,20 @@ function setup(env: Record<string, string> = {}) {
       token,
       fetch: ((url: string, init: RequestInit) => app.request(url, init)) as typeof fetch,
     });
-  const client = clientFor("demo-token");
-  return { app, client, clientFor, deps };
+  // The shared demo token is read-only now, so tests that change the demo user's data sign in as
+  // it with a real token. The fixture IDs stay the same, because the demo user keeps them.
+  const demoSession = deps.auth.issue({ userId: DEMO_USER_ID, name: null, email: null });
+  const asDemo = async (path: string, init: RequestInit = {}) => {
+    const headers = new Headers(init.headers);
+    headers.set("authorization", `Bearer ${await demoSession}`);
+    return app.request(path, { ...init, headers });
+  };
+  const client = createApiClient({
+    baseUrl: "http://test",
+    token: "set-by-asDemo",
+    fetch: ((url: string, init: RequestInit) => asDemo(url, init)) as typeof fetch,
+  });
+  return { app, asDemo, client, clientFor, deps };
 }
 
 const rental: CopilotContext = {
@@ -29,6 +49,99 @@ const rental: CopilotContext = {
 test("requests without the token are rejected", async () => {
   const { app } = setup();
   assert.equal((await app.request("/v1/me")).status, 401);
+});
+
+/* ─── Security review W1 and W5: the shared demo token and guest sessions ──── */
+
+async function statusOf(call: Promise<unknown>): Promise<number> {
+  try {
+    await call;
+    return 200;
+  } catch (error) {
+    if (error instanceof ApiError) return error.status;
+    throw error;
+  }
+}
+
+test("W1: the shared demo token is read-only, apart from the extension's Copilot calls", async () => {
+  const { app, clientFor } = setup();
+  const demo = clientFor("demo-token");
+  const goals = await demo.listGoals();
+  assert.ok(goals.length > 0, "the demo token can still read");
+
+  // The attack from the review: a public-token visitor plants a goal every other visitor reads.
+  const { id: _id, userId: _userId, ...planted } = goals[0]!;
+  const res = await app.request("/v1/goals", {
+    method: "POST",
+    headers: { authorization: "Bearer demo-token", "content-type": "application/json" },
+    body: JSON.stringify({ ...planted, name: "Planted by another visitor", linkedAccountId: null }),
+  });
+  assert.equal(res.status, 403);
+  assert.equal(((await res.json()) as { error: { code: string } }).error.code, "demo_read_only");
+  assert.equal((await demo.listGoals()).length, goals.length, "nothing was written");
+
+  // The extension, signed out, still gets Copilot cards.
+  assert.equal(await statusOf(demo.evaluateCopilot({ body: rental })), 200);
+
+  assert.ok(demoTokenMayCall("GET", "/v1/goals"));
+  assert.ok(demoTokenMayCall("POST", "/v1/copilot/evaluate"));
+  assert.ok(demoTokenMayCall("POST", "/v1/copilot/events/evt_1/action"));
+  for (const [method, path] of [
+    ["POST", "/v1/goals"],
+    ["PATCH", "/v1/goals/goal_1"],
+    ["DELETE", "/v1/goals/goal_1"],
+    ["POST", "/v1/transactions"],
+    ["POST", "/v1/life-events"],
+    ["POST", "/v1/advisory/conversations"],
+    ["POST", "/v1/reports/schedule"],
+    ["POST", "/v1/copilot/evaluate/extra"],
+    ["POST", "/v1/copilot/events/evt_1/action/extra"],
+  ] as const) {
+    assert.ok(!demoTokenMayCall(method, path), `${method} ${path} must be refused`);
+  }
+});
+
+test("W1: each guest session gets a private demo copy, so one visitor's records never reach another", async () => {
+  const { client: demoUser, clientFor } = setup();
+  const anon = clientFor("");
+  const first = await anon.startGuestSession();
+  const second = await anon.startGuestSession();
+  assert.ok(first.user.id.startsWith("guest_"));
+  assert.notEqual(first.user.id, second.user.id);
+  const visitorA = clientFor(first.token);
+  const visitorB = clientFor(second.token);
+
+  // Both start from the full demo profile.
+  const demoGoals = await demoUser.listGoals();
+  assert.equal((await visitorA.listGoals()).length, demoGoals.length);
+
+  // Visitor A plants a goal. Only visitor A can see it.
+  const { id: _id, userId: _userId, ...template } = demoGoals[0]!;
+  const planted = await visitorA.createGoal({
+    body: { ...template, name: "Planted by visitor A", linkedAccountId: null },
+  });
+  assert.ok((await visitorA.listGoals()).some((g) => g.id === planted.id));
+  for (const other of [visitorB, demoUser, clientFor("demo-token")]) {
+    assert.ok(!(await other.listGoals()).some((g) => g.name === "Planted by visitor A"));
+  }
+
+  // A guest is a throwaway copy, not an account: short-lived, and it can't link a bank.
+  const claims = readClaims(first.token)!;
+  assert.equal(claims.guest, true);
+  assert.ok(claims.exp - Date.now() / 1000 <= 24 * 60 * 60 + 5, "a guest token lasts a day at most");
+  assert.equal(await statusOf(visitorA.createBankLinkToken()), 403);
+});
+
+test("W5: Advisor conversations are private to each guest session", async () => {
+  const { clientFor } = setup();
+  const anon = clientFor("");
+  const visitorA = clientFor((await anon.startGuestSession()).token);
+  const visitorB = clientFor((await anon.startGuestSession()).token);
+
+  const chat = await visitorA.createAdvisorConversation({ body: {} });
+  assert.ok((await visitorA.listAdvisorConversations()).some((c) => c.id === chat.id));
+  assert.equal((await visitorB.listAdvisorConversations()).length, 0);
+  assert.equal(await statusOf(visitorB.getAdvisorConversation({ params: { id: chat.id } })), 404);
 });
 
 test("the scheduler tick requires its separate server secret", async () => {
@@ -524,13 +637,13 @@ test("the bucket summary splits this month's spending into Needs, Wants and Savi
 });
 
 test("each user can change their split, and it must add up to 100%", async () => {
-  const { app, client } = setup();
+  const { asDemo, client } = setup();
   const split = await client.updateSpendingSplit({ body: { needs: 0.6, wants: 0.2, savings: 0.2 } });
   assert.deepEqual(split, { needs: 0.6, wants: 0.2, savings: 0.2 });
   assert.deepEqual((await client.getBucketSummary()).split, { needs: 0.6, wants: 0.2, savings: 0.2 });
-  const res = await app.request("/v1/spending/split", {
+  const res = await asDemo("/v1/spending/split", {
     method: "PATCH",
-    headers: { authorization: "Bearer demo-token", "content-type": "application/json" },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({ needs: 0.5, wants: 0.5, savings: 0.5 }),
   });
   assert.equal(res.status, 400);
@@ -546,17 +659,17 @@ test("the category list includes every default, with buckets", async () => {
 /* ─── Spending module: categories, budgets, rules, recurring ──────────────── */
 
 /** Same request with a status, for the error cases the typed client throws on. */
-async function raw(app: ReturnType<typeof setup>["app"], method: string, path: string, body?: unknown) {
-  const res = await app.request(path, {
+async function raw(asDemo: ReturnType<typeof setup>["asDemo"], method: string, path: string, body?: unknown) {
+  const res = await asDemo(path, {
     method,
-    headers: { authorization: "Bearer demo-token", "content-type": "application/json" },
+    headers: { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   return { status: res.status, json: (await res.json()) as { error?: { code: string } } };
 }
 
 test("users can add their own categories up to three levels deep", async () => {
-  const { app, client } = setup();
+  const { asDemo, client } = setup();
   const walmart = await client.createSpendingCategory({ body: { parentId: "shopping.superstores", label: "Walmart" } });
   assert.match(walmart.id, /^shopping\.superstores\.c[0-9a-f]{8}$/);
   assert.equal(walmart.bucket, "wants");
@@ -564,9 +677,9 @@ test("users can add their own categories up to three levels deep", async () => {
   const kids = await client.createSpendingCategory({ body: { parentId: "shopping", label: "Kids' Clothes", bucket: "needs" } });
   assert.equal(kids.bucket, "needs");
 
-  assert.equal((await raw(app, "POST", "/v1/spending/categories", { parentId: walmart.id, label: "Too Deep" })).json.error?.code, "too_deep");
-  assert.equal((await raw(app, "POST", "/v1/spending/categories", { parentId: "shopping.superstores", label: "walmart" })).status, 409);
-  assert.equal((await raw(app, "POST", "/v1/spending/categories", { parentId: "nope", label: "X" })).status, 404);
+  assert.equal((await raw(asDemo, "POST", "/v1/spending/categories", { parentId: walmart.id, label: "Too Deep" })).json.error?.code, "too_deep");
+  assert.equal((await raw(asDemo, "POST", "/v1/spending/categories", { parentId: "shopping.superstores", label: "walmart" })).status, 409);
+  assert.equal((await raw(asDemo, "POST", "/v1/spending/categories", { parentId: "nope", label: "X" })).status, 404);
 
   const list = await client.listSpendingCategories();
   const at = (id: string) => list.findIndex((c) => c.id === id);
@@ -575,7 +688,7 @@ test("users can add their own categories up to three levels deep", async () => {
 });
 
 test("default categories can be renamed, hidden and moved between buckets, but not deleted", async () => {
-  const { app, client } = setup();
+  const { asDemo, client } = setup();
   const renamed = await client.updateSpendingCategory({ params: { id: "dining_out" }, body: { label: "Eating Out" } });
   assert.equal(renamed.label, "Eating Out");
   const hidden = await client.updateSpendingCategory({ params: { id: "entertainment.gambling" }, body: { hidden: true } });
@@ -586,8 +699,8 @@ test("default categories can be renamed, hidden and moved between buckets, but n
   const list = await client.listSpendingCategories();
   assert.equal(list.find((c) => c.id === "home_pets.vet")?.bucket, "needs");
 
-  assert.equal((await raw(app, "PATCH", "/v1/spending/categories/transfers", { bucket: "wants" })).json.error?.code, "excluded_bucket");
-  assert.equal((await raw(app, "DELETE", "/v1/spending/categories/groceries")).json.error?.code, "default_category");
+  assert.equal((await raw(asDemo, "PATCH", "/v1/spending/categories/transfers", { bucket: "wants" })).json.error?.code, "excluded_bucket");
+  assert.equal((await raw(asDemo, "DELETE", "/v1/spending/categories/groceries")).json.error?.code, "default_category");
 });
 
 test("deleting a custom category moves its transactions, rules and budgets up to the parent", async () => {
@@ -608,7 +721,7 @@ test("deleting a custom category moves its transactions, rules and budgets up to
 });
 
 test("budgets report spending, pace and a suggestion, and work on subcategories", async () => {
-  const { app, client, deps } = setup();
+  const { asDemo, client, deps } = setup();
   deps.today = () => "2026-11-10";
   const budgets = await client.listBudgets();
   assert.ok(budgets.some((b) => b.category === "groceries"), "demo budgets are the starting point");
@@ -629,9 +742,9 @@ test("budgets report spending, pace and a suggestion, and work on subcategories"
   assert.equal(tight.status, "over");
   assert.equal((await client.listBudgets()).filter((b) => b.category === "dining_out.bars_alcohol").length, 1);
 
-  assert.equal((await raw(app, "POST", "/v1/budgets", { category: "income", monthlyLimitCents: 100 })).json.error?.code, "excluded_budget");
+  assert.equal((await raw(asDemo, "POST", "/v1/budgets", { category: "income", monthlyLimitCents: 100 })).json.error?.code, "excluded_budget");
   await client.deleteBudget({ params: { category: "dining_out.bars_alcohol" } });
-  assert.equal((await raw(app, "DELETE", "/v1/budgets/dining_out.bars_alcohol")).status, 404);
+  assert.equal((await raw(asDemo, "DELETE", "/v1/budgets/dining_out.bars_alcohol")).status, 404);
 });
 
 test("merchant rules re-categorise past transactions and new ones without a category", async () => {
@@ -660,14 +773,14 @@ test("merchant rules re-categorise past transactions and new ones without a cate
 });
 
 test("a transaction can be moved to any category, or cleared", async () => {
-  const { app, client, deps } = setup();
+  const { asDemo, client, deps } = setup();
   const [account] = await client.listAccounts();
   const tx = await client.addTransaction({ body: { accountId: account!.id, date: deps.today(), amountCents: -1_000, merchant: "Somewhere" } });
   const moved = await client.recategorizeTransaction({ params: { id: tx.id }, body: { categoryId: "travel.lodging" } });
   assert.deepEqual([moved.category, moved.subcategory], ["travel", "travel.lodging"]);
   const cleared = await client.recategorizeTransaction({ params: { id: tx.id }, body: { categoryId: null } });
   assert.deepEqual([cleared.category, cleared.subcategory], [null, null]);
-  assert.equal((await raw(app, "PATCH", `/v1/transactions/${tx.id}/category`, { categoryId: "made.up" })).status, 404);
+  assert.equal((await raw(asDemo, "PATCH", `/v1/transactions/${tx.id}/category`, { categoryId: "made.up" })).status, 404);
 });
 
 test("recurring charges and bills come from the bank's streams and due dates", async () => {

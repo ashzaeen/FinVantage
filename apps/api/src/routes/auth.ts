@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Hono } from "hono";
 import { routes, type User } from "@finvantage/contracts";
-import type { SignedInUser } from "../auth";
+import { GUEST_PREFIX, type SignedInUser } from "../auth";
 import { EmailTakenError, hashPassword, verifyPassword } from "../credentials";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
@@ -78,6 +78,14 @@ export function registerAuthRoutes(app: Hono<AppEnv>, deps: AppDeps) {
       name: known?.displayName ?? null,
       email: credential.email,
     };
+    return { token: await deps.auth.issue(user), user: await profileOf(deps, user) };
+  });
+
+  // A signed-out visitor's own copy of the demo profile. The shared demo user is everyone's, so
+  // letting visitors write there let one visitor plant records (and Advisor instructions) that
+  // every other visitor read. Each guest gets a random user ID and the same copy sign-up makes.
+  mount(app, deps, routes.startGuestSession, async () => {
+    const user: SignedInUser = { userId: `${GUEST_PREFIX}${randomUUID()}`, name: null, email: null, guest: true };
     return { token: await deps.auth.issue(user), user: await profileOf(deps, user) };
   });
 

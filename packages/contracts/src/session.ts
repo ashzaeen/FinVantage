@@ -10,6 +10,8 @@ export interface TokenClaims {
   exp: number;
   name?: string;
   email?: string;
+  /** A signed-out visitor's private demo copy, not an account. The UI shows it as the demo profile. */
+  guest?: boolean;
 }
 
 /** Reads a JWT's claims without verifying it. Only for display and expiry; the API verifies. */

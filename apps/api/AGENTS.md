@@ -25,13 +25,13 @@ Hono on Node. Read the root `AGENTS.md` first. Brief: `docs/workstreams/platform
 
 ## Auth
 
-`src/app.ts` maps one shared demo token to the demo user. `EventSource` cannot set headers, so the SSE stream also accepts `?token=`. Handlers only read `userId`, so real auth changes that one middleware.
+`src/app.ts` maps one shared demo token to the demo user. That token is public, so it is **read-only**: `GET`/`HEAD` plus the extension's two Copilot calls (`demoTokenMayCall`); anything else is 403 `demo_read_only`. Signed-out web visitors get their own guest session instead (`POST /auth/guest`, a `guest_` user with a private demo copy). Tests that write as the demo user use `asDemo` / `client` from `setup()`, which sign in as it with a real token. `EventSource` cannot set headers, so the SSE stream also accepts `?token=`. Handlers only read `userId`, so real auth changes that one middleware.
 
 ## Testing
 
 ```bash
 npm test -w @finvantage/api
-curl -H "Authorization: Bearer demo-token" localhost:4000/v1/accounts
+curl -H "Authorization: Bearer demo-token" localhost:4000/v1/accounts   # reads only; writes need a guest or sign-in token
 ```
 
 The in-memory store resets on restart, which is also how to reset demo state.

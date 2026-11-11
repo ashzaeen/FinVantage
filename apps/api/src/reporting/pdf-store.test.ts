@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createApiClient } from "@finvantage/contracts";
+import { DEMO_USER_ID } from "@finvantage/data";
 import { createApp } from "../app";
 import { createDeps } from "../deps";
 
@@ -11,9 +12,10 @@ test("a report PDF still downloads after the local file is gone (another server 
   const outputDir = path.join(tmpdir(), `finvantage-pdf-test-${Date.now()}`);
   const deps = createDeps({ REPORT_OUTPUT_DIR: outputDir });
   const app = createApp(deps, {});
+  // Generating a report is a write, which the shared demo token may not do: sign in as the demo user.
   const client = createApiClient({
     baseUrl: "http://test",
-    token: "demo-token",
+    token: await deps.auth.issue({ userId: DEMO_USER_ID, name: null, email: null }),
     fetch: ((url: string, init: RequestInit) => app.request(url, init)) as typeof fetch,
   });
 
