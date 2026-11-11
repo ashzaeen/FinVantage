@@ -10,6 +10,7 @@ import {
 } from "@finvantage/contracts";
 import { DEMO_USER_ID } from "@finvantage/data";
 import { createApp, demoTokenMayCall, originMatcher } from "./app";
+import { RateLimiter } from "./rate-limit";
 import { createDeps } from "./deps";
 import { monthlyCashFlow } from "./reporting/cashflow";
 
@@ -227,6 +228,96 @@ test("W3: a scheduled send looks the recipient up again, so a stored stranger's 
   await deps.docs.saveEmailSchedule(saved.userId, { ...saved, recipientEmail: "someone-else@example.com" });
   assert.equal((await client.triggerScheduledEmail()).success, true);
   assert.deepEqual(sentTo, ["owner@example.com"]);
+});
+
+/* ─── Security review W4: request limits ─────────────────────────────────── */
+
+test("W4: login is limited per address, so passwords can't be guessed at speed", async () => {
+  const { app, clientFor } = setup();
+  await clientFor("").signUp({ body: { displayName: "Sam", email: "sam@example.com", password: "s3cret-pass" } });
+  const login = (password: string, ip = "203.0.113.7") =>
+    app.request("/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": ip },
+      body: JSON.stringify({ email: "sam@example.com", password }),
+    });
+  for (let i = 0; i < 10; i++) assert.equal((await login(`guess-${i}-pass`)).status, 401);
+  const blocked = await login("guess-10-pass");
+  assert.equal(blocked.status, 429);
+  assert.equal(((await blocked.json()) as { error: { code: string } }).error.code, "rate_limited");
+  assert.ok(Number(blocked.headers.get("retry-after")) > 0);
+  assert.equal((await login("s3cret-pass")).status, 429, "even the right password waits out the window");
+  assert.equal((await login("s3cret-pass", "198.51.100.9")).status, 200, "another address is unaffected");
+});
+
+test("W4: guest sessions are limited per address, so memory can't be filled with demo copies", async () => {
+  const { app } = setup();
+  const guest = () => app.request("/auth/guest", { method: "POST", headers: { "x-forwarded-for": "203.0.113.8" } });
+  for (let i = 0; i < 30; i++) assert.equal((await guest()).status, 200);
+  assert.equal((await guest()).status, 429);
+});
+
+test("W4: model routes are limited per user and per address", async () => {
+  const { app } = setup();
+  const ip = { "x-forwarded-for": "203.0.113.9" };
+  const newGuest = async () =>
+    ((await (await app.request("/auth/guest", { method: "POST", headers: ip })).json()) as { token: string }).token;
+  const parse = (token: string) =>
+    app.request("/v1/life-events/parse", {
+      method: "POST",
+      headers: { ...ip, authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ text: "we adopted a llama" }),
+    });
+
+  // Per user: 30 a minute.
+  const a = await newGuest();
+  for (let i = 0; i < 30; i++) assert.equal((await parse(a)).status, 200);
+  assert.equal((await parse(a)).status, 429);
+
+  // A new guest gets its own allowance, but the address caps the total at 60 a minute.
+  const b = await newGuest();
+  for (let i = 0; i < 29; i++) assert.equal((await parse(b)).status, 200);
+  assert.equal((await parse(b)).status, 200, "the 60th model call from this address");
+  assert.equal((await parse(await newGuest())).status, 429, "a third guest can't multiply the allowance");
+});
+
+test("W4: an Advisor message, which can make several model calls, has a tighter limit", async () => {
+  const { app, clientFor } = setup();
+  const token = (await clientFor("").startGuestSession()).token;
+  const chat = await clientFor(token).createAdvisorConversation({ body: {} });
+  const send = () =>
+    app.request(`/v1/advisory/conversations/${chat.id}/messages`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ content: "How are my budgets?" }),
+    });
+  for (let i = 0; i < 10; i++) assert.notEqual((await send()).status, 429);
+  assert.equal((await send()).status, 429);
+});
+
+test("W4: everyone on the shared demo token is counted by address, so one caller can't use up everyone's limit", async () => {
+  const { app } = setup();
+  const evaluate = (ip: string) =>
+    app.request("/v1/copilot/evaluate", {
+      method: "POST",
+      headers: { authorization: "Bearer demo-token", "content-type": "application/json", "x-forwarded-for": ip },
+      body: JSON.stringify(rental),
+    });
+  for (let i = 0; i < 30; i++) assert.equal((await evaluate("203.0.113.10")).status, 200);
+  assert.equal((await evaluate("203.0.113.10")).status, 429);
+  assert.equal((await evaluate("198.51.100.11")).status, 200, "another extension user still gets cards");
+});
+
+test("W4: a window resets after it ends, and the counter map stays bounded", () => {
+  let now = 0;
+  const limiter = new RateLimiter(() => now, 3);
+  assert.equal(limiter.hit("k", 1, 1_000).allowed, true);
+  assert.equal(limiter.hit("k", 1, 1_000).allowed, false);
+  assert.equal(limiter.hit("k", 1, 1_000).retryAfterSeconds, 1);
+  now = 1_000;
+  assert.equal(limiter.hit("k", 1, 1_000).allowed, true, "a new window");
+  for (const key of ["a", "b", "c", "d", "e"]) limiter.hit(key, 1, 60_000);
+  assert.ok((limiter as unknown as { windows: Map<string, unknown> }).windows.size <= 3);
 });
 
 test("the scheduler tick requires its separate server secret", async () => {

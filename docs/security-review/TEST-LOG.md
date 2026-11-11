@@ -18,7 +18,7 @@ Raw, dated notes for every test, including the ones that fail or get blocked.
 | W5 | Shared Advisor chat history across visitors (found during W1) | **Confirmed and fixed** with W1 | Medium |
 | W2 | Guardrails check digits, not meaning (G1–G7) | **Confirmed and fixed** (F1, F2, F3). Probe before/after, tests, mutation check, live Gemini check done | Medium (G2), Low–Medium (rest) |
 | W3 | Report email to any recipient (email relay) | **Confirmed and fixed** (server picks the recipient; guests and demo can't email). Probe before/after, 4 tests, mutation check | Medium |
-| W4 | No rate limiting on model-backed routes (and now guest creation) | Not started | TBD |
+| W4 | No rate limiting (login guessing, guest memory, model spend) | **Confirmed and fixed** (in-memory limiter, 429 + Retry-After). Burst before/after, 6 tests, mutation check | Medium |
 | Minor | Token in `?token=` URL; 7-day tokens, no revocation | Observed (S2); guest tokens now 1 day. Not started | Low |
 
 ## Setup observations
@@ -226,4 +226,65 @@ The contracts are unchanged (`to` and `recipientEmail` stay, now validated), so 
 
 ## W4: Rate limiting
 
-_Not started._
+### Code review
+
+No rate limiting anywhere in the API: no library, middleware, or `429` response (`grep` for rate/limit/throttle/429 across `apps/api/src`, `packages/*/src`, `infra`).
+
+Routes that matter:
+
+| Route | Risk without a limit |
+|---|---|
+| `POST /v1/copilot/evaluate`, `/v1/life-events/parse`, `/v1/advisory`, `/v1/reports/quarterly` | Each calls Gemini once: quota and cost |
+| `POST /v1/advisory/chat`, `/v1/advisory/conversations/:id/messages` | **Amplification:** one message can make several model calls (up to 4 tool rounds, web search, a retry) |
+| `POST /auth/login` | Unlimited password guessing |
+| `POST /auth/signup` | Mass account creation (and the W3 residual: unverified addresses) |
+| `POST /auth/guest` (added by the W1 fix) | Each call copies the demo profile into memory, with no ceiling |
+
+### Burst test (2026-11-11, local only)
+
+Small and cost-free on purpose: wrong-password logins and guest sessions never call the model, and the repeated Copilot request is served from the card cache after its first call. One request at a time. Script: [`w4-burst-probe.ts`](w4-burst-probe.ts).
+
+| # | Run | Login (wrong password) | Guest sessions | Copilot evaluate (one guest) |
+|---|---|---|---|---|
+| W4-01 | Before, 25 each | 25x 401 in 0.55 s (~45 guesses/s), no limit | 25x 200, no limit | 25x 200, no limit |
+| W4-02 | Before, 35 each | 35x 401, no limit | 35x 200, no limit | 35x 200, no limit |
+| W4-03 | **After, 35 each** (fresh API process) | **10x 401, then 25x 429** | **29x 200 (+1 made first = 30), then 6x 429** | **30x 200, then 5x 429** |
+
+Evidence: [`evidence/W4-burst-before-fix.txt`](evidence/W4-burst-before-fix.txt), [`evidence/W4-burst-35-before-fix.txt`](evidence/W4-burst-35-before-fix.txt), [`evidence/W4-burst-35-after-fix.txt`](evidence/W4-burst-35-after-fix.txt).
+
+Mistake caught during W4-03: the probe first created its Copilot guest *after* the guest burst. With the fix on, that request was itself limited, so the probe had no token and every Copilot call got 401. The guest limit was working; the probe was wrong. Fixed by creating the probe's guest first, then reran on a fresh API process.
+
+**Proposed severity: Medium.** Password guessing on login, unbounded memory from guest sessions, and uncapped spend on the model routes, all reachable without an account.
+
+### Fix (2026-11-11)
+
+`apps/api/src/rate-limit.ts`: fixed-window counters in memory, answering **429 `rate_limited`** with a `Retry-After` header. Wired into `apps/api/src/app.ts`, registered before the routes they guard (Hono runs handlers in registration order): auth limits before the auth routes, model limits after the token check (so they can count per user).
+
+| Rule | Limit | Counted per | Reason |
+|---|---|---|---|
+| Log in | 10 / 5 min | address | Password guessing |
+| Sign up | 5 / hour | address | Mass accounts |
+| Guest session | 30 / hour | address | Memory; generous because judges at a venue share one address |
+| Advisor message | 10 / min | user | Amplified route |
+| Any model route | 30 / min | user | Quota; Copilot fires on every product page, so it needs headroom |
+| Any model route | 60 / min | address | So a stream of new guests can't multiply the per-user allowance |
+
+The shared demo user (everyone on `demo-token`) is counted **per address**, not as one user, so one caller can't use up the Copilot allowance of every signed-out extension user. The counter map is bounded (oldest windows dropped past 10,000 keys).
+
+When a limit is hit, the clients fail safe with no change needed: the web proxy can't get a guest session and falls back to the read-only demo token; the extension stays silent on any error.
+
+### Verification
+
+| # | Check | Result |
+|---|---|---|
+| V4-01 | 6 new regression tests in `apps/api/src/app.test.ts` | Login: 10 then 429 with `Retry-After`, even the right password waits, another address is unaffected. Guests: 30 then 429. Model routes: 30 per user, and a third guest from the same address is refused at 60. Advisor: 10 then 429. Demo token: counted per address. Limiter: windows reset, map stays bounded |
+| V4-02 | Mutation check: switched off each safeguard alone | Limiter never refusing fails all 6; no `/auth` limits fails the login and guest tests; no per-address model cap fails the model test; no Advisor rule fails the Advisor test; counting the demo user as one user fails the demo test |
+| V4-03 | Live burst before and after (W4-02, W4-03) | All three routes limited after the fix |
+| V4-04 | `npm run check` | **335/335 pass** (329 + 6), typecheck clean. All 95 existing API tests passed unchanged with the limiter on, so normal use stays under the limits |
+
+### Residual risk after the W4 fix
+
+- **Per instance, in memory.** On Vercel, several serverless instances each keep their own counts, and a cold start resets them. Production needs a shared store (such as Redis) or the platform's firewall rate rules.
+- **Per-address limits trust `x-real-ip` / `x-forwarded-for`.** Vercel sets these, but anywhere a client reaches the server directly it can forge them to look like many addresses. Needs a trusted proxy in front.
+- **Per-account login lockout** isn't added (it can be abused to lock real users out). Per-address limits slow guessing; a real bank would add MFA and anomaly detection.
+- **A distributed attacker** with many addresses still gets many allowances. That's a platform-level (WAF/bot management) problem.

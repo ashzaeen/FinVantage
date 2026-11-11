@@ -269,3 +269,10 @@ Answers to the open questions above. These replace those rows.
 |---|---|
 | The server decides who receives a report: `REPORT_EMAIL_OVERRIDE` if set, else the account's own address. A request may still name a recipient (`to`, `recipientEmail`), but it must match, or it gets 403 `recipient_not_allowed`. Scheduled sends look the recipient up again at send time. This replaces "the request's address wins" | Anyone with a token could make FinVantage email a report, with text they wrote into it, to any address, once or monthly. The override was only a fallback, not the lock the README implied |
 | Guests and the shared demo user can't email reports (403 `sign_in_required`); generating a report still works, and its email is recorded as skipped | Same rule as bank linking: they are demo copies whose address is the demo persona's |
+
+## Request limits, decided 2026-11-11 (security review W4)
+
+| Decision | Why |
+|---|---|
+| `apps/api/src/rate-limit.ts` limits requests with fixed windows in memory, answering 429 `rate_limited` with `Retry-After`: login 10 per 5 minutes, sign-up 5 per hour, guest session 30 per hour (per address); Advisor messages 10 per minute and other model routes 30 per minute (per user), plus 60 model calls per minute per address. The shared demo user is counted per address. Add a model-backed route to `MODEL_ROUTES` | Nothing limited requests: login could be guessed at ~45 tries a second, every guest session copied the demo profile into memory, and model routes spent Gemini quota without a cap |
+| Counts are per server instance and trust the platform's `x-real-ip` / `x-forwarded-for`. Production should add a shared store or the host's firewall rate rules | Enough to bound one process and the demo; honest about what it doesn't cover |

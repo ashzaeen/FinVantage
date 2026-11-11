@@ -20,6 +20,7 @@ import { registerSimulationRoutes } from "./routes/simulations";
 import { registerIncomeRoutes } from "./routes/income";
 import { registerSpendingRoutes } from "./routes/spending";
 import { registerTransactionRoutes } from "./routes/transactions";
+import { AUTH_RULES, MODEL_RULES, RateLimiter, rateLimit } from "./rate-limit";
 
 /**
  * `WEB_ORIGIN` is a comma-separated list. An entry may use `*` for one subdomain label, such as
@@ -67,6 +68,11 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   });
   app.get("/health", (c) => c.json({ ok: true, llm: deps.llm.provider, live: deps.live.transport }));
 
+  // Request limits (security review W4). Registered before the routes they guard, because Hono
+  // runs handlers in registration order.
+  const limiter = new RateLimiter();
+  app.use("/auth/*", rateLimit(limiter, AUTH_RULES));
+
   // Sign-up, log-in, and the public key. No token needed.
   registerAuthRoutes(app, deps);
 
@@ -93,6 +99,9 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
     c.set("userId", user.userId);
     await next();
   });
+
+  // After the token check, so model routes can be counted per user.
+  app.use("/v1/*", rateLimit(limiter, MODEL_RULES));
 
   registerProfileRoutes(app, deps);
   registerAccountRoutes(app, deps);
