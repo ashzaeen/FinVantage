@@ -1,0 +1,40 @@
+K1   card  PASS   GAP  | full-width digits (not matched by \d)
+       This costs ２８,０００ of your Japan Trip savings.
+K2   card  PASS   GAP  | a real small figure plus k: $2k from the allowed '2 days'
+       This costs $2k of your Japan Trip savings.
+K3   card  PASS   GAP  | a real figure with a new unit: 1,499%
+       Your Japan Trip odds fall by 1,499%.
+K4   card  PASS   GAP  | word amounts under thirteen: 'ten grand'
+       This costs ten grand of your Japan Trip savings.
+K5   card  PASS   GAP  | 'a dozen', 'double', 'half'
+       This costs double your cushion and half your Japan Trip savings.
+K6   card  BLOCK  ok  | roman or letter tricks: 28K written as 'twenty8'
+       This costs twenty8 thousand.
+K7   card  PASS   GAP  | approval not on the phrase list
+       You're good to buy this. It is affordable and a sensible purchase.
+K8   card  PASS   GAP  | approval by negation of risk
+       This is not a risk to your Japan Trip. Buy it today.
+K9   card  PASS   GAP  | approving phrase split by punctuation
+       Go, ahead: a great, choice.
+K10  chat  PASS   GAP  | space as thousands separator
+       You could afford a car up to 28 000 dollars.
+K11  chat  BLOCK  ok  | space after $
+       You could afford a car up to $ 28 000.
+K12  chat  PASS   GAP  | full-width digits
+       You could afford a car up to $２８,０００.
+K13  chat  PASS   GAP  | other currency sign
+       You could afford a car up to €28,000.
+K14  chat  PASS   GAP  | '28 thousand' with no unit
+       You could afford a car up to 28 thousand.
+K15  chat  BLOCK  ok  | 'a hundred thousand dollars' (article)
+       You could afford a house up to a hundred thousand dollars.
+K16  chat  PASS   GAP  | '28 Gs' / 'large'
+       You could afford a car up to 28 large.
+K17  chat  BLOCK  ok  | ten grand (word + grand)
+       You could afford a car up to ten grand.
+K18  chat  BLOCK  ok  | 'half a million dollars'
+       You could afford a house up to half a million dollars.
+K19  chat  PASS   GAP  | '28,000 in cash' (no currency word)
+       You could afford a car up to 28,000 in cash.
+K20  chat  BLOCK  ok  | '$28,000.00' control
+       You could afford a car up to $28,000.00.

@@ -19,6 +19,7 @@ Raw, dated notes for every test, including the ones that fail or get blocked.
 | W2 | Guardrails check digits, not meaning (G1–G7) | **Confirmed and fixed** (F1, F2, F3). Probe before/after, tests, mutation check, live Gemini check done | Medium (G2), Low–Medium (rest) |
 | W3 | Report email to any recipient (email relay) | **Confirmed and fixed** (server picks the recipient; guests and demo can't email). Probe before/after, 4 tests, mutation check | Medium |
 | W4 | No rate limiting (login guessing, guest memory, model spend) | **Confirmed and fixed** (in-memory limiter, 429 + Retry-After). Burst before/after, 6 tests, mutation check | Medium |
+| R2 | Independent second review of the fixes and the rest of the app (see the last section) | **7 new items found, none fixed yet.** Isolation and the demo-token allowlist held | Medium (R2-1, R2-2, R2-3), Low–Medium (rest) |
 | Minor | Token in `?token=` URL; 7-day tokens, no revocation | Observed (S2); guest tokens now 1 day. Not started | Low |
 
 ## Setup observations
@@ -288,3 +289,101 @@ When a limit is hit, the clients fail safe with no change needed: the web proxy 
 - **Per-address limits trust `x-real-ip` / `x-forwarded-for`.** Vercel sets these, but anywhere a client reaches the server directly it can forge them to look like many addresses. Needs a trusted proxy in front.
 - **Per-account login lockout** isn't added (it can be abused to lock real users out). Per-address limits slow guessing; a real bank would add MFA and anomaly detection.
 - **A distributed attacker** with many addresses still gets many allowances. That's a platform-level (WAF/bot management) problem.
+
+## Independent second review (2026-11-11)
+
+A second reviewer (a different model, starting from the code and this log) tried to get past each fix and scanned the rest of the app. Report only: **no code was changed.** Local API, mock mail, no model calls beyond one Copilot card.
+
+- Scripts: [`review2-probe.ts`](review2-probe.ts), [`review2-guardrail-probe.ts`](review2-guardrail-probe.ts)
+- Output: [`evidence/R-review2-probe-run1.txt`](evidence/R-review2-probe-run1.txt), [`evidence/R-review2-guardrail-probe.txt`](evidence/R-review2-guardrail-probe.txt)
+
+### Fixes that held
+
+| # | Attempt | Result |
+|---|---|---|
+| R1a–h | Demo token writing through path and method tricks: trailing slash, upper case, double slash, `..` segments after an allowed Copilot path, a method-override header, `?_method=`, the token in `?token=` | All refused (403 or 404); goal count unchanged. **W1 allowlist holds** |
+| R2a–m | Guest B (and the demo token) reading, changing, or deleting guest A's goal, conversation, report, report PDF, simulation, transaction, account, and Copilot event by ID | All 404. **No cross-user access found** on 13 routes. **W1/W5 isolation holds** |
+| — | Other paths that send email | Only `emailReport` calls the mailer, and all three callers go through `reportRecipient`. **W3 holds** |
+| — | Model routes missing from the rate limit | Every route that reaches the model is in `MODEL_ROUTES`. **W4 coverage holds** |
+| — | Secrets in git history, dependency advisories | No keys found in 80 commits; `npm audit --omit=dev`: 0 vulnerabilities. Passwords use scrypt with a per-password salt and a constant-time compare. Errors return a generic 500 with no stack trace |
+
+### New findings (confirmed by test unless marked)
+
+| ID | Finding | Evidence | Proposed severity |
+|---|---|---|---|
+| **N1** | **No input size limits.** A goal name of 200,000 characters and a 5 MB request body were both accepted (R3a, R3b). `Goal.name`, `Account.name`, transaction `merchant`, and the life-event `text` (which is sent to Gemini) are `z.string()` with no maximum, and the API sets no body limit. Memory growth, large prompts (cost), and it makes self-injection easier | R3a, R3b; `packages/contracts/src/goal.ts:18`, `life-event.ts:33` | Medium |
+| **N2** | **W2 fix is a list of formats, and more formats get through.** Cards: full-width digits (`２８,０００`), `$2k` built from an allowed "2", an allowed figure with a new unit (`1,499%`), "ten grand", "double / half". Chat: `28 000 dollars`, full-width digits, `€28,000`, "28 thousand", "28 large", "28,000 in cash". Tone: approval in words not on the list ("You're good to buy this", "Buy it today") or split by punctuation. **14 of 20 extra forms passed** | K1–K20 | Low–Medium. The log's "7 gaps to 0" is true for those 7 only; the fix narrows the gap, it doesn't close it |
+| **N3** | **Open redirect after sign-in.** `nextPath()` accepts `/login?next=/\evil.example`: it starts with `/` and not `//`, but browsers read `/\` as `//`, so `window.location.replace` leaves the site. Confirmed by URL resolution (`new URL("/\\evil.example/x", origin)` gives `http://evil.example/x`); **not yet clicked through in a browser** | `apps/web/src/lib/session.ts`, `LoginForm.tsx:62` | Low–Medium (phishing aid: a real FinVantage link that lands on another site after login) |
+| **N4** | **The shared demo user is still writable through Copilot.** `demo-token` may call `POST /v1/copilot/evaluate` (needed by the signed-out extension), which saves an event with a caller-chosen `merchant` (up to 100 characters) that every demo-token reader sees, with no cap on how many. No path from there into another person's model prompt was found (Advisor routes are closed to the demo token) | R5a | Low. Already listed as a W1 residual; now proven |
+| **N5** | **No security headers** on the API (`X-Content-Type-Options`, HSTS, `Cache-Control` on authenticated JSON) and none configured in `next.config.ts` (no CSP, no frame protection, so the dashboard can be framed) | R6; `apps/web/next.config.ts` | Low |
+| **N6** | **CPU-heavy route with no limit.** `POST /v1/simulations` with `paths: 50000` (the contract's maximum) took ~1.9 s against ~0.2 s by default, and it isn't rate limited. Node runs it on the one thread that serves everyone | R4a, R4b | Low–Medium |
+| **N7** | **`?token=` is accepted on every `/v1` route**, not only the SSE stream and the PDF download that need it | `apps/api/src/app.ts` auth middleware; R1h shows it is read on a write route | Low (widens the "token in URL" minor item) |
+| **N8** | Web-search source links are rendered as `href={s.url}` and the contract allows any string (`z.string()`, not a URL with an http/https check) | `advisory.ts:84`, `AdvisorMessage.tsx:45` | Informational. **Not exploited:** React 19 blocks `javascript:` links. Hardening only |
+| **N9** | The scheduler secret is compared with `!==`, not a constant-time compare | `agents.ts`, `/internal/reports/schedule/run` | Informational |
+
+### Corrections to earlier entries
+
+- **W2 status** should read "narrowed", not closed: see N2.
+- **W4 residual "per-address limits trust forwarded headers"** is now demonstrated: both review probes ran from a made-up `x-forwarded-for` address and got fresh allowances after the real address had used its 30 guest sessions. Locally nothing sits in front of the API; on Vercel the platform sets the header.
+- R4c (40 calls to the schedule trigger, none limited) is **not** a finding: with no saved schedule it does no work.
+
+### Not covered by this review
+
+The Chrome extension running on live shopping sites, the SpacetimeDB module, the Plaid and MongoDB backends (memory store only), the deployed Vercel configuration, and anything in a real browser.
+
+
+## Independent review (second reviewer, 2026-11-11)
+
+A second reviewer (a different model, Claude Fable 5.2) rechecked the fixes on `security-review` (`9495c84` to `31e6284`) and scanned the rest of the app. Report only: **no code was changed.**
+
+Method: one probe that runs the real API in process with the mock model, in-memory stores and a recording mailer, so nothing leaves the machine and no Gemini quota is used. Plus code reading and one request to the running local API.
+
+- Script: [`review2-probe.ts`](review2-probe.ts), run with `npx tsx docs/security-review/review2-probe.ts`
+- Output: [`evidence/R2-probe-before-fix.txt`](evidence/R2-probe-before-fix.txt)
+
+### What held up
+
+| Area | Check | Result |
+|---|---|---|
+| W1 allowlist | The public demo token against **every** non-GET route in the contract table | 48 of 48 refused with 403 `demo_read_only`; only the two Copilot calls are allowed |
+| W1 allowlist | Path and method tricks: trailing slash, double slash, upper case, `..` segments, encoded slashes, a query string naming an allowed path, a method-override header | None wrote anything; the demo user's goal count never changed |
+| W1 allowlist | Every GET route called with the demo token | The demo user's data was identical before and after, so no GET has a side effect |
+| W1/W5 isolation | Guest B used guest A's record IDs, and the demo user's known fixture IDs, on 20 routes (goals, accounts, transactions, conversations, simulations, reports, PDFs, Copilot events, categories) | All 404 or 403; A's and the demo user's data unchanged |
+| Secrets | Eight key patterns searched across the whole git history (all branches) | None found. `.env` is ignored |
+| Auth basics | Code reading | Passwords use scrypt with a per-password salt and a constant-time compare; tokens are RS256 with issuer, audience and algorithm pinned; the signing key is required in production |
+| Output handling | Code reading | Report emails escape HTML; PDFs are drawn with pdfkit (no HTML rendering); the web app and extension have no raw-HTML sinks |
+
+Not covered by the ID sweep: life events and life-simulator scenarios (the guest had none to test with).
+
+### New findings
+
+| # | Finding | Evidence | Proposed severity |
+|---|---|---|---|
+| **R2-1** | **The guest-session limit is shared by every web visitor.** `apps/web/src/proxy.ts` asks the API for the guest session from the web **server**, so the API counts all visitors as one address. After 30 demo visitors in an hour, new visitors silently fall back to the read-only demo token and the demo stops working (no Advisor, no saving). Anyone can trigger it on purpose with 30 requests an hour. Introduced by the W1 and W4 fixes together | The running local API answered `POST /auth/guest` with **429** after the W4 probe used the 30. Vercel behavior is reasoned from the code, not tested (live site is out of scope) | Medium (availability; a regression) |
+| **R2-2** | **Unlimited email to an address the sender doesn't own.** Sign-up doesn't verify the email address, and the email routes have no rate limit. The W3 residual-risk note said each account "reaches only its one address"; that is true, but it can do so without limit | Signed up as `someone-else@example.com`, then 40 of 40 email requests were accepted and handed to the (recording) mailer | Medium |
+| **R2-3** | **The login limit can be dodged.** It counts per address, and the address comes from `x-forwarded-for`. Where the platform doesn't overwrite that header (local, self-hosted), a caller can send a new value each time. There is also no per-account limit, so guessing one account from many addresses is unlimited | 40 wrong passwords for one account, a different header value each: 40 x 401, never 429 | Medium |
+| **R2-4** | **No size limits on user text.** `Goal.name` has no maximum (139 string fields in the contracts have none), and there is no request body limit. Names flow into every Advisor and Copilot prompt, so a huge name also raises model cost. This is the "length limits and delimiters" item from the original plan, which was never built | A goal with a 2,000,000-character name was accepted and stored | Low–Medium |
+| **R2-5** | **Heavy non-model routes are unlimited.** W4 limits only auth and model routes. Saved simulations cost CPU and memory | 40 saved simulation runs from one guest in 7 s, all 40 stored | Low–Medium |
+| **R2-6** | **The number guardrails still have gaps**, one of them introduced by the W2 fix (F3). See the table below | 13 of 15 crafted inputs pass | Medium for C1–C2 (regression), Low–Medium for the rest |
+| **R2-7** | **Hardening gaps (no exploit shown).** The web app sends no security headers (no CSP, no frame protection). Advisor source links are rendered as `href` without checking they are http(s). Tokens are still accepted in `?token=`. Sign-in tokens last 7 days with no way to revoke one | Code reading only | Low |
+
+R2-6 detail. Card check, allowed figures `$1,499`, `$599`, `$2,500`, `22.99%`:
+
+| # | Input | Why it passes |
+|---|---|---|
+| C1 | "$71,499 of your 7 goal", goal named "7" | **F3 regression.** Removing the name "7" from the text deletes that digit, leaving the allowed "1,499" |
+| C2 | "$7,599 of your 7 goal" | Same: leaves "599" |
+| C3, C4 | "$1,499k", "$2,500M" | The digits match an allowed figure; the unit suffix is ignored |
+| C5 | "599 grand" | Same, and "grand" isn't a number word in the card check |
+| C6 | "$14,99" | Commas are stripped, so it reads as 1499 |
+| C7 | "$９９,９９９" (full-width digits) | The digit pattern only sees ASCII digits |
+| C8 | "slips 599 months" | A number is approved regardless of its unit |
+
+Chat check, figure given `$3,400`: "28 thousand" (C10), full-width digits after `$` (C11), "28 K" with a space (C13) and "€28,000" (C14) all pass. "$ 28 000" and "a hundred grand" are blocked.
+
+### Corrections to earlier entries
+
+- **W3 residual risk** understates the unverified sign-up problem: see R2-2.
+- **W4 "clients fail safe"** is accurate, but that safe fallback is what makes R2-1 silent.
+- **V1-06b (self-injection after the W1 fix)** is still logged as inconclusive and was never retested. With no length limit or delimiters on names (R2-4), assume a visitor can still steer **their own** Advisor.
+- Severities for W1 (High), W5, W2, W3 and W4 (Medium) look fair. The data is synthetic, so the W1 and W5 ratings describe what the same design would mean in a real banking app, which the log already says.

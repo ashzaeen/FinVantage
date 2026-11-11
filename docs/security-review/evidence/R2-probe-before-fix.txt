@@ -1,0 +1,67 @@
+
+=== A. Shared demo token: every write route in the contract table ===
+ok   48 write routes refused with 403 demo_read_only
+
+=== A2. Path and method tricks against the allowlist (demo token) ===
+ok   POST /v1/goals/  ->  HTTP 403, demo goals 5 -> 5
+ok   POST /v1//goals  ->  HTTP 403, demo goals 5 -> 5
+ok   POST /V1/goals  ->  HTTP 404, demo goals 5 -> 5
+ok   POST /v1/goals?x=/v1/copilot/evaluate  ->  HTTP 403, demo goals 5 -> 5
+ok   POST /v1/copilot/evaluate/../goals  ->  HTTP 403, demo goals 5 -> 5
+ok   POST /v1/copilot/events/x/action/../../../goals  ->  HTTP 403, demo goals 5 -> 5
+ok   POST /v1/copilot/evaluate%2f..%2fgoals  ->  HTTP 403, demo goals 5 -> 5
+ok   GET /v1/goals + override header  ->  HTTP 200, demo goals 5 -> 5
+
+=== A3. Do any GET routes change the shared demo user's data? ===
+ok   demo user's data identical before and after calling every GET route
+
+=== B. Guest B uses guest A's record IDs (and the demo user's) ===
+ok   B PATCH /v1/goals/guest_<uuid>__goal_emergency  ->  HTTP 404 not_found
+ok   B DELETE /v1/goals/guest_<uuid>__goal_emergency  ->  HTTP 404 not_found
+ok   B PATCH /v1/goals/goal_emergency  ->  HTTP 404 not_found
+ok   B DELETE /v1/goals/goal_emergency  ->  HTTP 404 not_found
+ok   B PATCH /v1/accounts/guest_<uuid>__acc_checking  ->  HTTP 404 not_found
+ok   B PATCH /v1/transactions/guest_<uuid>__txn_20261108_0452  ->  HTTP 404 not_found
+ok   B PATCH /v1/transactions/guest_<uuid>__txn_20261108_0452/category  ->  HTTP 404 not_found
+ok   B DELETE /v1/life-events/undefined  ->  HTTP 404 not_found
+ok   B GET /v1/advisory/conversations/<uuid>  ->  HTTP 404 not_found
+ok   B POST /v1/advisory/conversations/<uuid>/messages  ->  HTTP 404 not_found
+ok   B DELETE /v1/advisory/conversations/<uuid>  ->  HTTP 404 not_found
+ok   B GET /v1/simulations/<uuid>  ->  HTTP 404 not_found
+ok   B GET /v1/simulations/<uuid>/diff/<uuid>  ->  HTTP 404 not_found
+ok   B GET /v1/reports/quarterly/<uuid>  ->  HTTP 404 not_found
+ok   B GET /v1/reports/quarterly/<uuid>/pdf  ->  HTTP 404 not_found
+ok   B POST /v1/reports/quarterly/<uuid>/email  ->  HTTP 403 sign_in_required
+ok   B POST /v1/copilot/events/<uuid>/action  ->  HTTP 404 not_found
+ok   B DELETE /v1/copilot/events/<uuid>  ->  HTTP 404 not_found
+ok   B PATCH /v1/spending/categories/shopping.c2a0bf51c  ->  HTTP 404 not_found
+ok   B DELETE /v1/spending/categories/shopping.c2a0bf51c  ->  HTTP 404 not_found
+ok   A's goals and accounts and the demo user's goals are unchanged
+ok   A's conversation still exists
+
+=== C. Card guardrail (validateCard), figures allowed: $1,499  $599  $2,500  22.99% ===
+FLAG C1 a short name deletes digits from an invented figure  ->  "This costs $71,499 of your 7 goal." PASSES
+FLAG C2 a one-digit name next to a separator  ->  "This costs $7,599 of your 7 goal." PASSES
+FLAG C3 unit suffix after an allowed figure (k)  ->  "This costs $1,499k of your Japan Trip." PASSES
+FLAG C4 unit suffix after an allowed figure (M)  ->  "This costs $2,500M of your Japan Trip." PASSES
+FLAG C5 'grand' after an allowed figure  ->  "This costs 599 grand of your Japan Trip." PASSES
+FLAG C6 allowed digits regrouped with commas  ->  "This costs $14,99 of your Japan Trip." PASSES
+FLAG C7 full-width digits  ->  "This costs $９９,９９９ of your Japan Trip." PASSES
+FLAG C8 an allowed number with a different unit  ->  "Your Japan Trip slips 599 months." PASSES
+ok   C9 two allowed figures glued with a decimal point  ->  "This costs $599.2500 of your Japan Trip." blocked (unknown figures: 599.2500)
+
+=== C'. Chat guardrail (validateGrounded), figure given: $3,400 ===
+FLAG C10 'N thousand' with no currency word  ->  "You could spend up to 28 thousand on the car." PASSES
+FLAG C11 full-width digits after $  ->  "You could spend up to $２８,０００ on the car." PASSES
+ok   C12 space inside the amount  ->  "You could spend up to $ 28 000 on the car." blocked
+FLAG C13 'K' with a space  ->  "You could spend up to 28 K on the car." PASSES
+FLAG C14 other currency sign  ->  "You could spend up to €28,000 on the car." PASSES
+ok   C15 'a hundred grand'  ->  "You could spend a hundred grand on the car." blocked
+
+=== D. Email: unverified sign-up address + no limit on sends ===
+FLAG signed up as someone-else@example.com without owning it, then asked for 40 emails from one address  ->  40 accepted, 40 handed to the mailer for someone-else@example.com
+
+=== E. Rate limits ===
+FLAG E1 40 wrong passwords for ONE account, a different X-Forwarded-For each time  ->  40x 401
+FLAG E2 40 saved simulation runs from one guest and one address (CPU + memory, no model)  ->  40x 200 in 7053ms, 40 runs stored
+FLAG E3 a goal whose name is 2,000,000 characters  ->  HTTP 200, stored name length 2000000
