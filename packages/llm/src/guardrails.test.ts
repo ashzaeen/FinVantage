@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { CopilotContext, CopilotMetrics } from "@finvantage/contracts";
 import { CARD_JARGON, generateCopilotCard, templateCard } from "./copilot-card";
-import { cardText, isGroundedNumber, moneyIn, withoutSentences, groundedFigures, validateCard, validateGrounded, wordCount, MAX_CARD_WORDS, MAX_CHAT_WORDS } from "./guardrails";
+import { cardText, contradictsVerdict, isGroundedNumber, moneyIn, withoutNames, withoutSentences, groundedFigures, validateCard, validateGrounded, validateNumbers, wordCount, wordsToNumber, MAX_CARD_WORDS, MAX_CHAT_WORDS } from "./guardrails";
 import type { LlmClient } from "./client";
 
 const context: CopilotContext = {
@@ -508,3 +508,105 @@ test("numbers inside well-known financial names are names, not figures", () => {
   assert.equal(validateGrounded("Your payment is $56,883.", groundedFigures({ paymentCents: 56_883 })).ok, false, "cents never pass as dollars");
 });
 
+
+/* ─── Security review W2: the guardrails check meaning, not only digits ───── */
+
+test("W2 G1: a spelled-out amount fails the card and report checks, while small counts pass", () => {
+  const card = (impact: string) => validateCard({ impact, tradeOff: "", smartMove: "" }, ["$1,499"]);
+  assert.equal(card("This laptop would cost you twenty-eight thousand dollars.").ok, false);
+  assert.equal(card("It eats a hundred of your spare dollars.").ok, false);
+  assert.equal(validateNumbers("Net worth grew by fifty thousand.", ["2026-Q3"]).ok, false, "reports share the check");
+  assert.equal(card("Two goals slip, and twelve months of saving pays for it.").ok, true, "counts up to twelve are fine");
+});
+
+test("W2 G2: an approving card on a caution verdict falls back to the template", async () => {
+  const approving = (): LlmClient => ({
+    provider: "test",
+    generate: async () =>
+      JSON.stringify({
+        impact: "Great choice: this fits your Japan trip perfectly.",
+        tradeOff: "Nothing to worry about here.",
+        smartMove: "Go ahead and buy it.",
+      }),
+  });
+  assert.equal(metrics.verdict, "caution");
+  assert.equal((await generateCopilotCard(approving(), context, metrics)).source, "template");
+  // The same words are fine when the math says the purchase is good.
+  assert.equal((await generateCopilotCard(approving(), context, { ...metrics, verdict: "good" })).source, "llm");
+  assert.equal(contradictsVerdict("Great choice, go ahead.", "neutral"), null);
+});
+
+test("W2 G2: no template card trips its own tone check", () => {
+  const rental: CopilotContext = { pageType: "rental", itemType: "rent_monthly", priceCents: 195_000, merchant: "x" };
+  const car: CopilotContext = { pageType: "vehicle_financing", itemType: "vehicle", priceCents: 2_800_000, merchant: "x" };
+  const noGoal = { ...metrics.headline, kind: "none" as const, goalName: null, statusBefore: null, statusAfter: null };
+  const cases: Array<[CopilotContext, CopilotMetrics]> = [
+    [context, metrics],
+    [context, { ...metrics, splitPlan: null }],
+    [context, { ...metrics, splitPlan: null, headline: noGoal }],
+    [context, { ...metrics, liquidBufferAfterCents: -29_900, headline: { ...metrics.headline, kind: "out_of_reach", statusAfter: "out of reach" } }],
+    [rental, { ...metrics, splitPlan: null, fixedCostRatioBefore: 0.42, fixedCostRatioAfter: 0.66, safeRentThresholdCents: 120_000 }],
+    [car, { ...metrics, splitPlan: null, debtToIncomeBefore: 0.16, debtToIncomeAfter: 0.25, totalCostOfOwnershipCents: 3_326_400, vehicle: { termMonths: 60, annualRate: 0.07, monthlyPaymentCents: 55_440, totalInterestCents: 526_400 } }],
+  ];
+  for (const [c, m] of cases) {
+    const text = cardText(templateCard(c, m));
+    assert.equal(contradictsVerdict(text, "caution"), null, text);
+  }
+});
+
+test("W2 G3: digits in a user-written name approve nothing outside that name", async () => {
+  const names = ["Trip 2000", "0% Promo Card"];
+  const card = (impact: string) => validateCard({ impact, tradeOff: "", smartMove: "" }, ["$1,499"], names);
+  assert.equal(card("This puts $2,000 of your Trip 2000 goal at risk.").ok, false, "the name can't approve $2,000");
+  assert.equal(card("This puts your Trip 2000 goal at risk.").ok, true, "the name itself is fine");
+  assert.equal(card("Put the rest on your 0% promo card.").ok, true, "names match ignoring case");
+  assert.equal(withoutNames("Your TRIP 2000 goal", ["Trip 2000"]).trim(), "Your   goal".trim());
+
+  // End to end: a goal name with digits no longer launders an invented figure into a card.
+  const inventing: LlmClient = {
+    provider: "test",
+    generate: async () =>
+      JSON.stringify({ impact: "This puts $2,000 of your Trip 2000 goal at risk.", tradeOff: "x", smartMove: "y" }),
+  };
+  const poisoned: CopilotMetrics = { ...metrics, headline: { ...metrics.headline, goalName: "Trip 2000" } };
+  assert.equal((await generateCopilotCard(inventing, context, poisoned)).source, "template");
+});
+
+test("W2 G4-G7: the chat check catches grand, bucks, k, USD, and spelled-out amounts", () => {
+  const given = groundedFigures({ balanceCents: 340_000 });
+  for (const text of [
+    "You could afford a car up to 28 grand.",
+    "That's about 500 bucks a month.",
+    "You could afford a car up to 28k.",
+    "You could afford a car up to USD 28,000.",
+    "You could afford a car up to 28,000 USD.",
+    "You could afford a car up to twenty-eight thousand dollars.",
+    "Budget around twenty-eight grand for it.",
+  ]) {
+    assert.equal(validateGrounded(text, given).ok, false, text);
+  }
+  // The same forms pass when the amount is real.
+  const real = groundedFigures({ priceCents: 2_800_000 });
+  for (const text of ["Up to 28 grand.", "Up to 28k.", "Up to USD 28,000.", "Up to twenty-eight thousand dollars."]) {
+    assert.equal(validateGrounded(text, real).ok, true, text);
+  }
+});
+
+test("W2: the new money forms don't misread names, units, or counts", () => {
+  const given = groundedFigures({ balanceCents: 340_000 });
+  for (const text of [
+    "Max out your 401k match first, then a 529 plan.",
+    "A used car with 28k miles is a fair pick.",
+    "An S&P 500 index fund is a common choice.",
+    "Two of your goals stay on track.",
+    "Your grand total of goals is on pace.",
+  ]) {
+    assert.equal(validateGrounded(text, given).ok, true, text);
+  }
+  assert.deepEqual(moneyIn("$28k").map((m) => m.dollars), [28_000], "$28k is counted once");
+  assert.deepEqual(moneyIn("28k dollars").map((m) => m.dollars), [28_000], "28k dollars is counted once");
+  assert.equal(wordsToNumber("twenty-eight thousand"), 28_000);
+  assert.equal(wordsToNumber("one hundred and five"), 105);
+  assert.equal(wordsToNumber("two million five hundred thousand"), 2_500_000);
+  assert.equal(wordsToNumber("twenty bananas"), null);
+});

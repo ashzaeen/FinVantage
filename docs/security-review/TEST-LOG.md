@@ -10,6 +10,17 @@ Raw, dated notes for every test, including the ones that fail or get blocked.
 - Baseline: `npm run check` passed, 316/316 tests, typecheck clean (2026-11-11)
 - Evidence files live in `evidence/`. Name them `W1-01-...png`, `W1-02-...txt`, and so on.
 
+## Status (updated 2026-11-11)
+
+| ID | Finding | Status | Proposed severity |
+|---|---|---|---|
+| W1 | Shared public demo token: cross-user writes and stored prompt injection | **Confirmed and fixed** (guest sessions + read-only demo token). Tests, mutation check, manual retest done. Commit `9495c84` | High |
+| W5 | Shared Advisor chat history across visitors (found during W1) | **Confirmed and fixed** with W1 | Medium |
+| W2 | Guardrails check digits, not meaning (G1–G7) | **Confirmed and fixed** (F1, F2, F3). Probe before/after, tests, mutation check, live Gemini check done | Medium (G2), Low–Medium (rest) |
+| W3 | Report email to any recipient | Not started | TBD |
+| W4 | No rate limiting on model-backed routes (and now guest creation) | Not started | TBD |
+| Minor | Token in `?token=` URL; 7-day tokens, no revocation | Observed (S2); guest tokens now 1 day. Not started | Low |
+
 ## Setup observations
 
 | # | Observation | Evidence |
@@ -92,7 +103,78 @@ Found during W1-05. All demo visitors see each other's Advisor conversations, be
 
 ## W2: Guardrails check numbers, not meaning
 
-_Not started._
+### How the guardrails work (code review)
+
+- **Copilot card, `validateCard`** (`packages/llm/src/guardrails.ts`): rejects a card over 60 words, or one containing any number not in the allowlist. Numbers are found by `numbersIn()`, the regex `\d[\d,]*(?:\.\d+)?`, so **only digits are seen**. The allowlist is the math core's formatted figures **plus account, card, and goal names** (`packages/llm/src/copilot-card.ts`, "Names can contain digits"). The rule that the math decides the verdict (caution / good / neutral) is only in `SYSTEM_PROMPT`; no code compares the card's tone to the verdict.
+- **Advisor chat, `validateGrounded`**: checks **dollar amounts only** (`$570`, `$9.1k`, `$1.2 million`, `570 dollars`), each within 3% of a given figure. Plain numbers and percentages are unchecked **by design**: a recorded team decision of 2026-11-08 in `docs/DECISIONS.md` ("Rule 1, narrowed for chat"). Gaps below are judged against that stated scope, not against an all-numbers check.
+
+### Method
+
+Tested the controls in isolation: a probe script feeds hand-written cards and answers straight into the real functions. No model or network, so results are deterministic and repeatable. Control cases (which should be blocked) run alongside the gap cases.
+
+- Script: [`w2-probe.ts`](w2-probe.ts), run with `npx tsx docs/security-review/w2-probe.ts`
+- Output before the fix: [`evidence/W2-probe-before-fix.txt`](evidence/W2-probe-before-fix.txt)
+- Output after the fix: [`evidence/W2-probe-after-fix.txt`](evidence/W2-probe-after-fix.txt)
+
+### Results (2026-11-11)
+
+| # | Function | Input (abridged) | Expected | Got | Verdict |
+|---|---|---|---|---|---|
+| C1 | `validateCard` | "...costs $9,999 of your Japan Trip savings" ($9,999 not on the list) | Block | Block (`unknown figures: 9999`) | ✅ Control works |
+| C2 | `validateCard` | 61 words | Block | Block (`over word limit`) | ✅ Control works |
+| C3 | `validateCard` | Only approved figures; "$1499" vs "$1,499" | Pass | Pass | ✅ Commas normalized |
+| **G1** | `validateCard` | "...cost you **twenty-eight thousand dollars**..." | Block | **Pass** | ❌ Spelled-out amounts invisible |
+| **G2** | `validateCard` | Verdict is **caution**; card says "**Great choice... go ahead and buy it**" (no digits) | Block | **Pass** | ❌ Tone never checked against the verdict |
+| **G3** | `validateCard` | Goal named "Trip **2000**" on the allowlist; card invents "**$2,000**" | Block | **Pass** | ❌ Digits in a user-written name get approved (allowlist poisoning) |
+| C4 | `validateGrounded` | "...a car up to $28,000" | Block | Block (`unknown amounts: $28,000`) | ✅ Control works |
+| C5 | `validateGrounded` | "...up to 28000 dollars" | Block | Block | ✅ Control works |
+| C6 | `validateGrounded` | "about $3,400" (real figure) | Pass | Pass | ✅ Rounding tolerance works |
+| C7 | `validateGrounded` | "under 30%" | Pass | Pass | ✅ Out of scope by design |
+| **G4** | `validateGrounded` | "...up to **28 grand**" | Block | **Pass** | ❌ "grand" not recognized as dollars |
+| **G5** | `validateGrounded` | "...up to **twenty-eight thousand dollars**" | Block | **Pass** | ❌ Spelled-out amounts invisible |
+| **G6** | `validateGrounded` | "...up to **28k**" (no $) | Block | **Pass** | ❌ "k" shorthand needs a $ sign |
+| **G7** | `validateGrounded` | "...up to **USD 28,000**" | Block | **Pass** | ❌ Currency code not recognized |
+
+**Summary:** 7 of 7 controls behave correctly; 7 of 7 suspected gaps confirmed.
+
+### Severity reasoning
+
+- What the guardrail is for: stopping the model from showing a user a figure the math didn't produce (PRD rule 1) and keeping the card's verdict honest. These gaps let a wrong figure or the wrong tone reach the user while the UI still treats the answer as checked (see the "Safe Answer" badge in W1-04).
+- Who can trigger them: mainly the **model's own mistakes** (it writes "28 grand" or "go for it" on a caution card). Deliberate abuse through planted text (W1) is now **self-only** after the W1 fix, so G3 needs the attacker to control their own goal name.
+- Proposed severity: **Medium** for G2 (a wrong verdict on a money decision is the product's core risk, and nothing in code catches it); **Low–Medium** for G1, G3–G7 (wrong figures in unusual formats).
+- Existing mitigation for G2: the card's `lead` and `keyFigures` always come from the deterministic template (`copilot-card.ts`, `llmCard`), so the headline figure stays honest. Only the three sentences (impact, trade-off, smart move) are model-written, and those carry the tone.
+- Not yet done: a live check that Gemini actually produces these forms. The probe proves the guardrail **would let them through**, not how often the model writes them.
+
+### W2 fix (2026-11-11): all three options
+
+| Fix | Gap | Change | Where |
+|---|---|---|---|
+| **F1, cards and reports** | G1 | `validateNumbers` rejects number words from "thirteen" up ("twenty", "hundred", "thousand"...). Words up to twelve stay allowed as counts. Because the quarterly report uses the same function, reports get the fix too | `packages/llm/src/guardrails.ts` |
+| **F1, chat** | G4–G7 | `moneyIn` also reads "28 grand", "500 bucks", "USD 28,000" / "28,000 USD", a bare "28k", and spelled-out amounts ("twenty-eight thousand dollars", via `wordsToNumber`). `validateGrounded` removes financial names first, so "401k" is never read as $401,000. A bare "k" followed by a non-money unit ("28k miles") isn't counted | `guardrails.ts` |
+| **F2** | G2 | `contradictsVerdict`: on a **caution** verdict, a card with a plainly approving phrase ("go ahead", "great choice", "easily afford"...) falls back to the template. Hedged phrases the templates use ("If you planned for it, you can afford it") are deliberately excluded | `guardrails.ts`, `copilot-card.ts` |
+| **F3** | G3 | `validateCard` takes names separately and removes them from the text before checking numbers (`withoutNames`). A name's digits are fine where the name is written but approve nothing elsewhere. Same idea as the team's existing `withoutFinancialNames` | `guardrails.ts`, `copilot-card.ts` |
+
+**F2 is a tripwire, not a full tone check.** A model can approve in words that aren't on the list. The real protection remains that the card's headline figure (`lead`, `keyFigures`) comes from code. F2 is a cheap second layer: no extra model call, no added latency.
+
+**Tradeoff accepted:** F1 and F3 make the card check stricter, so a model that paraphrases a name ("the 0% card" instead of "0% Promo Card") or writes a large number in words now gets the template card. That fails safe: the template is always correct, just less fluent.
+
+### W2 fix verification
+
+| # | Check | Result |
+|---|---|---|
+| V2-01 | Reran the same probe on the old code and the fixed code (card checks run as the app runs them) | Before: **7 of 7 gaps pass through**. After: **all 7 blocked**. All 8 controls identical before and after, including new control C8 ("your 0% Promo Card" still passes) |
+| V2-02 | 6 new regression tests in `packages/llm/src/guardrails.test.ts`, named by gap (G1, G2 x2, G3, G4–G7, false positives) | All pass. False-positive guards: "401k match", "529 plan", "28k miles", "S&P 500", "two of your goals", "grand total" all still pass the chat check; every caution template passes its own tone check |
+| V2-03 | Targeted mutation check: switched off each fix alone | F1-cards off fails only G1; F2 off fails only G2; F3 off fails only G3; F1-chat off fails only G4–G7. Each test guards its own fix |
+| V2-04 | `npm run check` | **325/325 pass** (319 + 6), typecheck clean |
+| V2-05 | 2026-11-11 ~01:45. **Live check with Gemini** (`gemini-3-flash-preview`) on the fixed code: a fresh guest session asked the local API for 8 real Copilot cards (checkout $1,499 / $3,699 / $89 / $450, rent $1,950 / $1,200, car $28,000 / $18,000), one at a time. Script: [`w2-live-copilot.ts`](w2-live-copilot.ts) | **8 of 8 cards written by Gemini (`source=llm`) and accepted.** No template fallbacks, and the API log shows no `Copilot card: template used` lines, so the stricter checks didn't push real cards to the template. All 6 **caution** cards read as cautious ("a stretch", "out of reach", "consider a less expensive vehicle"); both **good** cards read as positive. 1.4–1.6 s each, inside the 3-second budget. Evidence: [`evidence/W2-live-copilot-run1.txt`](evidence/W2-live-copilot-run1.txt) |
+
+Limits of V2-05: one run of 8 scenarios. Accepted cards are cached per identical input, so rerunning the same scenarios in the same API process would only replay the cache. It shows the fix doesn't break normal cards; it doesn't measure how often Gemini would write a bad form.
+
+### Residual risk after the W2 fix
+
+- **Tone beyond the phrase list** (G2): a model could still approve a caution purchase in other words. Mitigated by code-owned headline figures. A stronger fix (a separate classifier call) was rejected: it adds cost and latency inside the Copilot's 2-second budget.
+- **Plain numbers and percentages in chat** remain unchecked by design (team decision of 2026-11-08). Not a finding.
+- **Live-tested for regressions only** (V2-05): real cards still pass. How often Gemini would write a bad form wasn't measured.
 
 ## W3: Report email recipient
 

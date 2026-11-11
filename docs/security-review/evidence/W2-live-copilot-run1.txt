@@ -1,0 +1,16 @@
+checkout          $1,499   HTTP 200  verdict=caution source=llm      1603ms
+    "Buying this now pushes your Next car back 1 month. This $1,499 purchase is a stretch that leaves you $599 below your $2,500 safety cushion. Consider paying off your $1,529.06 balance at 22.99% first to save on interest before making this big purchase."
+checkout          $3,699   HTTP 200  verdict=caution source=llm      1498ms
+    "Buying this makes your House down payment unlikely. You would be $299 short in checking, and this costs 65% of your monthly income. This is a stretch, so try paying off your $1,529.06 balance at 22.99% first or finding a cheaper model."
+checkout          $89      HTTP 200  verdict=good    source=llm      1430ms
+    "This purchase fits comfortably into your current plan. You will have $3,311 left in checking, which keeps you well above your $2,500 safety cushion. Pay with your checking balance to avoid the 22.99% interest on your Cash Rewards Card."
+checkout          $450     HTTP 200  verdict=caution source=llm      1433ms
+    "Buying this is a stretch while you are carrying $1,529.06 on your Cash Rewards Card. This $450 purchase takes up 50% of your spare cash. Paying off that 22.99% debt first or finding a less expensive option would be a safer choice."
+rental            $1,950   HTTP 200  verdict=caution source=llm      1536ms
+    "Paying this rent makes your House down payment out of reach instead of at risk. A price of $1,950 means bills take 42% of your income. Looking for a place around $1,700 would help keep your goals on track."
+rental            $1,200   HTTP 200  verdict=good    source=llm      1405ms
+    "Paying this rent helps you stay on track for your Next car. At $1,200, your bills will take up 29% of your income. This choice works well since you can comfortably afford rent up to $2,450."
+vehicle_financing $28,000  HTTP 200  verdict=caution source=llm      1563ms
+    "Buying this car makes your House down payment out of reach. Adding the $555 monthly payment means $33,300 in total costs and pushes debt payments to 44% of your income. Looking for a less expensive vehicle or a larger down payment could help keep your goal reachable."
+vehicle_financing $18,000  HTTP 200  verdict=caution source=llm      1509ms
+    "Buying this car makes your House down payment out of reach. A $18,000 price tag at 7% interest means $357 monthly payments and $21,420 in total costs. Consider a less expensive vehicle to keep your total debt payments from reaching 41% of your income."
