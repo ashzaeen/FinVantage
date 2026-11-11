@@ -19,7 +19,7 @@ export async function proxy(request: NextRequest) {
 
   let token: string;
   try {
-    token = (await createApiClient({ baseUrl: API_URL, token: "" }).startGuestSession()).token;
+    token = (await createApiClient({ baseUrl: API_URL, token: "", fetch: asVisitor(request) }).startGuestSession()).token;
   } catch {
     return NextResponse.next();
   }
@@ -36,6 +36,23 @@ export async function proxy(request: NextRequest) {
     maxAge: Math.max(0, claims.exp - Math.floor(Date.now() / 1000)),
   });
   return response;
+}
+
+/**
+ * This request comes from the web server, so the API would count every visitor as one address and
+ * its guest-session limit would be shared by everyone. With WEB_PROXY_SECRET set on both sides, the
+ * API believes the visitor address sent here. The host (Vercel) sets these headers; a visitor can't.
+ */
+function asVisitor(request: NextRequest): typeof fetch {
+  const secret = process.env.WEB_PROXY_SECRET;
+  const visitor = request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (!secret || !visitor) return fetch;
+  return (input, init) => {
+    const headers = new Headers(init?.headers);
+    headers.set("x-finvantage-visitor-ip", visitor);
+    headers.set("x-finvantage-proxy-secret", secret);
+    return fetch(input, { ...init, headers });
+  };
 }
 
 // Dashboard pages only. The landing page, sign-in, and legal pages stay public and session-free.

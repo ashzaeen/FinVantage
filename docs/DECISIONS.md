@@ -276,3 +276,15 @@ Answers to the open questions above. These replace those rows.
 |---|---|
 | `apps/api/src/rate-limit.ts` limits requests with fixed windows in memory, answering 429 `rate_limited` with `Retry-After`: login 10 per 5 minutes, sign-up 5 per hour, guest session 30 per hour (per address); Advisor messages 10 per minute and other model routes 30 per minute (per user), plus 60 model calls per minute per address. The shared demo user is counted per address. Add a model-backed route to `MODEL_ROUTES` | Nothing limited requests: login could be guessed at ~45 tries a second, every guest session copied the demo profile into memory, and model routes spent Gemini quota without a cap |
 | Counts are per server instance and trust the platform's `x-real-ip` / `x-forwarded-for`. Production should add a shared store or the host's firewall rate rules | Enough to bound one process and the demo; honest about what it doesn't cover |
+
+## Second review fixes, decided 2026-11-11
+
+| Decision | Why |
+|---|---|
+| Request bodies are capped at 64 KB (413 `body_too_large`), and names a caller sends are capped (goal and account 80, merchant 100, life-event sentence 500). The limits are on the input schemas (`NewGoal`, `NewAccount`, `CreateTransaction`, `ParseLifeEventRequest`), not the stored types | A 200,000-character goal name and a 5 MB body were accepted, and names reach model prompts. Bank-supplied names must still pass response checks |
+| `WEB_PROXY_SECRET`, the same on the API and the web app, lets the web server tell the API a visitor's address (`x-finvantage-visitor-ip`) for rate limits. Unset, the header is ignored | Guest sessions are requested by the web server, so every visitor counted as one address and 30 visitors an hour used up the demo |
+| Report emails: 5 an hour per account and per recipient. Sign-in: 10 attempts per 15 minutes per email as well as per address. Simulation routes: 60 a minute per user | Each was unlimited. The per-account sign-in limit can lock a person out for the window; accepted |
+| `?token=` is read only on `GET /v1/live` and the report PDF link | Tokens in URLs reach logs and history; only those two can't send a header |
+| The API sends `secureHeaders` and `no-store` on `/v1`; the web app sends frame, sniff, referrer and HSTS headers. No script CSP yet | Cheap protection against framing and sniffing. A full CSP needs nonces for Next's inline scripts |
+| `safeNextPath` (contracts) decides the post-sign-in redirect by resolving the URL and comparing origins | `/login?next=/\evil.example` passed the old text check and left the site |
+| Card and report number check: look-alike digits are normalized, commas must group thousands, a money figure must be written with `$`, shorthand (`2k`, `ten grand`, `double`) is refused, and a name is removed only as a whole name. This replaces the F3 wording above | A goal named "7" deleted a digit from "$71,499"; "$14,99", "599 months" and "$2k" passed |

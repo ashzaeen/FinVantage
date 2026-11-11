@@ -1,5 +1,7 @@
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
 import { DEMO_USER_ID, NotImplementedError } from "@finvantage/data";
 import type { AppDeps } from "./deps";
 import { HttpError, type AppEnv } from "./mount";
@@ -20,7 +22,7 @@ import { registerSimulationRoutes } from "./routes/simulations";
 import { registerIncomeRoutes } from "./routes/income";
 import { registerSpendingRoutes } from "./routes/spending";
 import { registerTransactionRoutes } from "./routes/transactions";
-import { AUTH_RULES, MODEL_RULES, RateLimiter, rateLimit } from "./rate-limit";
+import { AUTH_RULES, COMPUTE_RULES, MODEL_RULES, RateLimiter, rateLimit } from "./rate-limit";
 
 /**
  * `WEB_ORIGIN` is a comma-separated list. An entry may use `*` for one subdomain label, such as
@@ -49,6 +51,12 @@ const DEMO_TOKEN_WRITES: ReadonlyArray<{ method: string; path: RegExp }> = [
   { method: "POST", path: /^\/v1\/copilot\/events\/[^/]+\/action$/ },
 ];
 
+/** The only routes that accept `?token=`. */
+const TOKEN_IN_URL = /^\/v1\/(?:live|reports\/quarterly\/[^/]+\/pdf)$/;
+
+/** The largest request body the API reads. */
+export const MAX_BODY_BYTES = 64 * 1024;
+
 export function demoTokenMayCall(method: string, path: string): boolean {
   if (method === "GET" || method === "HEAD") return true;
   return DEMO_TOKEN_WRITES.some((rule) => rule.method === method && rule.path.test(path));
@@ -66,12 +74,29 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
     await next();
     await deps.live.flush();
   });
+  // nosniff, frame protection, HSTS, no-referrer. The API serves JSON and one PDF, never pages.
+  // The web app and the extension call this API from other origins, so that one policy is off.
+  app.use("*", secureHeaders({ crossOriginResourcePolicy: false }));
+  // Answers hold account data, so no shared cache may keep them.
+  app.use("/v1/*", async (c, next) => {
+    await next();
+    c.header("cache-control", "no-store");
+  });
+  // No request here needs more than a few kilobytes of JSON. Without a cap a 5 MB body was read
+  // and stored (security review N1).
+  app.use(
+    "*",
+    bodyLimit({
+      maxSize: MAX_BODY_BYTES,
+      onError: (c) => c.json({ error: { code: "body_too_large", message: "Request body is too large." } }, 413),
+    }),
+  );
   app.get("/health", (c) => c.json({ ok: true, llm: deps.llm.provider, live: deps.live.transport }));
 
   // Request limits (security review W4). Registered before the routes they guard, because Hono
   // runs handlers in registration order.
   const limiter = new RateLimiter();
-  app.use("/auth/*", rateLimit(limiter, AUTH_RULES));
+  app.use("/auth/*", rateLimit(limiter, AUTH_RULES, deps.webProxySecret));
 
   // Sign-up, log-in, and the public key. No token needed.
   registerAuthRoutes(app, deps);
@@ -80,7 +105,10 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   // to the demo user, and stays for signed-out visitors, the extension, and tests. EventSource
   // cannot set headers, so the SSE stream also accepts ?token=.
   app.use("/v1/*", async (c, next) => {
-    const token = c.req.header("authorization")?.replace(/^Bearer /, "") ?? c.req.query("token");
+    // A token in the URL ends up in logs and history, so it is read only where a header can't be
+    // sent: the SSE stream (EventSource) and the PDF download link.
+    const fromQuery = c.req.method === "GET" && TOKEN_IN_URL.test(c.req.path) ? c.req.query("token") : undefined;
+    const token = c.req.header("authorization")?.replace(/^Bearer /, "") ?? fromQuery;
     if (token && token === demoToken) {
       if (!demoTokenMayCall(c.req.method, c.req.path)) {
         return c.json(
@@ -101,7 +129,8 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   });
 
   // After the token check, so model routes can be counted per user.
-  app.use("/v1/*", rateLimit(limiter, MODEL_RULES));
+  app.use("/v1/*", rateLimit(limiter, MODEL_RULES, deps.webProxySecret));
+  app.use("/v1/*", rateLimit(limiter, COMPUTE_RULES, deps.webProxySecret));
 
   registerProfileRoutes(app, deps);
   registerAccountRoutes(app, deps);

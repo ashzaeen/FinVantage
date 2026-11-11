@@ -30,7 +30,8 @@ export type LifeEventDraft = z.infer<typeof LifeEventDraft>;
 export const LifeEvent = LifeEventDraft.extend({ id: Id, userId: Id });
 export type LifeEvent = z.infer<typeof LifeEvent>;
 
-export const ParseLifeEventRequest = z.object({ text: z.string().min(1) });
+/** One typed sentence. Capped because the text is sent to the model (security review N1). */
+export const ParseLifeEventRequest = z.object({ text: z.string().min(1).max(500) });
 
 /** Parsing never saves. The user confirms a draft, then the client POSTs it. */
 export const ParseLifeEventResponse = z.discriminatedUnion("matched", [

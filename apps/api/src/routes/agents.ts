@@ -4,6 +4,7 @@ import { routes, type QuarterlyReport } from "@finvantage/contracts";
 import { generateQuarterlyReport } from "@finvantage/llm";
 import { DEMO_USER_ID } from "@finvantage/data";
 import { GUEST_PREFIX } from "../auth";
+import { RateLimiter, sameSecret } from "../rate-limit";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
 import {
@@ -144,6 +145,17 @@ async function requireAllowedRecipient(deps: AppDeps, userId: string, requested:
   }
 }
 
+export const REPORT_EMAILS_PER_HOUR = 5;
+const emailLimiters = new WeakMap<AppDeps, RateLimiter>();
+
+function emailAllowed(deps: AppDeps, userId: string, to: string): boolean {
+  let limiter = emailLimiters.get(deps);
+  if (!limiter) emailLimiters.set(deps, (limiter = new RateLimiter()));
+  const hour = 60 * 60_000;
+  const byRecipient = limiter.hit(`to:${to.trim().toLowerCase()}`, REPORT_EMAILS_PER_HOUR, hour).allowed;
+  return limiter.hit(`user:${userId}`, REPORT_EMAILS_PER_HOUR, hour).allowed && byRecipient;
+}
+
 async function emailReport(deps: AppDeps, userId: string, reportId: string) {
   const report = await deps.docs.getReport(userId, reportId);
   if (!report) throw new HttpError(404, "not_found", "Quarterly report not found.");
@@ -151,6 +163,14 @@ async function emailReport(deps: AppDeps, userId: string, reportId: string) {
     throw new HttpError(409, "pdf_not_ready", "The report PDF is not ready.");
   }
   const to = await reportRecipient(deps, userId);
+  // Sign-up doesn't verify addresses, and nothing limited sends: one account could email its
+  // address without end (second review, R2-2). Counted per account and per recipient.
+  if (to && !emailAllowed(deps, userId, to)) {
+    return deps.docs.updateReport({
+      ...report,
+      email: { status: "failed" as const, sentAt: null, messageId: null, error: "Too many report emails. Try again later." },
+    });
+  }
   if (!to) {
     const updated = {
       ...report,
@@ -253,7 +273,7 @@ export function registerAgentRoutes(app: Hono<AppEnv>, deps: AppDeps) {
 
   app.post("/internal/reports/schedule/run", async (c) => {
     const token = c.req.header("authorization")?.replace(/^Bearer /, "");
-    if (!deps.schedulerSecret || token !== deps.schedulerSecret) {
+    if (!deps.schedulerSecret || !token || !sameSecret(token, deps.schedulerSecret)) {
       return c.json({ error: { code: "unauthorized", message: "Missing or bad scheduler token." } }, 401);
     }
     const result = await runDueEmailSchedules(

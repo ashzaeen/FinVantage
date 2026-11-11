@@ -20,7 +20,8 @@ Raw, dated notes for every test, including the ones that fail or get blocked.
 | W3 | Report email to any recipient (email relay) | **Confirmed and fixed** (server picks the recipient; guests and demo can't email). Probe before/after, 4 tests, mutation check | Medium |
 | W4 | No rate limiting (login guessing, guest memory, model spend) | **Confirmed and fixed** (in-memory limiter, 429 + Retry-After). Burst before/after, 6 tests, mutation check | Medium |
 | R2 | Independent second review of the fixes and the rest of the app (see the last section) | **7 new items found, none fixed yet.** Isolation and the demo-token allowlist held | Medium (R2-1, R2-2, R2-3), Low–Medium (rest) |
-| Minor | Token in `?token=` URL; 7-day tokens, no revocation | Observed (S2); guest tokens now 1 day. Not started | Low |
+| Minor | Token in `?token=` URL; 7-day tokens, no revocation | `?token=` now limited to the stream and the PDF link; guest tokens 1 day; revocation not built | Low |
+| N/R2 | Second-review findings (size limits, redirect, shared guest limit, email and login limits, headers, guardrail forms) | **11 of 13 fixed**; see "Fixes for the second-review findings" | Low to Medium |
 
 ## Setup observations
 
@@ -387,3 +388,65 @@ Chat check, figure given `$3,400`: "28 thousand" (C10), full-width digits after 
 - **W4 "clients fail safe"** is accurate, but that safe fallback is what makes R2-1 silent.
 - **V1-06b (self-injection after the W1 fix)** is still logged as inconclusive and was never retested. With no length limit or delimiters on names (R2-4), assume a visitor can still steer **their own** Advisor.
 - Severities for W1 (High), W5, W2, W3 and W4 (Medium) look fair. The data is synthetic, so the W1 and W5 ratings describe what the same design would mean in a real banking app, which the log already says.
+
+## Fixes for the second-review findings (2026-11-11)
+
+Two reviews ran in parallel and logged overlapping findings under different IDs (the two sections above). This section is the single record of what was done about them.
+
+### ID map and outcome
+
+| Finding | First-review ID | Second-review ID | Outcome |
+|---|---|---|---|
+| No input size limits | N1 | R2-4 | **Fixed** |
+| Guardrail formats still passing; F3 name-digit regression | N2 | R2-6 | **Fixed for every form either probe tried except one** ("28 large") |
+| Open redirect after sign-in | N3 | (not found) | **Fixed** |
+| Heavy simulation routes unlimited | N6 | R2-5 | **Fixed** |
+| Guest-session limit shared by all web visitors | (not found) | R2-1 | **Fixed in code; needs `WEB_PROXY_SECRET` set on both deployments to take effect** |
+| Unlimited email to an unverified address | (W3 residual) | R2-2 | **Limited** to 5 an hour; the address is still unverified |
+| Login limit dodged with forged addresses; no per-account limit | (W4 residual) | R2-3 | **Fixed** (per-account limit added) |
+| No security headers | N5 | R2-7 | **Fixed** (API and web) |
+| `?token=` accepted on every route | N7 | R2-7 | **Fixed** (stream and PDF link only) |
+| Source links not checked for http(s) | N8 | R2-7 | **Fixed** (filtered on the server) |
+| Scheduler secret compared with `!==` | N9 | (not found) | **Fixed** (constant-time) |
+| Demo token can still add Copilot events to the shared demo user | N4 | (W1 residual) | **Not fixed, accepted.** The signed-out extension needs it; no path into another person's model prompt was found |
+| 7-day sign-in tokens, no revocation | (minor) | R2-7 | **Not fixed.** Guests are 1 day; revocation needs a token store |
+
+### What changed
+
+| Fix | Change | Where |
+|---|---|---|
+| Size limits | Bodies over 64 KB get 413 `body_too_large`. Names a caller sends are capped: goal and account 80, transaction merchant 100, life-event sentence 500. Stored types stay loose so bank-supplied names never fail a response | `apps/api/src/app.ts`, `packages/contracts/src/{goal,account,life-event,life-scenario}.ts` |
+| Redirect | `safeNextPath` resolves `next` as the browser will and requires the same origin; backslashes and control characters are refused | `packages/contracts/src/session.ts`, `apps/web/src/lib/session.ts` |
+| Compute limits | Simulation routes: 60 a minute per user, 120 per address | `apps/api/src/rate-limit.ts` (`COMPUTE_RULES`) |
+| Visitor-aware limits | The web proxy sends the visitor's address plus `WEB_PROXY_SECRET`; the API uses that address for rate limits only when the secret matches (constant-time). Without the secret on both sides, behavior is as before | `apps/web/src/proxy.ts`, `apps/api/src/rate-limit.ts`, `apps/api/src/deps.ts`, `.env.example` |
+| Email limit | 5 report emails an hour per account and per recipient; over that, the send is recorded as failed ("Too many report emails") | `apps/api/src/routes/agents.ts` |
+| Login per account | 10 attempts per 15 minutes per email, whatever address they come from | `apps/api/src/routes/auth.ts` |
+| Headers | API: `secureHeaders` (nosniff, HSTS, frame protection, no-referrer) and `Cache-Control: no-store` on `/v1`. Web: `X-Frame-Options: DENY`, `frame-ancestors 'none'`, nosniff, referrer policy, HSTS | `apps/api/src/app.ts`, `apps/web/next.config.ts` |
+| Token in URL | `?token=` is read only on `GET /v1/live` and `GET /v1/reports/quarterly/:id/pdf` | `apps/api/src/app.ts` |
+| Guardrails | NFKC normalizing (full-width digits); names are removed only as whole names, never inside a number (F3 regression); commas must group thousands (`$14,99` refused); a number keeps its unit (`$`, `%`) and a money-only figure must be written with `$` (`599 months` refused); shorthand refused in cards (`$2k`, `ten grand`, `double`); more approving phrases, punctuation stripped before the tone check; chat reads `28 000`, `€28,000`, `28 thousand`, `28 K`, `28,000 in cash` | `packages/llm/src/guardrails.ts` |
+
+### Verification
+
+| # | Check | Result |
+|---|---|---|
+| VR-01 | `npm run check` | **348/348 pass** (335 + 13 new), typecheck clean |
+| VR-02 | Second reviewer's in-process probe, before and after | **16 flags down to 2.** Both remaining are by design: 40 email requests accepted but only **5 reached the mailer**; 40 simulations is under the new limit of 60. [`evidence/R2-probe-before-fix.txt`](evidence/R2-probe-before-fix.txt), [`evidence/R2-probe-after-fix.txt`](evidence/R2-probe-after-fix.txt) |
+| VR-03 | First reviewer's guardrail probe | 14 gaps down to 1 ("28 large"). [`evidence/R-review2-guardrail-after-fix.txt`](evidence/R-review2-guardrail-after-fix.txt) |
+| VR-04 | Original W2 probe | Still 15 of 15 as expected |
+| VR-05 | Mutation check | Each of these, switched off, failed its test: body limit, compute limits, goal name cap, same-origin redirect check, NFKC, unit check, tone punctuation, visitor header trusted without the secret, email limit, per-account login limit, `?token=` scope, comma grouping, money-stays-money. **Two were not shown:** "visitor header ignored" was never run, and removing only the name look-behind failed nothing because the look-ahead covers the same cases |
+| VR-06 | Live Gemini, 8 Copilot cards on the fixed code | **7 of 8 written by Gemini; 1 fell back to the template** (rent $1,200). The reason wasn't captured (the API log was in another session's terminal). Three in-process reruns of that scenario were all accepted, so it did not reproduce. [`evidence/N2-live-copilot-run2.txt`](evidence/N2-live-copilot-run2.txt) |
+| VR-07 | Running API | `GET /v1/me` carries `nosniff`, HSTS, `no-store`; `GET /v1/goals?token=demo-token` is 401 |
+| VR-08 | Running web app | Landing page carries all five headers; `/app` still issues a 1-day guest cookie |
+
+**Process mistake during VR-05:** the first mutation script had a shell bug (zsh doesn't split an unquoted list), so it made no backups and left its deliberate breakages in five source files. Caught from the script's own error output, reverted by hand, and confirmed with a clean `npm run check` (348/348) before anything was committed. The mutations in that run were cumulative, which is why VR-05 lists what each one added rather than a clean one-at-a-time table.
+
+### Still open
+
+- **`WEB_PROXY_SECRET` must be set on Vercel** (API and web) or the guest limit is still shared by all visitors there. Not verified on the deployment.
+- **Sign-up still doesn't verify email addresses.** An account can send 5 reports an hour to an address it doesn't own.
+- **Per-account login limit can be used to lock someone out** for 15 minutes by failing on purpose. Accepted; a real bank would add MFA.
+- **Guardrails remain a list of forms.** "28 large" passes, and other wordings will. The headline figure on a card still comes from code.
+- **Rate limits are per instance and in memory**, and trust platform address headers (unchanged W4 residual).
+- **Self-injection** (V1-06b) was never retested. Names are now capped at 80 characters, which limits it but doesn't remove it.
+- N3's fix is tested as a function; the redirect wasn't clicked through in a browser.
+- Not reviewed: the extension on live shopping sites, SpacetimeDB, Plaid and MongoDB backends, the deployed Vercel configuration.

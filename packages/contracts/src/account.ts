@@ -80,7 +80,7 @@ export const Account = z.object({
 });
 export type Account = z.infer<typeof Account>;
 
-export const NewAccount = Account.omit({ id: true, userId: true });
+export const NewAccount = Account.omit({ id: true, userId: true }).extend({ name: z.string().trim().min(1).max(80) });
 export type NewAccount = z.infer<typeof NewAccount>;
 
 export const CurrencyCode = z.enum(["USD", "EUR", "GBP", "CAD", "AUD", "CHF", "INR", "MXN"]);
@@ -120,6 +120,7 @@ export const NewTransaction = Transaction.omit({ id: true, category: true, isRec
 export type NewTransaction = z.infer<typeof NewTransaction>;
 
 export const CreateTransaction = NewTransaction.extend({
+  merchant: z.string().trim().min(1).max(100),
   category: z.string().nullable().default(null),
   isRecurring: z.boolean().default(false),
 });

@@ -30,7 +30,7 @@ export type LifeScenarioStatus = z.infer<typeof LifeScenarioStatus>;
 /** One goal as the life simulator sees it, whether sourced from the user's real goals or a saved scenario. */
 export const LifeScenarioGoalInput = z.object({
   id: Id,
-  name: z.string().min(1),
+  name: z.string().min(1).max(80),
   targetCents: Cents.positive(),
   savedCents: Cents.nonnegative(),
   monthlyContributionCents: Cents.nonnegative(),

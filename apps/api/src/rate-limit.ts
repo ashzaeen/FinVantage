@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import type { Context, MiddlewareHandler } from "hono";
 import { DEMO_USER_ID } from "@finvantage/data";
 import type { AppEnv } from "./mount";
@@ -43,6 +44,17 @@ export const MODEL_RULES: readonly RateRule[] = [
   { name: "model-ip", method: "POST", path: MODEL_ROUTES, limit: 60, windowMs: MINUTE, per: "ip" },
 ];
 
+/**
+ * Routes that run the Monte Carlo simulator. A run at the contract's maximum of 50,000 paths took
+ * about two seconds on the one thread that serves every request, and nothing limited it (security
+ * review N6). The dashboard's sliders call these while the user drags, so the allowance is generous.
+ */
+const COMPUTE_ROUTES = /^\/v1\/(?:simulations|life-events|life-events\/preview|life-simulator\/analyze|life-simulator\/export\/pdf|advisory\/visuals)$/;
+export const COMPUTE_RULES: readonly RateRule[] = [
+  { name: "compute", method: "POST", path: COMPUTE_ROUTES, limit: 60, windowMs: MINUTE, per: "user" },
+  { name: "compute-ip", method: "POST", path: COMPUTE_ROUTES, limit: 120, windowMs: MINUTE, per: "ip" },
+];
+
 /** Fixed-window counters. Old windows are dropped once the map grows, so memory stays bounded. */
 export class RateLimiter {
   private readonly windows = new Map<string, { count: number; resetAt: number }>();
@@ -78,7 +90,12 @@ export class RateLimiter {
  * Anywhere a client can reach the server directly it can forge them, so per-IP limits there need a
  * trusted proxy in front. Without any header (tests, local calls) every caller shares one key.
  */
-export function clientIp(c: Context): string {
+export function clientIp(c: Context, webProxySecret: string | null = null): string {
+  // The web app asks for guest sessions from its own server, so without this every visitor looked
+  // like one address and 30 visitors an hour used up the demo for everyone (second review, R2-1).
+  // The web server names the visitor's address, and is believed only with the shared secret.
+  const visitor = c.req.header(VISITOR_IP_HEADER)?.trim();
+  if (visitor && webProxySecret && sameSecret(c.req.header(PROXY_SECRET_HEADER) ?? "", webProxySecret)) return visitor;
   const real = c.req.header("x-real-ip")?.trim();
   if (real) return real;
   const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
@@ -87,13 +104,26 @@ export function clientIp(c: Context): string {
   return socket?.remoteAddress ?? "unknown";
 }
 
-export function rateLimit(limiter: RateLimiter, rules: readonly RateRule[]): MiddlewareHandler<AppEnv> {
+export const VISITOR_IP_HEADER = "x-finvantage-visitor-ip";
+export const PROXY_SECRET_HEADER = "x-finvantage-proxy-secret";
+
+/** Compares two secrets without leaking, through timing, how much of a guess was right. */
+export function sameSecret(given: string, expected: string): boolean {
+  const digest = (value: string) => createHash("sha256").update(value).digest();
+  return timingSafeEqual(digest(given), digest(expected));
+}
+
+export function rateLimit(
+  limiter: RateLimiter,
+  rules: readonly RateRule[],
+  webProxySecret: string | null = null,
+): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     for (const rule of rules) {
       if (rule.method !== c.req.method || !rule.path.test(c.req.path)) continue;
       const userId = rule.per === "user" ? c.get("userId") : undefined;
       // Everyone on the shared demo token is one user, so count them by address instead.
-      const who = userId && userId !== DEMO_USER_ID ? `user:${userId}` : `ip:${clientIp(c)}`;
+      const who = userId && userId !== DEMO_USER_ID ? `user:${userId}` : `ip:${clientIp(c, webProxySecret)}`;
       const { allowed, retryAfterSeconds } = limiter.hit(`${rule.name}:${who}`, rule.limit, rule.windowMs);
       if (!allowed) {
         c.header("Retry-After", String(retryAfterSeconds));

@@ -10,8 +10,16 @@ export function wordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
+/**
+ * Text as the checks read it. NFKC turns look-alike characters into plain ones, so full-width
+ * digits ("２８,０００") can't slip past patterns that only match 0-9 (security review N2).
+ */
+export function plain(text: string): string {
+  return text.normalize("NFKC");
+}
+
 export function numbersIn(text: string): string[] {
-  return (text.match(/\d[\d,]*(?:\.\d+)?/g) ?? []).map((n) => n.replaceAll(",", ""));
+  return (plain(text).match(/\d[\d,]*(?:\.\d+)?/g) ?? []).map((n) => n.replaceAll(",", ""));
 }
 
 /**
@@ -21,14 +29,46 @@ export function numbersIn(text: string): string[] {
  */
 const SPELLED_AMOUNT = /\b(?:thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)\b/i;
 
+/** A number or small number word followed by a multiplier: "2k", "28 grand", "ten grand", "5 million". */
+const MULTIPLIED_AMOUNT = /(?:\d|\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|a|half a|a few|several))\s?(?:k|m|mm|bn|grand|bucks)\b/i;
+
+/** Words that scale an amount without a digit. Checked on cards only; reports use "half" and "quarter" as time. */
+const CARD_MULTIPLIER_WORDS = /\b(?:double|triple|twice|half|dozen)\b/i;
+
 export function validateNumbers(
   text: string,
   allowedFigures: string[],
 ): { ok: true } | { ok: false; reason: string } {
+  text = plain(text);
   const spelled = text.match(SPELLED_AMOUNT);
   if (spelled) return { ok: false, reason: `spelled-out number: "${spelled[0]}"` };
+  // "$2k" would otherwise pass on the strength of an allowed "2". The math core never writes
+  // amounts this way, so any multiplier after a number (or a number word) is refused.
+  const multiplied = text.match(MULTIPLIED_AMOUNT);
+  if (multiplied) return { ok: false, reason: `shorthand amount: "${multiplied[0]}"` };
   const allowed = new Set(allowedFigures.flatMap(numbersIn));
-  const invented = numbersIn(text).filter((number) => !allowed.has(number));
+  // A number keeps the unit it was given with: "1,499" from "$1,499" can't come back as "1,499%".
+  const withUnit = (unit: string) => new Set(allowedFigures.filter((f) => plain(f).includes(unit)).flatMap(numbersIn));
+  const dollars = withUnit("$");
+  const percents = withUnit("%");
+  // A number given only as money must be written as money: "599" from "$599" can't become "599 months".
+  const moneyOnly = (number: string) =>
+    dollars.has(number) && !allowedFigures.some((f) => !plain(f).includes("$") && numbersIn(f).includes(number));
+  const invented: string[] = [];
+  for (const m of text.matchAll(/(\$\s?)?(\d[\d,]*(?:\.\d+)?)(\s?%)?/g)) {
+    const number = m[2]!.replaceAll(",", "");
+    // Commas must group thousands, so "$14,99" is not read as the allowed 1,499.
+    const grouped = !m[2]!.includes(",") || /^\d{1,3}(?:,\d{3})+(?:\.\d+)?$/.test(m[2]!);
+    if (
+      !grouped ||
+      !allowed.has(number) ||
+      (m[1] && !dollars.has(number)) ||
+      (m[3] && !percents.has(number)) ||
+      (!m[1] && moneyOnly(number))
+    ) {
+      invented.push(m[0].trim());
+    }
+  }
   return invented.length > 0
     ? { ok: false, reason: `unknown figures: ${invented.join(", ")}` }
     : { ok: true };
@@ -44,7 +84,14 @@ export function withoutNames(text: string, names: string[]): string {
   return [...names]
     .filter((name) => name.trim() !== "")
     .sort((a, b) => b.length - a.length)
-    .reduce((out, name) => out.replace(new RegExp(escape(name), "gi"), " "), text);
+    // Only a whole name is removed. A goal named "7" used to delete the 7 from "$71,499" and
+    // leave the allowed "1,499" (second review, R2-6 C1 and C2), so a name never matches inside a
+    // word or a number, or right after a currency sign.
+    .reduce(
+      (out, name) =>
+        out.replace(new RegExp(`(?<![\\p{L}\\p{N}$€£¥]|\\d[.,])${escape(name)}(?![\\p{L}\\p{N}]|[.,]\\d)`, "giu"), " "),
+      text,
+    );
 }
 
 /**
@@ -59,8 +106,10 @@ export function validateCard(
 ): { ok: true } | { ok: false; reason: string } {
   const text = cardText(card);
   if (wordCount(text) > MAX_CARD_WORDS) return { ok: false, reason: "over word limit" };
+  const multiplier = withoutNames(plain(text), names).match(CARD_MULTIPLIER_WORDS);
+  if (multiplier) return { ok: false, reason: `multiplier word: "${multiplier[0]}"` };
 
-  return validateNumbers(withoutNames(text, names), allowedFigures);
+  return validateNumbers(withoutNames(plain(text), names), allowedFigures);
 }
 
 /**
@@ -71,12 +120,14 @@ export function validateCard(
  * afford it") are deliberately not on it.
  */
 export const APPROVING_PHRASES =
-  /\b(?:go ahead|go for it|great (?:choice|buy|pick|purchase|idea|deal|news)|no problem|nothing to worry|totally fine|perfectly (?:fine|safe|affordable)|fits[\w\s]{0,30}perfectly|easily afford|treat yourself|won'?t hurt|safe to buy|smart buy|no impact on)\b/i;
+  /\b(?:go ahead|go for it|(?:great|good|smart|sensible|solid|wise) (?:choice|buy|pick|purchase|idea|deal|news|move)|good to (?:buy|go)|buy it (?:today|now)|(?:is|it's|its) (?:very |quite |easily )?affordable|not a risk|no risk|worth it|you deserve|no problem|nothing to worry|totally fine|perfectly (?:fine|safe|affordable)|fits[\w\s]{0,30}perfectly|easily afford|treat yourself|won'?t hurt|safe to buy|no impact on)\b/i;
 
 /** Whether card text contradicts a verdict the math core decided. */
 export function contradictsVerdict(text: string, verdict: string): string | null {
   if (verdict !== "caution") return null;
-  return text.match(APPROVING_PHRASES)?.[0] ?? null;
+  // Punctuation between the words ("Go, ahead: a great, choice") must not hide a phrase.
+  const words = plain(text).replace(/[^\p{L}\p{N}'\s]/gu, " ").replace(/\s+/g, " ");
+  return words.match(APPROVING_PHRASES)?.[0] ?? null;
 }
 
 /** Numbers small enough to be counts, list markers, or months; always allowed in chat. */
@@ -149,9 +200,12 @@ const MULTIPLIER: Record<string, number> = { k: 1e3, thousand: 1e3, m: 1e6, mm: 
 
 /** Every dollar amount in the text, as a number of dollars: "$570", "$9.1k", "$1.2 million", "570 dollars". */
 export function moneyIn(text: string): Array<{ text: string; dollars: number }> {
+  // Read "28 000" as 28000, and look-alike digits as digits (security review N2).
+  text = plain(text).replace(/(?<=\d)[ \u00a0\u202f](?=\d{3}(?!\d))/g, "");
   const found: Array<{ text: string; dollars: number }> = [];
   const value = (digits: string, unit?: string) => Number(digits.replaceAll(",", "")) * (unit ? (MULTIPLIER[unit.toLowerCase()] ?? 1) : 1);
-  for (const m of text.matchAll(/\$\s?(\d[\d,]*(?:\.\d+)?)(?:\s?(k|thousand|mm|m|million|bn|b|billion)\b)?/gi)) {
+  // Other currency signs count too: the app only holds dollars, so "€28,000" is an amount to check.
+  for (const m of text.matchAll(/[$€£¥]\s?(\d[\d,]*(?:\.\d+)?)(?:\s?(k|thousand|mm|m|million|bn|b|billion)\b)?/gi)) {
     found.push({ text: m[0], dollars: value(m[1]!, m[2]) });
   }
   for (const m of text.matchAll(/(?<![$\d.,])\b(\d[\d,]*(?:\.\d+)?)(?:\s?(k|thousand|million|billion))?\s+(?:US\s+)?dollars?\b/gi)) {
@@ -171,8 +225,16 @@ export function moneyIn(text: string): Array<{ text: string; dollars: number }> 
   }
   // A bare "28k" (no $). Not when a non-money unit follows ("28k miles"), and not when a form
   // above already counted it ("$28k", "28k dollars", "28k USD").
-  for (const m of text.matchAll(/(?<![$\d.,]|\$\s|USD\s)\b(\d[\d,]*(?:\.\d+)?)k\b(?!\s+(?:US\s+)?dollars?\b|\s?USD\b|\s+(?:miles?|mi|km|steps|users|followers|views|subscribers|words|calories|people)\b)/gi)) {
+  for (const m of text.matchAll(/(?<![$\d.,]|\$\s|USD\s)\b(\d[\d,]*(?:\.\d+)?)\s?k\b(?!\s+(?:US\s+)?dollars?\b|\s?USD\b|\s+(?:miles?|mi|km|steps|users|followers|views|subscribers|words|calories|people)\b)/gi)) {
     found.push({ text: m[0], dollars: value(m[1]!, "k") });
+  }
+  // "28 thousand" with no unit at all, unless a non-money unit follows.
+  for (const m of text.matchAll(/(?<![$€£¥\d.,]|[$€£¥]\s|USD\s)\b(\d[\d,]*(?:\.\d+)?)\s(thousand|million|billion)\b(?!\s+(?:US\s+)?dollars?\b|\s?USD\b|\s+(?:miles?|mi|km|steps|users|followers|views|subscribers|words|calories|people|years)\b)/gi)) {
+    found.push({ text: m[0], dollars: value(m[1]!, m[2]) });
+  }
+  // "28,000 in cash", "28,000 in savings"
+  for (const m of text.matchAll(/(?<![$€£¥\d.,]|[$€£¥]\s|USD\s)\b(\d{1,3}(?:,\d{3})+|\d{4,})(?:\.\d+)?\s+in\s+(?:cash|savings|debt)\b/gi)) {
+    found.push({ text: m[0], dollars: value(m[1]!) });
   }
   // "twenty-eight thousand dollars", "five hundred bucks", "twenty-eight grand"
   for (const m of text.matchAll(SPELLED_MONEY)) {

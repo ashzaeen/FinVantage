@@ -9,8 +9,8 @@ import {
   type NewLifeScenario,
 } from "@finvantage/contracts";
 import { DEMO_USER_ID } from "@finvantage/data";
-import { createApp, demoTokenMayCall, originMatcher } from "./app";
-import { RateLimiter } from "./rate-limit";
+import { createApp, demoTokenMayCall, MAX_BODY_BYTES, originMatcher } from "./app";
+import { RateLimiter, sameSecret } from "./rate-limit";
 import { createDeps } from "./deps";
 import { monthlyCashFlow } from "./reporting/cashflow";
 
@@ -247,7 +247,14 @@ test("W4: login is limited per address, so passwords can't be guessed at speed",
   assert.equal(((await blocked.json()) as { error: { code: string } }).error.code, "rate_limited");
   assert.ok(Number(blocked.headers.get("retry-after")) > 0);
   assert.equal((await login("s3cret-pass")).status, 429, "even the right password waits out the window");
-  assert.equal((await login("s3cret-pass", "198.51.100.9")).status, 200, "another address is unaffected");
+  // Another address signing in to another account is unaffected.
+  await clientFor("").signUp({ body: { displayName: "Kim", email: "kim@example.com", password: "s3cret-pass" } });
+  const other = await app.request("/auth/login", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-forwarded-for": "198.51.100.9" },
+    body: JSON.stringify({ email: "kim@example.com", password: "s3cret-pass" }),
+  });
+  assert.equal(other.status, 200);
 });
 
 test("W4: guest sessions are limited per address, so memory can't be filled with demo copies", async () => {
@@ -318,6 +325,111 @@ test("W4: a window resets after it ends, and the counter map stays bounded", () 
   assert.equal(limiter.hit("k", 1, 1_000).allowed, true, "a new window");
   for (const key of ["a", "b", "c", "d", "e"]) limiter.hit(key, 1, 60_000);
   assert.ok((limiter as unknown as { windows: Map<string, unknown> }).windows.size <= 3);
+});
+
+/* ─── Security review N1 and N6: size limits and compute limits ───────────── */
+
+test("N1: an oversized body or name is refused and nothing is stored", async () => {
+  const { app, clientFor } = setup();
+  const token = (await clientFor("").startGuestSession()).token;
+  const guest = clientFor(token);
+  const before = await guest.listGoals();
+  const { id: _id, userId: _userId, ...template } = before[0]!;
+  const post = (name: string) =>
+    app.request("/v1/goals", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ ...template, name, linkedAccountId: null }),
+    });
+  const tooBig = await post("x".repeat(MAX_BODY_BYTES));
+  assert.equal(tooBig.status, 413);
+  assert.equal(((await tooBig.json()) as { error: { code: string } }).error.code, "body_too_large");
+  assert.equal((await post("x".repeat(81))).status, 400);
+  assert.equal((await post("A normal goal")).status, 200);
+  assert.equal((await guest.listGoals()).length, before.length + 1);
+  assert.equal(await statusOf(guest.parseLifeEvent({ body: { text: "x".repeat(501) } })), 400);
+});
+
+test("N6: simulation routes are limited per user", async () => {
+  const { app, clientFor } = setup();
+  const token = (await clientFor("").startGuestSession()).token;
+  const run = () =>
+    app.request("/v1/simulations", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "x-forwarded-for": "203.0.113.20" },
+      body: JSON.stringify({ persist: false, seed: 1, paths: 50 }),
+    });
+  for (let i = 0; i < 60; i++) assert.equal((await run()).status, 200);
+  assert.equal((await run()).status, 429);
+});
+
+/* ─── Second review: R2-1, R2-2, R2-3 and hardening ──────────────────────── */
+
+test("R2-1: with the shared secret, guest sessions are counted per visitor, not per web server", async () => {
+  const { app } = setup({ WEB_PROXY_SECRET: "proxy-test-secret" });
+  const guest = (visitor: string, secret = "proxy-test-secret") =>
+    app.request("/auth/guest", {
+      method: "POST",
+      headers: { "x-forwarded-for": "10.0.0.1", "x-finvantage-visitor-ip": visitor, "x-finvantage-proxy-secret": secret },
+    });
+  // One web server address, many visitors: each visitor has their own allowance.
+  for (let i = 0; i < 30; i++) assert.equal((await guest("203.0.113.30")).status, 200);
+  assert.equal((await guest("203.0.113.30")).status, 429, "one visitor is still limited");
+  assert.equal((await guest("203.0.113.31")).status, 200, "the next visitor is not");
+  // Without the right secret the visitor header is ignored, so it can't be used to dodge the limit.
+  for (let i = 0; i < 30; i++) assert.equal((await guest(`198.51.100.${i}`, "wrong")).status, 200);
+  assert.equal((await guest("198.51.100.99", "wrong")).status, 429);
+});
+
+test("R2-1: with no secret configured, a visitor header is never trusted", async () => {
+  const { app } = setup();
+  const guest = (visitor: string) =>
+    app.request("/auth/guest", { method: "POST", headers: { "x-forwarded-for": "10.0.0.2", "x-finvantage-visitor-ip": visitor, "x-finvantage-proxy-secret": "" } });
+  for (let i = 0; i < 30; i++) assert.equal((await guest(`198.51.100.${i}`)).status, 200);
+  assert.equal((await guest("198.51.100.200")).status, 429);
+});
+
+test("R2-2: report emails are limited per account and per recipient", async () => {
+  const { clientFor, deps } = setup();
+  const sentTo = recordMail(deps);
+  const { client, report } = await signedUpReport(clientFor, "owner@example.com");
+  for (let i = 0; i < 5; i++) {
+    assert.equal((await client.emailReport({ params: { id: report.id }, body: undefined })).email.status, "sent");
+  }
+  const sixth = await client.emailReport({ params: { id: report.id }, body: undefined });
+  assert.equal(sixth.email.status, "failed");
+  assert.equal(sixth.email.error, "Too many report emails. Try again later.");
+  assert.equal(sentTo.length, 5);
+});
+
+test("R2-3: sign-in attempts are limited per account, whatever address they come from", async () => {
+  const { app, clientFor } = setup();
+  await clientFor("").signUp({ body: { displayName: "Sam", email: "sam@example.com", password: "s3cret-pass" } });
+  const login = (password: string, i: number, email = "sam@example.com") =>
+    app.request("/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": `198.51.100.${i}` },
+      body: JSON.stringify({ email, password }),
+    });
+  for (let i = 0; i < 10; i++) assert.equal((await login("wrong-pass-1", i)).status, 401);
+  assert.equal((await login("wrong-pass-1", 50)).status, 429, "a new address doesn't reset the count");
+  assert.equal((await login("wrong-pass-1", 51, "SAM@example.com ")).status, 429, "case and spaces don't either");
+  assert.equal((await login("wrong-pass-1", 52, "someone@example.com")).status, 401, "other accounts are unaffected");
+});
+
+test("hardening: a token in the URL is read only by the stream and the PDF link, and answers carry safe headers", async () => {
+  const { app, clientFor } = setup();
+  const token = (await clientFor("").startGuestSession()).token;
+  assert.equal((await app.request(`/v1/goals?token=${token}`)).status, 401);
+  assert.equal((await app.request(`/v1/me?token=demo-token`)).status, 401);
+  const withHeader = await app.request("/v1/goals", { headers: { authorization: `Bearer ${token}` } });
+  assert.equal(withHeader.status, 200);
+  assert.equal(withHeader.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(withHeader.headers.get("cache-control"), "no-store");
+  assert.ok(withHeader.headers.get("strict-transport-security"));
+  assert.equal(sameSecret("abc", "abc"), true);
+  assert.equal(sameSecret("abd", "abc"), false);
+  assert.equal(sameSecret("", "abc"), false);
 });
 
 test("the scheduler tick requires its separate server secret", async () => {

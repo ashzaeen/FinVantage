@@ -610,3 +610,84 @@ test("W2: the new money forms don't misread names, units, or counts", () => {
   assert.equal(wordsToNumber("two million five hundred thousand"), 2_500_000);
   assert.equal(wordsToNumber("twenty bananas"), null);
 });
+
+/* ─── Security review N2: forms the second review got past the W2 fix ─────── */
+
+test("N2: cards refuse look-alike digits, shorthand, a changed unit, and multiplier words", () => {
+  const figures = ["$1,499", "$2,500", "2 days", "22.99%", "76-77%"];
+  const card = (impact: string) => validateCard({ impact, tradeOff: "", smartMove: "" }, figures, ["Japan Trip"]);
+  for (const text of [
+    "This costs ２８,０００ of your Japan Trip savings.",
+    "This costs $2k of your Japan Trip savings.",
+    "Your Japan Trip odds fall by 1,499%.",
+    "This costs $22.99 a month.",
+    "This costs ten grand of your Japan Trip savings.",
+    "This costs double your cushion.",
+    "It takes half your Japan Trip savings.",
+  ]) {
+    assert.equal(card(text).ok, false, text);
+  }
+  // Real figures in their own units still pass, including a range written out.
+  for (const text of [
+    "Paying $1,499 leaves you under your $2,500 cushion for 2 days.",
+    "Your Japan Trip odds fall to 76% to 77%, and the card charges 22.99%.",
+    "This is a large purchase for you.",
+  ]) {
+    assert.equal(card(text).ok, true, text);
+  }
+});
+
+test("N2: the tone check sees through punctuation and more ways of approving", () => {
+  for (const text of [
+    "You're good to buy this. It is affordable and a sensible purchase.",
+    "This is not a risk to your Japan trip. Buy it today.",
+    "Go, ahead: a great, choice.",
+  ]) {
+    assert.ok(contradictsVerdict(text, "caution"), text);
+  }
+  for (const text of [
+    "If you planned for it, you can afford it.",
+    "Buying this now puts your Japan trip at risk. A cheaper option is a safer choice.",
+    "This purchase is a stretch. Consider waiting until payday.",
+  ]) {
+    assert.equal(contradictsVerdict(text, "caution"), null, text);
+  }
+});
+
+test("N2: the chat check reads spaced thousands, look-alike digits, other currency signs, and bare thousands", () => {
+  const given = groundedFigures({ balanceCents: 340_000 });
+  for (const text of [
+    "You could afford a car up to 28 000 dollars.",
+    "You could afford a car up to $２８,０００.",
+    "You could afford a car up to €28,000.",
+    "You could afford a car up to 28 thousand.",
+    "You could afford a car up to 28,000 in cash.",
+  ]) {
+    assert.equal(validateGrounded(text, given).ok, false, text);
+  }
+  for (const text of [
+    "You have $3,400 in checking, about 3 400 dollars.",
+    "A used car with 28 thousand miles is a fair pick.",
+    "Over 10 years, 3 goals stay on track.",
+    "Keep 3,400 in cash for emergencies.",
+  ]) {
+    assert.equal(validateGrounded(text, given).ok, true, text);
+  }
+});
+
+test("R2-6: a short name can't delete digits, commas must group thousands, and money stays money", () => {
+  const figures = ["$1,499", "$599", "$2,500", "22.99%", "10 months"];
+  const card = (impact: string, names: string[] = ["Japan Trip"]) => validateCard({ impact, tradeOff: "", smartMove: "" }, figures, names);
+  assert.equal(card("This costs $71,499 of your 7 goal.", ["7"]).ok, false, "C1");
+  assert.equal(card("This costs $7,599 of your 7 goal.", ["7"]).ok, false, "C2");
+  assert.equal(card("This costs $1,499k of your Japan Trip.").ok, false, "C3");
+  assert.equal(card("This costs $2,500M of your Japan Trip.").ok, false, "C4");
+  assert.equal(card("This costs 599 grand.").ok, false, "C5");
+  assert.equal(card("This costs $14,99 of your Japan Trip.").ok, false, "C6");
+  assert.equal(card("Your Japan Trip slips 599 months.").ok, false, "C8");
+  // The name still works as a name, and real figures still pass.
+  assert.equal(card("This puts your 7 goal at risk and costs $1,499.", ["7"]).ok, true);
+  assert.equal(card("Pay $599 now over 10 months at 22.99% and keep $2,500.").ok, true);
+  assert.equal(withoutNames("$71,499 of your 7 goal", ["7"]).includes("71,499"), true);
+  assert.equal(validateGrounded("You could spend up to 28 K on the car.", groundedFigures({ balanceCents: 340_000 })).ok, false, "C13");
+});
