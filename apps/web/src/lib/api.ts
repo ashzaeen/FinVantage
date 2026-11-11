@@ -1,5 +1,6 @@
 import { createApiClient } from "@finvantage/contracts";
-import { readCookie, TOKEN_COOKIE, usableToken } from "./token";
+import { createSessionFetch } from "./session-fetch";
+import { readClaims, readCookie, TOKEN_COOKIE, usableToken } from "./token";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 /** Used when nobody is signed in. Also used by the extension and tests. */
@@ -21,25 +22,26 @@ export async function currentToken(): Promise<string> {
   return usableToken(saved) ?? API_TOKEN;
 }
 
-async function fetchWithToken(input: RequestInfo | URL, init: RequestInit | undefined, token: string) {
-  const headers = new Headers(init?.headers);
-  headers.set("authorization", `Bearer ${token}`);
-  return fetch(input, { ...init, headers });
+/** Keeps a token in the sign-in cookie, or clears it with null. Browser only. */
+function saveTokenCookie(token: string | null): void {
+  const exp = token ? readClaims(token)?.exp : undefined;
+  const maxAge = exp ? Math.max(0, exp - Math.floor(Date.now() / 1000)) : 0;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${TOKEN_COOKIE}=${token && exp ? encodeURIComponent(token) : ""}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
 }
 
-const fetchAsCurrentUser: typeof fetch = async (input, init) => {
-  const token = await currentToken();
-  const response = await fetchWithToken(input, init, token);
-  if (response.status !== 401 || token === API_TOKEN) return response;
-
-  // A local API restart can rotate its development-only signing key and invalidate a still-live
-  // browser cookie. Treat that rejected session as signed out so server-rendered pages can still
-  // load the public demo profile instead of failing with an auth runtime error.
-  if (typeof window !== "undefined") {
-    document.cookie = `${TOKEN_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
-  }
-  return fetchWithToken(input, init, API_TOKEN);
-};
+// A refused session (for example after the API's signing key changed) is swapped for a fresh guest
+// session in the browser, so writes keep working. On the server it falls back to the read-only
+// demo token so the page still renders; the browser then recovers on its first call.
+const inBrowser = typeof window !== "undefined";
+const fetchAsCurrentUser = createSessionFetch({
+  demoToken: API_TOKEN,
+  readToken: currentToken,
+  startGuest: inBrowser
+    ? async () => (await createApiClient({ baseUrl: API_URL, token: "" }).startGuestSession()).token
+    : undefined,
+  saveToken: inBrowser ? saveTokenCookie : undefined,
+});
 
 /** Works in server and client components. Every response is validated against the contracts. */
 export const api = createApiClient({ baseUrl: API_URL, token: API_TOKEN, fetch: fetchAsCurrentUser });
