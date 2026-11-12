@@ -6,7 +6,7 @@ import {
   type CopilotMetrics,
 } from "@finvantage/contracts";
 import type { LlmClient } from "./client";
-import { cardText, validateCard } from "./guardrails";
+import { cardText, contradictsVerdict, validateCard } from "./guardrails";
 
 /*
  * Copilot card: goal first, then the trade-off, then a way out.
@@ -602,7 +602,8 @@ export async function generateCopilotCard(
   if (h.kind !== "none" && !metrics.debtPayment && h.goalName && !parsed.impact.toLowerCase().includes(h.goalName.toLowerCase())) {
     return useTemplate(`impact does not name the ${h.goalName} goal`);
   }
-  // Names can contain digits ("0% Promo Card"), so they count as allowed text too.
+  // Names can contain digits ("0% Promo Card"). They may appear in the card, but their digits
+  // don't approve the same number anywhere else (validateCard removes the names first).
   const names = [
     figures.splitOnCard ? metrics.splitPlan?.promoCardName : undefined,
     metrics.transfer?.fromAccountName,
@@ -611,8 +612,10 @@ export async function generateCopilotCard(
     h.goalName,
     ...metrics.alternatives.map((a) => a.label),
   ].filter((n): n is string => !!n);
-  const verdict = validateCard(parsed, [...Object.values(figures), ...names]);
+  const verdict = validateCard(parsed, Object.values(figures), names);
   if (!verdict.ok) return useTemplate(`guardrail: ${verdict.reason}`);
+  const approving = contradictsVerdict(cardText(parsed), metrics.verdict);
+  if (approving) return useTemplate(`tone: "${approving}" on a caution verdict`);
   if (/-\s?\$/.test(cardText(parsed))) return useTemplate("negative dollar amount");
   const jargon = cardText(parsed).match(CARD_JARGON);
   if (jargon) return useTemplate(`jargon: "${jargon[0]}"`);

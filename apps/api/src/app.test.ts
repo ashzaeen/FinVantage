@@ -1,7 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ApiError, createApiClient, type ApiClient, type CopilotContext, type NewLifeScenario } from "@finvantage/contracts";
-import { createApp, originMatcher } from "./app";
+import {
+  ApiError,
+  createApiClient,
+  readClaims,
+  type ApiClient,
+  type CopilotContext,
+  type NewLifeScenario,
+} from "@finvantage/contracts";
+import { DEMO_USER_ID } from "@finvantage/data";
+import { createApp, demoTokenMayCall, MAX_BODY_BYTES, originMatcher } from "./app";
+import { RateLimiter, sameSecret } from "./rate-limit";
 import { createDeps } from "./deps";
 import { monthlyCashFlow } from "./reporting/cashflow";
 
@@ -15,8 +24,20 @@ function setup(env: Record<string, string> = {}) {
       token,
       fetch: ((url: string, init: RequestInit) => app.request(url, init)) as typeof fetch,
     });
-  const client = clientFor("demo-token");
-  return { app, client, clientFor, deps };
+  // The shared demo token is read-only now, so tests that change the demo user's data sign in as
+  // it with a real token. The fixture IDs stay the same, because the demo user keeps them.
+  const demoSession = deps.auth.issue({ userId: DEMO_USER_ID, name: null, email: null });
+  const asDemo = async (path: string, init: RequestInit = {}) => {
+    const headers = new Headers(init.headers);
+    headers.set("authorization", `Bearer ${await demoSession}`);
+    return app.request(path, { ...init, headers });
+  };
+  const client = createApiClient({
+    baseUrl: "http://test",
+    token: "set-by-asDemo",
+    fetch: ((url: string, init: RequestInit) => asDemo(url, init)) as typeof fetch,
+  });
+  return { app, asDemo, client, clientFor, deps };
 }
 
 const rental: CopilotContext = {
@@ -29,6 +50,386 @@ const rental: CopilotContext = {
 test("requests without the token are rejected", async () => {
   const { app } = setup();
   assert.equal((await app.request("/v1/me")).status, 401);
+});
+
+/* ─── Security review W1 and W5: the shared demo token and guest sessions ──── */
+
+async function statusOf(call: Promise<unknown>): Promise<number> {
+  try {
+    await call;
+    return 200;
+  } catch (error) {
+    if (error instanceof ApiError) return error.status;
+    throw error;
+  }
+}
+
+test("W1: the shared demo token is read-only, apart from the extension's Copilot calls", async () => {
+  const { app, clientFor } = setup();
+  const demo = clientFor("demo-token");
+  const goals = await demo.listGoals();
+  assert.ok(goals.length > 0, "the demo token can still read");
+
+  // The attack from the review: a public-token visitor plants a goal every other visitor reads.
+  const { id: _id, userId: _userId, ...planted } = goals[0]!;
+  const res = await app.request("/v1/goals", {
+    method: "POST",
+    headers: { authorization: "Bearer demo-token", "content-type": "application/json" },
+    body: JSON.stringify({ ...planted, name: "Planted by another visitor", linkedAccountId: null }),
+  });
+  assert.equal(res.status, 403);
+  assert.equal(((await res.json()) as { error: { code: string } }).error.code, "demo_read_only");
+  assert.equal((await demo.listGoals()).length, goals.length, "nothing was written");
+
+  // The extension, signed out, still gets Copilot cards.
+  assert.equal(await statusOf(demo.evaluateCopilot({ body: rental })), 200);
+
+  assert.ok(demoTokenMayCall("GET", "/v1/goals"));
+  assert.ok(demoTokenMayCall("POST", "/v1/copilot/evaluate"));
+  assert.ok(demoTokenMayCall("POST", "/v1/copilot/events/evt_1/action"));
+  for (const [method, path] of [
+    ["POST", "/v1/goals"],
+    ["PATCH", "/v1/goals/goal_1"],
+    ["DELETE", "/v1/goals/goal_1"],
+    ["POST", "/v1/transactions"],
+    ["POST", "/v1/life-events"],
+    ["POST", "/v1/advisory/conversations"],
+    ["POST", "/v1/reports/schedule"],
+    ["POST", "/v1/copilot/evaluate/extra"],
+    ["POST", "/v1/copilot/events/evt_1/action/extra"],
+  ] as const) {
+    assert.ok(!demoTokenMayCall(method, path), `${method} ${path} must be refused`);
+  }
+});
+
+test("W1: each guest session gets a private demo copy, so one visitor's records never reach another", async () => {
+  const { client: demoUser, clientFor } = setup();
+  const anon = clientFor("");
+  const first = await anon.startGuestSession();
+  const second = await anon.startGuestSession();
+  assert.ok(first.user.id.startsWith("guest_"));
+  assert.notEqual(first.user.id, second.user.id);
+  const visitorA = clientFor(first.token);
+  const visitorB = clientFor(second.token);
+
+  // Both start from the full demo profile.
+  const demoGoals = await demoUser.listGoals();
+  assert.equal((await visitorA.listGoals()).length, demoGoals.length);
+
+  // Visitor A plants a goal. Only visitor A can see it.
+  const { id: _id, userId: _userId, ...template } = demoGoals[0]!;
+  const planted = await visitorA.createGoal({
+    body: { ...template, name: "Planted by visitor A", linkedAccountId: null },
+  });
+  assert.ok((await visitorA.listGoals()).some((g) => g.id === planted.id));
+  for (const other of [visitorB, demoUser, clientFor("demo-token")]) {
+    assert.ok(!(await other.listGoals()).some((g) => g.name === "Planted by visitor A"));
+  }
+
+  // A guest is a throwaway copy, not an account: short-lived, and it can't link a bank.
+  const claims = readClaims(first.token)!;
+  assert.equal(claims.guest, true);
+  assert.ok(claims.exp - Date.now() / 1000 <= 24 * 60 * 60 + 5, "a guest token lasts a day at most");
+  assert.equal(await statusOf(visitorA.createBankLinkToken()), 403);
+});
+
+test("W5: Advisor conversations are private to each guest session", async () => {
+  const { clientFor } = setup();
+  const anon = clientFor("");
+  const visitorA = clientFor((await anon.startGuestSession()).token);
+  const visitorB = clientFor((await anon.startGuestSession()).token);
+
+  const chat = await visitorA.createAdvisorConversation({ body: {} });
+  assert.ok((await visitorA.listAdvisorConversations()).some((c) => c.id === chat.id));
+  assert.equal((await visitorB.listAdvisorConversations()).length, 0);
+  assert.equal(await statusOf(visitorB.getAdvisorConversation({ params: { id: chat.id } })), 404);
+});
+
+/* ─── Security review W3: the server decides who receives a report ───────── */
+
+/** A mailer that records each recipient instead of sending, so tests can see where mail would go. */
+function recordMail(deps: ReturnType<typeof setup>["deps"]): string[] {
+  const sentTo: string[] = [];
+  deps.mail = {
+    sendReport: async ({ to }: { to: string }) => {
+      sentTo.push(to);
+      return { messageId: `test-${sentTo.length}` };
+    },
+  } as unknown as typeof deps.mail;
+  return sentTo;
+}
+
+async function signedUpReport(clientFor: ReturnType<typeof setup>["clientFor"], email: string) {
+  const { token } = await clientFor("").signUp({ body: { displayName: "Owner", email, password: "s3cret-pass" } });
+  const client = clientFor(token);
+  return { client, report: await client.generateReport({ body: { email: false } }) };
+}
+
+test("W3: a report can't be emailed or scheduled to an address the account doesn't own", async () => {
+  const { clientFor, deps } = setup();
+  const sentTo = recordMail(deps);
+  const { client, report } = await signedUpReport(clientFor, "owner@example.com");
+
+  // The attack from the review: name a stranger as the recipient.
+  const stranger = "someone-else@example.com";
+  assert.equal(await statusOf(client.emailReport({ params: { id: report.id }, body: { to: stranger } })), 403);
+  assert.equal(
+    await statusOf(client.updateEmailSchedule({ body: { enabled: true, frequency: "monthly", recipientEmail: stranger } })),
+    403,
+  );
+  assert.deepEqual(sentTo, [], "nothing was sent");
+
+  // The account's own address still works, named or not, ignoring case.
+  assert.equal((await client.emailReport({ params: { id: report.id }, body: { to: "Owner@Example.com" } })).email.status, "sent");
+  assert.equal((await client.emailReport({ params: { id: report.id }, body: undefined })).email.status, "sent");
+  assert.deepEqual(sentTo, ["owner@example.com", "owner@example.com"]);
+});
+
+test("W3: guests and the shared demo user can't email reports at all", async () => {
+  const { app, asDemo, clientFor, deps } = setup();
+  const sentTo = recordMail(deps);
+  const guest = clientFor((await clientFor("").startGuestSession()).token);
+  const report = await guest.generateReport({ body: { email: true } });
+  assert.equal(report.email.status, "failed", "generating still works; only the email is skipped");
+  assert.equal(report.email.error, "Sign in to email reports.");
+  assert.equal(await statusOf(guest.emailReport({ params: { id: report.id }, body: undefined })), 403);
+  assert.equal(
+    await statusOf(guest.updateEmailSchedule({ body: { enabled: true, frequency: "monthly", recipientEmail: "jordan@example.com" } })),
+    403,
+  );
+
+  // The demo user, through a signed session or the public token.
+  const demoReport = (await (await asDemo("/v1/reports/quarterly", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: false }) })).json()) as { id: string };
+  assert.equal((await asDemo(`/v1/reports/quarterly/${demoReport.id}/email`, { method: "POST" })).status, 403);
+  const viaToken = await app.request(`/v1/reports/quarterly/${demoReport.id}/email`, {
+    method: "POST",
+    headers: { authorization: "Bearer demo-token", "content-type": "application/json" },
+    body: JSON.stringify({ to: "someone-else@example.com" }),
+  });
+  assert.equal(viaToken.status, 403);
+  assert.deepEqual(sentTo, []);
+});
+
+test("W3: the operator's REPORT_EMAIL_OVERRIDE wins over the account and any request", async () => {
+  const { clientFor, deps } = setup({ REPORT_EMAIL_OVERRIDE: "demo-inbox@example.com" });
+  const sentTo = recordMail(deps);
+  const { client, report } = await signedUpReport(clientFor, "owner@example.com");
+  assert.equal(await statusOf(client.emailReport({ params: { id: report.id }, body: { to: "someone-else@example.com" } })), 403);
+  await client.emailReport({ params: { id: report.id }, body: undefined });
+  assert.deepEqual(sentTo, ["demo-inbox@example.com"]);
+});
+
+test("W3: a scheduled send looks the recipient up again, so a stored stranger's address is never used", async () => {
+  const { clientFor, deps } = setup();
+  const sentTo = recordMail(deps);
+  const { client } = await signedUpReport(clientFor, "owner@example.com");
+  const saved = await client.updateEmailSchedule({ body: { enabled: true, frequency: "monthly", recipientEmail: "owner@example.com" } });
+  // A schedule saved before the fix could still hold a stranger's address.
+  await deps.docs.saveEmailSchedule(saved.userId, { ...saved, recipientEmail: "someone-else@example.com" });
+  assert.equal((await client.triggerScheduledEmail()).success, true);
+  assert.deepEqual(sentTo, ["owner@example.com"]);
+});
+
+/* ─── Security review W4: request limits ─────────────────────────────────── */
+
+test("W4: login is limited per address, so passwords can't be guessed at speed", async () => {
+  const { app, clientFor } = setup();
+  await clientFor("").signUp({ body: { displayName: "Sam", email: "sam@example.com", password: "s3cret-pass" } });
+  const login = (password: string, ip = "203.0.113.7") =>
+    app.request("/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": ip },
+      body: JSON.stringify({ email: "sam@example.com", password }),
+    });
+  for (let i = 0; i < 10; i++) assert.equal((await login(`guess-${i}-pass`)).status, 401);
+  const blocked = await login("guess-10-pass");
+  assert.equal(blocked.status, 429);
+  assert.equal(((await blocked.json()) as { error: { code: string } }).error.code, "rate_limited");
+  assert.ok(Number(blocked.headers.get("retry-after")) > 0);
+  assert.equal((await login("s3cret-pass")).status, 429, "even the right password waits out the window");
+  // Another address signing in to another account is unaffected.
+  await clientFor("").signUp({ body: { displayName: "Kim", email: "kim@example.com", password: "s3cret-pass" } });
+  const other = await app.request("/auth/login", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-forwarded-for": "198.51.100.9" },
+    body: JSON.stringify({ email: "kim@example.com", password: "s3cret-pass" }),
+  });
+  assert.equal(other.status, 200);
+});
+
+test("W4: guest sessions are limited per address, so memory can't be filled with demo copies", async () => {
+  const { app } = setup();
+  const guest = () => app.request("/auth/guest", { method: "POST", headers: { "x-forwarded-for": "203.0.113.8" } });
+  for (let i = 0; i < 30; i++) assert.equal((await guest()).status, 200);
+  assert.equal((await guest()).status, 429);
+});
+
+test("W4: model routes are limited per user and per address", async () => {
+  const { app } = setup();
+  const ip = { "x-forwarded-for": "203.0.113.9" };
+  const newGuest = async () =>
+    ((await (await app.request("/auth/guest", { method: "POST", headers: ip })).json()) as { token: string }).token;
+  const parse = (token: string) =>
+    app.request("/v1/life-events/parse", {
+      method: "POST",
+      headers: { ...ip, authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ text: "we adopted a llama" }),
+    });
+
+  // Per user: 30 a minute.
+  const a = await newGuest();
+  for (let i = 0; i < 30; i++) assert.equal((await parse(a)).status, 200);
+  assert.equal((await parse(a)).status, 429);
+
+  // A new guest gets its own allowance, but the address caps the total at 60 a minute.
+  const b = await newGuest();
+  for (let i = 0; i < 29; i++) assert.equal((await parse(b)).status, 200);
+  assert.equal((await parse(b)).status, 200, "the 60th model call from this address");
+  assert.equal((await parse(await newGuest())).status, 429, "a third guest can't multiply the allowance");
+});
+
+test("W4: an Advisor message, which can make several model calls, has a tighter limit", async () => {
+  const { app, clientFor } = setup();
+  const token = (await clientFor("").startGuestSession()).token;
+  const chat = await clientFor(token).createAdvisorConversation({ body: {} });
+  const send = () =>
+    app.request(`/v1/advisory/conversations/${chat.id}/messages`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ content: "How are my budgets?" }),
+    });
+  for (let i = 0; i < 10; i++) assert.notEqual((await send()).status, 429);
+  assert.equal((await send()).status, 429);
+});
+
+test("W4: everyone on the shared demo token is counted by address, so one caller can't use up everyone's limit", async () => {
+  const { app } = setup();
+  const evaluate = (ip: string) =>
+    app.request("/v1/copilot/evaluate", {
+      method: "POST",
+      headers: { authorization: "Bearer demo-token", "content-type": "application/json", "x-forwarded-for": ip },
+      body: JSON.stringify(rental),
+    });
+  for (let i = 0; i < 30; i++) assert.equal((await evaluate("203.0.113.10")).status, 200);
+  assert.equal((await evaluate("203.0.113.10")).status, 429);
+  assert.equal((await evaluate("198.51.100.11")).status, 200, "another extension user still gets cards");
+});
+
+test("W4: a window resets after it ends, and the counter map stays bounded", () => {
+  let now = 0;
+  const limiter = new RateLimiter(() => now, 3);
+  assert.equal(limiter.hit("k", 1, 1_000).allowed, true);
+  assert.equal(limiter.hit("k", 1, 1_000).allowed, false);
+  assert.equal(limiter.hit("k", 1, 1_000).retryAfterSeconds, 1);
+  now = 1_000;
+  assert.equal(limiter.hit("k", 1, 1_000).allowed, true, "a new window");
+  for (const key of ["a", "b", "c", "d", "e"]) limiter.hit(key, 1, 60_000);
+  assert.ok((limiter as unknown as { windows: Map<string, unknown> }).windows.size <= 3);
+});
+
+/* ─── Security review N1 and N6: size limits and compute limits ───────────── */
+
+test("N1: an oversized body or name is refused and nothing is stored", async () => {
+  const { app, clientFor } = setup();
+  const token = (await clientFor("").startGuestSession()).token;
+  const guest = clientFor(token);
+  const before = await guest.listGoals();
+  const { id: _id, userId: _userId, ...template } = before[0]!;
+  const post = (name: string) =>
+    app.request("/v1/goals", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ ...template, name, linkedAccountId: null }),
+    });
+  const tooBig = await post("x".repeat(MAX_BODY_BYTES));
+  assert.equal(tooBig.status, 413);
+  assert.equal(((await tooBig.json()) as { error: { code: string } }).error.code, "body_too_large");
+  assert.equal((await post("x".repeat(81))).status, 400);
+  assert.equal((await post("A normal goal")).status, 200);
+  assert.equal((await guest.listGoals()).length, before.length + 1);
+  assert.equal(await statusOf(guest.parseLifeEvent({ body: { text: "x".repeat(501) } })), 400);
+});
+
+test("N6: simulation routes are limited per user", async () => {
+  const { app, clientFor } = setup();
+  const token = (await clientFor("").startGuestSession()).token;
+  const run = () =>
+    app.request("/v1/simulations", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "x-forwarded-for": "203.0.113.20" },
+      body: JSON.stringify({ persist: false, seed: 1, paths: 50 }),
+    });
+  for (let i = 0; i < 60; i++) assert.equal((await run()).status, 200);
+  assert.equal((await run()).status, 429);
+});
+
+/* ─── Second review: R2-1, R2-2, R2-3 and hardening ──────────────────────── */
+
+test("R2-1: with the shared secret, guest sessions are counted per visitor, not per web server", async () => {
+  const { app } = setup({ WEB_PROXY_SECRET: "proxy-test-secret" });
+  const guest = (visitor: string, secret = "proxy-test-secret") =>
+    app.request("/auth/guest", {
+      method: "POST",
+      headers: { "x-forwarded-for": "10.0.0.1", "x-finvantage-visitor-ip": visitor, "x-finvantage-proxy-secret": secret },
+    });
+  // One web server address, many visitors: each visitor has their own allowance.
+  for (let i = 0; i < 30; i++) assert.equal((await guest("203.0.113.30")).status, 200);
+  assert.equal((await guest("203.0.113.30")).status, 429, "one visitor is still limited");
+  assert.equal((await guest("203.0.113.31")).status, 200, "the next visitor is not");
+  // Without the right secret the visitor header is ignored, so it can't be used to dodge the limit.
+  for (let i = 0; i < 30; i++) assert.equal((await guest(`198.51.100.${i}`, "wrong")).status, 200);
+  assert.equal((await guest("198.51.100.99", "wrong")).status, 429);
+});
+
+test("R2-1: with no secret configured, a visitor header is never trusted", async () => {
+  const { app } = setup();
+  const guest = (visitor: string) =>
+    app.request("/auth/guest", { method: "POST", headers: { "x-forwarded-for": "10.0.0.2", "x-finvantage-visitor-ip": visitor, "x-finvantage-proxy-secret": "" } });
+  for (let i = 0; i < 30; i++) assert.equal((await guest(`198.51.100.${i}`)).status, 200);
+  assert.equal((await guest("198.51.100.200")).status, 429);
+});
+
+test("R2-2: report emails are limited per account and per recipient", async () => {
+  const { clientFor, deps } = setup();
+  const sentTo = recordMail(deps);
+  const { client, report } = await signedUpReport(clientFor, "owner@example.com");
+  for (let i = 0; i < 5; i++) {
+    assert.equal((await client.emailReport({ params: { id: report.id }, body: undefined })).email.status, "sent");
+  }
+  const sixth = await client.emailReport({ params: { id: report.id }, body: undefined });
+  assert.equal(sixth.email.status, "failed");
+  assert.equal(sixth.email.error, "Too many report emails. Try again later.");
+  assert.equal(sentTo.length, 5);
+});
+
+test("R2-3: sign-in attempts are limited per account, whatever address they come from", async () => {
+  const { app, clientFor } = setup();
+  await clientFor("").signUp({ body: { displayName: "Sam", email: "sam@example.com", password: "s3cret-pass" } });
+  const login = (password: string, i: number, email = "sam@example.com") =>
+    app.request("/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": `198.51.100.${i}` },
+      body: JSON.stringify({ email, password }),
+    });
+  for (let i = 0; i < 10; i++) assert.equal((await login("wrong-pass-1", i)).status, 401);
+  assert.equal((await login("wrong-pass-1", 50)).status, 429, "a new address doesn't reset the count");
+  assert.equal((await login("wrong-pass-1", 51, "SAM@example.com ")).status, 429, "case and spaces don't either");
+  assert.equal((await login("wrong-pass-1", 52, "someone@example.com")).status, 401, "other accounts are unaffected");
+});
+
+test("hardening: a token in the URL is read only by the stream and the PDF link, and answers carry safe headers", async () => {
+  const { app, clientFor } = setup();
+  const token = (await clientFor("").startGuestSession()).token;
+  assert.equal((await app.request(`/v1/goals?token=${token}`)).status, 401);
+  assert.equal((await app.request(`/v1/me?token=demo-token`)).status, 401);
+  const withHeader = await app.request("/v1/goals", { headers: { authorization: `Bearer ${token}` } });
+  assert.equal(withHeader.status, 200);
+  assert.equal(withHeader.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(withHeader.headers.get("cache-control"), "no-store");
+  assert.ok(withHeader.headers.get("strict-transport-security"));
+  assert.equal(sameSecret("abc", "abc"), true);
+  assert.equal(sameSecret("abd", "abc"), false);
+  assert.equal(sameSecret("", "abc"), false);
 });
 
 test("the scheduler tick requires its separate server secret", async () => {
@@ -355,7 +756,7 @@ test("the advisory stub returns at least two options", async () => {
   assert.ok(advice.options.length >= 2);
 });
 
-test("a quarterly report compares consecutive quarters, saves a PDF, and emails it", async () => {
+test("a quarterly report compares consecutive quarters and saves a PDF; the shared demo user's copy is not emailed", async () => {
   const { app, client, deps } = setup();
   const baseline = await client.runSimulation({ body: { persist: false, seed: 41 } });
   const previous = await client.runSimulation({ body: { persist: false, seed: 41 } });
@@ -410,7 +811,10 @@ test("a quarterly report compares consecutive quarters, saves a PDF, and emails 
   );
   assert.ok(report.visuals.goalPathways.every((goal) => goal.points.length >= 2));
   assert.equal(report.pdf.status, "ready");
-  assert.equal(report.email.status, "sent");
+  // W3: the demo user is a shared copy, not an account, so its reports aren't emailed. Emailing an
+  // account's report is covered by the W3 tests.
+  assert.equal(report.email.status, "failed");
+  assert.equal(report.email.error, "Sign in to email reports.");
   assert.deepEqual(
     (await client.listReports()).map((item) => item.quarter),
     ["2026-Q3", "2026-Q2", "2026-Q1"],
@@ -444,8 +848,12 @@ test("a first-quarter report generates without a previous simulation", async () 
 });
 
 test("a saved email schedule can send on demand and records the outcome", async () => {
-  const { client } = setup();
-  await client.loadDemoProfile();
+  // A signed-in account schedules reports to its own address (W3: no other recipient is allowed).
+  const { clientFor } = setup();
+  const { token } = await clientFor("").signUp({
+    body: { displayName: "Scheduled", email: "scheduled@example.com", password: "s3cret-pass" },
+  });
+  const client = clientFor(token);
   const report = await client.generateReport({ body: { email: false } });
   const schedule = await client.updateEmailSchedule({
     body: {
@@ -524,13 +932,13 @@ test("the bucket summary splits this month's spending into Needs, Wants and Savi
 });
 
 test("each user can change their split, and it must add up to 100%", async () => {
-  const { app, client } = setup();
+  const { asDemo, client } = setup();
   const split = await client.updateSpendingSplit({ body: { needs: 0.6, wants: 0.2, savings: 0.2 } });
   assert.deepEqual(split, { needs: 0.6, wants: 0.2, savings: 0.2 });
   assert.deepEqual((await client.getBucketSummary()).split, { needs: 0.6, wants: 0.2, savings: 0.2 });
-  const res = await app.request("/v1/spending/split", {
+  const res = await asDemo("/v1/spending/split", {
     method: "PATCH",
-    headers: { authorization: "Bearer demo-token", "content-type": "application/json" },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({ needs: 0.5, wants: 0.5, savings: 0.5 }),
   });
   assert.equal(res.status, 400);
@@ -546,17 +954,17 @@ test("the category list includes every default, with buckets", async () => {
 /* ─── Spending module: categories, budgets, rules, recurring ──────────────── */
 
 /** Same request with a status, for the error cases the typed client throws on. */
-async function raw(app: ReturnType<typeof setup>["app"], method: string, path: string, body?: unknown) {
-  const res = await app.request(path, {
+async function raw(asDemo: ReturnType<typeof setup>["asDemo"], method: string, path: string, body?: unknown) {
+  const res = await asDemo(path, {
     method,
-    headers: { authorization: "Bearer demo-token", "content-type": "application/json" },
+    headers: { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   return { status: res.status, json: (await res.json()) as { error?: { code: string } } };
 }
 
 test("users can add their own categories up to three levels deep", async () => {
-  const { app, client } = setup();
+  const { asDemo, client } = setup();
   const walmart = await client.createSpendingCategory({ body: { parentId: "shopping.superstores", label: "Walmart" } });
   assert.match(walmart.id, /^shopping\.superstores\.c[0-9a-f]{8}$/);
   assert.equal(walmart.bucket, "wants");
@@ -564,9 +972,9 @@ test("users can add their own categories up to three levels deep", async () => {
   const kids = await client.createSpendingCategory({ body: { parentId: "shopping", label: "Kids' Clothes", bucket: "needs" } });
   assert.equal(kids.bucket, "needs");
 
-  assert.equal((await raw(app, "POST", "/v1/spending/categories", { parentId: walmart.id, label: "Too Deep" })).json.error?.code, "too_deep");
-  assert.equal((await raw(app, "POST", "/v1/spending/categories", { parentId: "shopping.superstores", label: "walmart" })).status, 409);
-  assert.equal((await raw(app, "POST", "/v1/spending/categories", { parentId: "nope", label: "X" })).status, 404);
+  assert.equal((await raw(asDemo, "POST", "/v1/spending/categories", { parentId: walmart.id, label: "Too Deep" })).json.error?.code, "too_deep");
+  assert.equal((await raw(asDemo, "POST", "/v1/spending/categories", { parentId: "shopping.superstores", label: "walmart" })).status, 409);
+  assert.equal((await raw(asDemo, "POST", "/v1/spending/categories", { parentId: "nope", label: "X" })).status, 404);
 
   const list = await client.listSpendingCategories();
   const at = (id: string) => list.findIndex((c) => c.id === id);
@@ -575,7 +983,7 @@ test("users can add their own categories up to three levels deep", async () => {
 });
 
 test("default categories can be renamed, hidden and moved between buckets, but not deleted", async () => {
-  const { app, client } = setup();
+  const { asDemo, client } = setup();
   const renamed = await client.updateSpendingCategory({ params: { id: "dining_out" }, body: { label: "Eating Out" } });
   assert.equal(renamed.label, "Eating Out");
   const hidden = await client.updateSpendingCategory({ params: { id: "entertainment.gambling" }, body: { hidden: true } });
@@ -586,8 +994,8 @@ test("default categories can be renamed, hidden and moved between buckets, but n
   const list = await client.listSpendingCategories();
   assert.equal(list.find((c) => c.id === "home_pets.vet")?.bucket, "needs");
 
-  assert.equal((await raw(app, "PATCH", "/v1/spending/categories/transfers", { bucket: "wants" })).json.error?.code, "excluded_bucket");
-  assert.equal((await raw(app, "DELETE", "/v1/spending/categories/groceries")).json.error?.code, "default_category");
+  assert.equal((await raw(asDemo, "PATCH", "/v1/spending/categories/transfers", { bucket: "wants" })).json.error?.code, "excluded_bucket");
+  assert.equal((await raw(asDemo, "DELETE", "/v1/spending/categories/groceries")).json.error?.code, "default_category");
 });
 
 test("deleting a custom category moves its transactions, rules and budgets up to the parent", async () => {
@@ -608,7 +1016,7 @@ test("deleting a custom category moves its transactions, rules and budgets up to
 });
 
 test("budgets report spending, pace and a suggestion, and work on subcategories", async () => {
-  const { app, client, deps } = setup();
+  const { asDemo, client, deps } = setup();
   deps.today = () => "2026-11-10";
   const budgets = await client.listBudgets();
   assert.ok(budgets.some((b) => b.category === "groceries"), "demo budgets are the starting point");
@@ -629,9 +1037,9 @@ test("budgets report spending, pace and a suggestion, and work on subcategories"
   assert.equal(tight.status, "over");
   assert.equal((await client.listBudgets()).filter((b) => b.category === "dining_out.bars_alcohol").length, 1);
 
-  assert.equal((await raw(app, "POST", "/v1/budgets", { category: "income", monthlyLimitCents: 100 })).json.error?.code, "excluded_budget");
+  assert.equal((await raw(asDemo, "POST", "/v1/budgets", { category: "income", monthlyLimitCents: 100 })).json.error?.code, "excluded_budget");
   await client.deleteBudget({ params: { category: "dining_out.bars_alcohol" } });
-  assert.equal((await raw(app, "DELETE", "/v1/budgets/dining_out.bars_alcohol")).status, 404);
+  assert.equal((await raw(asDemo, "DELETE", "/v1/budgets/dining_out.bars_alcohol")).status, 404);
 });
 
 test("merchant rules re-categorise past transactions and new ones without a category", async () => {
@@ -660,14 +1068,14 @@ test("merchant rules re-categorise past transactions and new ones without a cate
 });
 
 test("a transaction can be moved to any category, or cleared", async () => {
-  const { app, client, deps } = setup();
+  const { asDemo, client, deps } = setup();
   const [account] = await client.listAccounts();
   const tx = await client.addTransaction({ body: { accountId: account!.id, date: deps.today(), amountCents: -1_000, merchant: "Somewhere" } });
   const moved = await client.recategorizeTransaction({ params: { id: tx.id }, body: { categoryId: "travel.lodging" } });
   assert.deepEqual([moved.category, moved.subcategory], ["travel", "travel.lodging"]);
   const cleared = await client.recategorizeTransaction({ params: { id: tx.id }, body: { categoryId: null } });
   assert.deepEqual([cleared.category, cleared.subcategory], [null, null]);
-  assert.equal((await raw(app, "PATCH", `/v1/transactions/${tx.id}/category`, { categoryId: "made.up" })).status, 404);
+  assert.equal((await raw(asDemo, "PATCH", `/v1/transactions/${tx.id}/category`, { categoryId: "made.up" })).status, 404);
 });
 
 test("recurring charges and bills come from the bank's streams and due dates", async () => {

@@ -1,0 +1,4 @@
+API: {"ok":true,"llm":"gemini","live":"sse"} | 25 requests per row, one at a time
+POST /auth/login (wrong password)            25x HTTP 401                 no limit hit (552ms)
+POST /auth/guest (new demo copy each)        25x HTTP 200                 no limit hit (102ms)
+POST /v1/copilot/evaluate (same guest)       25x HTTP 200                 no limit hit (10265ms)

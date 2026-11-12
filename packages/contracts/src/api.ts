@@ -95,9 +95,12 @@ function route<
  * Add or change an endpoint here first.
  */
 export const routes = {
-  // Auth. These two need no token; every /v1 route does.
+  // Auth. These three need no token; every /v1 route does.
   signUp: route({ method: "POST", path: "/auth/signup", body: SignUpRequest, response: AuthResponse }),
   logIn: route({ method: "POST", path: "/auth/login", body: LogInRequest, response: AuthResponse }),
+  // A private, short-lived copy of the demo profile for one signed-out visitor, so no visitor can
+  // write into data another visitor (or their Advisor) reads. See docs/security-review.
+  startGuestSession: route({ method: "POST", path: "/auth/guest", response: AuthResponse }),
 
   // Profile
   getMe: route({ method: "GET", path: "/v1/me", response: User }),

@@ -1,10 +1,14 @@
 import { randomUUID } from "node:crypto";
 import type { Hono } from "hono";
 import { routes, type User } from "@finvantage/contracts";
-import type { SignedInUser } from "../auth";
+import { GUEST_PREFIX, type SignedInUser } from "../auth";
 import { EmailTakenError, hashPassword, verifyPassword } from "../credentials";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
+import { RateLimiter } from "../rate-limit";
+
+export const LOGIN_ATTEMPTS_PER_ACCOUNT = 10;
+const LOGIN_WINDOW_MS = 15 * 60_000;
 
 /**
  * Makes sure a signed-in user has a profile in the ledger: on their first request ever, a copy
@@ -62,7 +66,15 @@ export function registerAuthRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     return { token: await deps.auth.issue(user), user: await profileOf(deps, user) };
   });
 
+  // Per account as well as per address (app.ts): guesses at one account from many addresses were
+  // unlimited (second review, R2-3). The cost: someone can lock a person out for the window by
+  // failing on purpose. A real bank would add MFA rather than rely on this.
+  const loginAttempts = new RateLimiter();
   mount(app, deps, routes.logIn, async ({ body }) => {
+    const attempt = loginAttempts.hit(body.email.trim().toLowerCase(), LOGIN_ATTEMPTS_PER_ACCOUNT, LOGIN_WINDOW_MS);
+    if (!attempt.allowed) {
+      throw new HttpError(429, "rate_limited", `Too many sign-in attempts. Try again in ${attempt.retryAfterSeconds} seconds.`);
+    }
     const credential = await deps.credentials.findByEmail(body.email);
     if (!credential) {
       await verifyPassword(body.password, await (dummyHash ??= hashPassword("not-a-real-password")));
@@ -78,6 +90,14 @@ export function registerAuthRoutes(app: Hono<AppEnv>, deps: AppDeps) {
       name: known?.displayName ?? null,
       email: credential.email,
     };
+    return { token: await deps.auth.issue(user), user: await profileOf(deps, user) };
+  });
+
+  // A signed-out visitor's own copy of the demo profile. The shared demo user is everyone's, so
+  // letting visitors write there let one visitor plant records (and Advisor instructions) that
+  // every other visitor read. Each guest gets a random user ID and the same copy sign-up makes.
+  mount(app, deps, routes.startGuestSession, async () => {
+    const user: SignedInUser = { userId: `${GUEST_PREFIX}${randomUUID()}`, name: null, email: null, guest: true };
     return { token: await deps.auth.issue(user), user: await profileOf(deps, user) };
   });
 

@@ -44,6 +44,8 @@ export interface AppDeps {
   now: () => string;
   reportEmailOverride: string | null;
   schedulerSecret: string | null;
+  /** Shared with the web server so it can name a visitor's address for rate limits. Unset: not trusted. */
+  webProxySecret: string | null;
   /**
    * Merchants whose Copilot card Gemini writes, lower-cased. Every other merchant gets the
    * template card without a model call. Null means every merchant uses the model.
@@ -76,6 +78,7 @@ export function createDeps(env: NodeJS.ProcessEnv = process.env): AppDeps {
     now,
     reportEmailOverride: env.REPORT_EMAIL_OVERRIDE ?? null,
     schedulerSecret: env.SCHEDULER_SECRET ?? null,
+    webProxySecret: env.WEB_PROXY_SECRET || null,
     copilotLlmMerchants: parseMerchantList(env.COPILOT_GEMINI_MERCHANTS),
   };
 }

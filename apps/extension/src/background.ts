@@ -12,6 +12,8 @@ const demoApi = createApiClient({ baseUrl: __API_URL__, token: __API_TOKEN__ });
 interface Session {
   token: string;
   name: string;
+  /** The dashboard's guest session: the visitor's private demo copy. Cards use it; the popup says signed out. */
+  guest: boolean;
 }
 
 async function getSession(): Promise<Session | null> {
@@ -19,7 +21,7 @@ async function getSession(): Promise<Session | null> {
   const token = usableToken(cookie ? decodeURIComponent(cookie.value) : null);
   if (!token) return null;
   const claims = readClaims(token);
-  return { token, name: claims?.name ?? claims?.email ?? "your account" };
+  return { token, name: claims?.name ?? claims?.email ?? "your account", guest: claims?.guest === true };
 }
 
 function apiFor(session: Session | null) {
@@ -101,7 +103,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
       return true;
     case "account":
       void getSession().then((session) =>
-        sendResponse({ name: session?.name ?? null, webUrl: __WEB_URL__ } satisfies AccountReply),
+        sendResponse({ name: session && !session.guest ? session.name : null, webUrl: __WEB_URL__ } satisfies AccountReply),
       );
       return true;
   }

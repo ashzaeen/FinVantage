@@ -14,6 +14,8 @@ export interface SignedInUser {
   userId: string;
   name: string | null;
   email: string | null;
+  /** A signed-out visitor's private demo copy (`POST /auth/guest`), not an account. */
+  guest?: boolean;
 }
 
 /**
@@ -34,6 +36,10 @@ export interface Auth {
 export const DEFAULT_ISSUER = "https://finvantage-api.vercel.app";
 export const AUDIENCE = "finvantage";
 const TOKEN_LIFETIME = "7d";
+/** Guests hold a throwaway copy of the demo profile, so their tokens expire sooner. */
+const GUEST_TOKEN_LIFETIME = "1d";
+/** Every guest user ID starts with this, so routes can tell a guest from an account. */
+export const GUEST_PREFIX = "guest_";
 
 export function createAuth(options: {
   /** A private RSA JWK as JSON. Omit to generate a throwaway key (local dev and tests only). */
@@ -50,13 +56,13 @@ export function createAuth(options: {
     audience: AUDIENCE,
     issue: async (user) => {
       const { privateKey, kid } = await loadKeys();
-      return new SignJWT({ name: user.name ?? undefined, email: user.email ?? undefined })
+      return new SignJWT({ name: user.name ?? undefined, email: user.email ?? undefined, guest: user.guest || undefined })
         .setProtectedHeader({ alg: "RS256", kid, typ: "JWT" })
         .setIssuer(issuer)
         .setAudience(AUDIENCE)
         .setSubject(user.userId)
         .setIssuedAt()
-        .setExpirationTime(TOKEN_LIFETIME)
+        .setExpirationTime(user.guest ? GUEST_TOKEN_LIFETIME : TOKEN_LIFETIME)
         .sign(privateKey);
     },
     verify: async (token) => {
@@ -68,7 +74,12 @@ export function createAuth(options: {
         });
         if (!payload.sub) return null;
         const text = (value: unknown) => (typeof value === "string" && value ? value : null);
-        return { userId: payload.sub, name: text(payload.name), email: text(payload.email) };
+        return {
+          userId: payload.sub,
+          name: text(payload.name),
+          email: text(payload.email),
+          ...(payload.guest === true ? { guest: true } : {}),
+        };
       } catch {
         return null;
       }

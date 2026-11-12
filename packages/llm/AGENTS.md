@@ -46,7 +46,7 @@ The key travels in the `x-goog-api-key` header, never the URL. Pass `jsonSchema`
 
 `webSearch()` runs Google Search grounding in its own call and returns a summary with sources. It is optional too. Only the query is sent; the Advisor's `web_search` tool checks it for personal details first.
 
-The Advisor (`src/advisory.ts`, `runAdvisorTurn`) runs the tool loop: at most four tool rounds and a 25-second turn budget. `validateGrounded` checks the answer's dollar amounts only (rounding within 3% passes; plain numbers and percentages are not checked). A failure gets one retry; a second failure keeps the answer minus the sentences holding the bad amount (`withoutSentences`), or else `safeAdvisorAnswer`. Tool inputs are checked exactly with `isGroundedNumber`.
+The Advisor (`src/advisory.ts`, `runAdvisorTurn`) runs the tool loop: at most four tool rounds and a 25-second turn budget. `validateGrounded` checks the answer's dollar amounts only, in any common form ("$570", "570 dollars", "28 grand", "28k", "USD 28,000", "twenty-eight thousand dollars"); rounding within 3% passes; plain numbers and percentages are not checked. `validateCard` takes names separately, so a name's digits approve nothing outside the name, and a caution card with plainly approving words (`contradictsVerdict`) uses the template. A failure gets one retry; a second failure keeps the answer minus the sentences holding the bad amount (`withoutSentences`), or else `safeAdvisorAnswer`. Tool inputs are checked exactly with `isGroundedNumber`.
 
 Tests inject a fake `LlmClient`. See `src/guardrails.test.ts` and `src/advisory.test.ts`.
 

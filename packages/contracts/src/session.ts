@@ -10,6 +10,8 @@ export interface TokenClaims {
   exp: number;
   name?: string;
   email?: string;
+  /** A signed-out visitor's private demo copy, not an account. The UI shows it as the demo profile. */
+  guest?: boolean;
 }
 
 /** Reads a JWT's claims without verifying it. Only for display and expiry; the API verifies. */
@@ -33,4 +35,20 @@ export function usableToken(token: string | undefined | null): string | null {
   if (!token) return null;
   const claims = readClaims(token);
   return claims && claims.exp * 1000 > Date.now() + 30_000 ? token : null;
+}
+
+/**
+ * `next` if it stays on this site, else the dashboard. Checking the text ("starts with / but not
+ * //") was not enough: browsers read "/\evil.example" as "//evil.example" and leave the site
+ * (security review N3). So resolve it the way the browser will and compare origins.
+ */
+export function safeNextPath(next: string | null, origin: string): string {
+  if (!next || !next.startsWith("/") || /[\\\u0000-\u001f]/.test(next)) return "/app";
+  try {
+    const url = new URL(next, origin);
+    if (url.origin !== origin || url.pathname.startsWith("/login")) return "/app";
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return "/app";
+  }
 }

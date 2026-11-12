@@ -9,6 +9,7 @@
 import type { Hono } from "hono";
 import { routes, type BankItemSummary } from "@finvantage/contracts";
 import { DEMO_USER_ID, NotImplementedError, PlaidApiError, type BankItemRecord } from "@finvantage/data";
+import { GUEST_PREFIX } from "../auth";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
 
@@ -19,9 +20,14 @@ const summary = (item: BankItemRecord): BankItemSummary => ({
   accountCount: item.accountCount,
 });
 
-/** The shared demo user is everyone's, so nobody may link a real or test bank to it. */
+/**
+ * The shared demo user is everyone's, so nobody may link a real or test bank to it. A guest is a
+ * throwaway demo copy, not an account, so the same rule applies.
+ */
 function requireOwnAccount(userId: string) {
-  if (userId === DEMO_USER_ID) throw new HttpError(403, "sign_in_required", "Sign in to connect a bank.");
+  if (userId === DEMO_USER_ID || userId.startsWith(GUEST_PREFIX)) {
+    throw new HttpError(403, "sign_in_required", "Sign in to connect a bank.");
+  }
 }
 
 /** Plaid failures become a readable 502, keeping Plaid's error code for the client. */

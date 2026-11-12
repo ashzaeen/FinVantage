@@ -58,7 +58,9 @@ export function LinkedBanks({ initialItems }: { initialItems: BankItemSummary[] 
 
   useEffect(() => {
     const token = usableToken(readCookie(document.cookie, TOKEN_COOKIE));
-    setSignedIn(Boolean(token && readClaims(token)));
+    // A guest session is a demo copy, not an account, so it can't link a bank either.
+    const claims = token ? readClaims(token) : null;
+    setSignedIn(Boolean(claims && !claims.guest));
   }, []);
 
   /** Plaid keeps fetching history for a little while after linking, so sync again twice. */

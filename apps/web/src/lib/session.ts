@@ -1,5 +1,6 @@
 "use client";
 
+import { safeNextPath } from "@finvantage/contracts";
 import { readClaims, TOKEN_COOKIE } from "./token";
 
 /** Keeps a sign-in token from /auth/login or /auth/signup in the TOKEN_COOKIE cookie. */
@@ -19,6 +20,5 @@ export function signOut(): void {
 
 /** Where to go after signing in: the `next` query value if it is a local path, else the dashboard. */
 export function nextPath(): string {
-  const next = new URLSearchParams(window.location.search).get("next") ?? "/app";
-  return next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/login") ? next : "/app";
+  return safeNextPath(new URLSearchParams(window.location.search).get("next"), window.location.origin);
 }

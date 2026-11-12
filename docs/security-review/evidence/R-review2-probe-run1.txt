@@ -1,0 +1,36 @@
+API {"ok":true,"llm":"gemini","live":"sse"} | probe address 10.77.158.51
+R1a   demo-token POST /v1/goals/                                     HTTP 403, goals 5->5               holds
+R1b   demo-token POST /V1/goals                                      HTTP 404, goals 5->5               holds
+R1c   demo-token POST /v1//goals                                     HTTP 403, goals 5->5               holds
+R1d   demo-token GET /v1/goals +override header                      HTTP 200, goals 5->5               holds
+R1e   demo-token POST /v1/goals?_method=GET                          HTTP 403, goals 5->5               holds
+R1f   demo-token POST /v1/copilot/evaluate/../goals                  HTTP 403, goals 5->5               holds
+R1g   demo-token POST /v1/copilot/events/x/action/../../../goals     HTTP 403, goals 5->5               holds
+R1h   demo-token in ?token= on a write route                         HTTP 403                           holds
+R2a   guest B PATCH /v1/goals/<A's id>                               HTTP 404                           holds
+R2b   guest B DELETE /v1/goals/<A's id>                              HTTP 404                           holds
+R2c   guest B GET /v1/advisory/conversations/<A's id>                HTTP 404                           holds
+R2d   guest B DELETE /v1/advisory/conversations/<A's id>             HTTP 404                           holds
+R2e   guest B POST /v1/advisory/conversations/<A's id>/messages      HTTP 404                           holds
+R2f   guest B GET /v1/reports/quarterly/<A's id>                     HTTP 404                           holds
+R2g   guest B GET /v1/reports/quarterly/<A's id>/pdf                 HTTP 404                           holds
+R2h   guest B GET /v1/simulations/<A's id>                           HTTP 404                           holds
+R2i   guest B PATCH /v1/transactions/<A's id>/category               HTTP 404                           holds
+R2j   guest B PATCH /v1/accounts/<A's id>                            HTTP 404                           holds
+R2k   guest B POST /v1/copilot/events/<A's id>/action                HTTP 404                           holds
+R2l   guest B DELETE /v1/copilot/events/<A's id>                     HTTP 404                           holds
+R2m   demo-token GET guest A's conversation                          HTTP 404                           holds
+R3a   goal name of 200,000 characters                                HTTP 200                           ACCEPTED (no length limit)
+R3b   5 MB request body                                              HTTP 200                           ACCEPTED (no body limit)
+R3c   life-event parse text: any max length? (schema check only)     HTTP 400                           see code: z.string().min(1), no max
+R4a   simulation, default paths                                      HTTP 200 in 195ms                  baseline
+R4b   simulation, paths=50000 (the contract's maximum)               HTTP 200 in 1931ms                 fine
+R4c   40x POST /v1/reports/schedule/trigger                          40 of 40 not limited               not a model route (no schedule saved)
+R5a   demo-token evaluate with a made-up merchant, read from another address HTTP 200, visible=true             SHARED WRITE (merchant text, 100 chars)
+R6    API response header x-content-type-options                     (absent)                           missing
+R6    API response header strict-transport-security                  (absent)                           missing
+R6    API response header x-frame-options                            (absent)                           missing
+R6    API response header content-security-policy                    (absent)                           missing
+R6    API response header referrer-policy                            (absent)                           missing
+R6    API response header cache-control                              (absent)                           missing
+R6    cache-control on an authenticated JSON response                (absent)                           missing

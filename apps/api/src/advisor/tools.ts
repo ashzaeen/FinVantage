@@ -596,6 +596,8 @@ export function advisorTools(ctx: AdvisorToolContext): AdvisorTool[] {
         const problem = privacyProblem(a.query, ctx.privateNames, turn.isGrounded);
         if (problem) throw new Error(`Query refused: ${problem}. Search only for the product or topic.`);
         const result = await deps.llm.webSearch({ query: a.query, timeoutMs: 10_000 });
+        // Links are shown as clickable sources, so only web addresses are kept.
+        result.sources = result.sources.filter((s) => /^https?:\/\//i.test(s.url));
         webSources.push(...result.sources.slice(0, 5));
         return {
           data: { query: a.query, answer: result.answer, sources: result.sources.slice(0, 5).map((s) => s.title), note: "Published terms change; tell the user to confirm with the issuer." },

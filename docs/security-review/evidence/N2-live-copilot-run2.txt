@@ -1,0 +1,16 @@
+checkout          $1,499   HTTP 200  verdict=caution source=llm      1531ms
+    "Buying this now delays your Next car by 1 month. Spending $1,499 leaves you $599 below your $2,500 safety cushion. Since this is a stretch, try paying $900 now and $599 on your 0% Promo Card at $86/month to stay safe."
+checkout          $3,699   HTTP 200  verdict=caution source=llm      1579ms
+    "This makes your House down payment unlikely. You are $299 short in checking and this price is 65% of your income. This is a stretch, so try paying off your $1,529.06 Cash Rewards Card at 22.99% before buying this."
+checkout          $89      HTTP 200  verdict=good    source=llm      1488ms
+    "This purchase fits your budget and keeps your financial goals on track. Paying $89 today means you would still have $3,311 in your checking account. Pay from your checking account instead of your Cash Rewards Card to avoid its 22.99% interest rate."
+checkout          $450     HTTP 200  verdict=caution source=llm      1401ms
+    "Buying this now is a stretch and makes your safety cushion smaller. This costs 8% of your monthly income and leaves you with $2,950 in checking. Consider a less expensive option or focus on paying off your $1,529.06 Cash Rewards Card balance first."
+rental            $1,950   HTTP 200  verdict=caution source=llm      1293ms
+    "Paying $1,950 for rent makes your House down payment out of reach rather than at risk. This choice increases your bills to 42% of your income. Looking for a place closer to $1,700 would help keep your home goal alive."
+rental            $1,200   HTTP 200  verdict=good    source=template 1323ms
+    "This rent moves your Next car up 4 months. At $1,200 a month, bills would take 29% of your income, up from 31%. It fits: you can afford rent up to $2,450."
+vehicle_financing $28,000  HTTP 200  verdict=caution source=llm      1583ms
+    "Buying this car makes your House down payment out of reach when it was at risk. This $28,000 purchase costs $33,300 in total and raises your bills to 41% of what you earn. Consider a less expensive vehicle to keep your debt payments below 44% of your income."
+vehicle_financing $18,000  HTTP 200  verdict=caution source=llm      1333ms
+    "Taking this loan makes your House down payment out of reach. The $357 monthly payment raises your bills to 37% of your income. Buying a less expensive car would keep your debt payments below 41% and help you stay on track."

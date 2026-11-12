@@ -29,5 +29,6 @@ export const Goal = z.object({
 });
 export type Goal = z.infer<typeof Goal>;
 
-export const NewGoal = Goal.omit({ id: true, userId: true });
+/** What a caller may send. Names are capped: they are shown everywhere and reach model prompts (security review N1). */
+export const NewGoal = Goal.omit({ id: true, userId: true }).extend({ name: z.string().trim().min(1).max(80) });
 export type NewGoal = z.infer<typeof NewGoal>;
