@@ -5,7 +5,7 @@
 | **Application** | FinVantage (HackUTD, 2nd place, PNC track): Next.js dashboard, Chrome extension "Copilot", Hono API, Gemini-backed AI Advisor and Copilot cards |
 | **Reviewer** | Aram, co-builder (Copilot extension, simulator, AI guardrails), assisted by AI coding tools |
 | **Date** | 2026-11-11 |
-| **Code reviewed** | `security-review` branch, commits `9495c84` to `388b19d` (base `12ca6bf`) |
+| **Code reviewed** | `security-review` branch, commits `9495c84` to `d6322b6` (base `12ca6bf`) |
 | **Status** | All confirmed findings fixed or reduced on the branch. **Not yet deployed**: the live demo still runs the pre-review code |
 | **Raw notes** | [`TEST-LOG.md`](TEST-LOG.md): every test, including failed attempts and mistakes |
 

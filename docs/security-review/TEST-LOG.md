@@ -336,7 +336,7 @@ The Chrome extension running on live shopping sites, the SpacetimeDB module, the
 
 ## Independent review (second reviewer, 2026-11-11)
 
-A second reviewer (a different model, Claude Fable 5.2) rechecked the fixes on `security-review` (`9495c84` to `31e6284`) and scanned the rest of the app. Report only: **no code was changed.**
+A second reviewer (a different model, Claude Fable 5.2) rechecked the fixes on `security-review` (`9495c84` to `4ab623b`) and scanned the rest of the app. Report only: **no code was changed.**
 
 Method: one probe that runs the real API in process with the mock model, in-memory stores and a recording mailer, so nothing leaves the machine and no Gemini quota is used. Plus code reading and one request to the running local API.
 
@@ -458,8 +458,8 @@ Before writing `SECURITY_REVIEW.md`, every headline claim was re-run rather than
 
 | # | Check | Result |
 |---|---|---|
-| FC-01 | `npm run check` at `572bbf8` | 348/348, typecheck clean: **confirmed** |
-| FC-02 | Original W2 probe at `572bbf8` (VR-04 says "still 15 of 15 as expected") | **Not confirmed: 14 of 15.** Control C3 ("Buying this $1499 laptop drops checking to **$1,901,** under your $2,500 cushion", only correct figures) was **rejected** (`unknown figures: $1,901,`) |
+| FC-01 | `npm run check` at `6f580ec` | 348/348, typecheck clean: **confirmed** |
+| FC-02 | Original W2 probe at `6f580ec` (VR-04 says "still 15 of 15 as expected") | **Not confirmed: 14 of 15.** Control C3 ("Buying this $1499 laptop drops checking to **$1,901,** under your $2,500 cushion", only correct figures) was **rejected** (`unknown figures: $1,901,`) |
 
 ### F1: correct figures followed by a comma were rejected (regression)
 
