@@ -5,6 +5,7 @@ import {
   type BankDataProvider,
   type BankTokenStore,
   type DocumentStore,
+  type HealthCheck,
   type MarketDataProvider,
   type SpendingStore,
   type SubscriptionStore,
@@ -54,6 +55,8 @@ export interface AppDeps {
    * template card without a model call. Null means every merchant uses the model.
    */
   copilotLlmMerchants: ReadonlySet<string> | null;
+  /** One check per database in use, run by `GET /health`. Optional so test doubles can skip it. */
+  health?: HealthCheck[];
 }
 
 /** Every stub-or-real switch happens here, from env. See .env.example. */

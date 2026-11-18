@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
-import { DEMO_USER_ID, NotImplementedError } from "@finvantage/data";
+import { DEMO_USER_ID, NotImplementedError, runHealthChecks, type HealthReport } from "@finvantage/data";
 import type { AppDeps } from "./deps";
 import { HttpError, type AppEnv } from "./mount";
 import { registerAccountRoutes } from "./routes/accounts";
@@ -53,6 +53,7 @@ const DEMO_TOKEN_WRITES: ReadonlyArray<{ method: string; path: RegExp }> = [
 ];
 
 /** The only routes that accept `?token=`. */
+const HEALTH_CACHE_MS = 15_000;
 const TOKEN_IN_URL = /^\/v1\/(?:live|reports\/quarterly\/[^/]+\/pdf)$/;
 
 /** The largest request body the API reads. */
@@ -92,7 +93,20 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
       onError: (c) => c.json({ error: { code: "body_too_large", message: "Request body is too large." } }, 413),
     }),
   );
-  app.get("/health", (c) => c.json({ ok: true, llm: deps.llm.provider, live: deps.live.transport }));
+  // Checks each database for real, so a monitor (.github/workflows/health.yml) sees an outage. A
+  // result is reused for 15 seconds, so a burst of requests can't turn into a burst of queries.
+  let lastHealth: { at: number; report: HealthReport } | null = null;
+  app.get("/health", async (c) => {
+    const now = Date.now();
+    if (!lastHealth || now - lastHealth.at > HEALTH_CACHE_MS) {
+      const report = await runHealthChecks(deps.health ?? [], {
+        onError: (name, error) => console.error(`Health check: ${name} is down:`, error),
+      });
+      lastHealth = { at: now, report };
+    }
+    const { ok, stores } = lastHealth.report;
+    return c.json({ ok, llm: deps.llm.provider, live: deps.live.transport, stores }, ok ? 200 : 503);
+  });
 
   // Request limits (security review W4). Registered before the routes they guard, because Hono
   // runs handlers in registration order.

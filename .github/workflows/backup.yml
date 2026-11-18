@@ -1,0 +1,64 @@
+# Nightly backup of both databases: MongoDB (documents) and SpacetimeDB (ledger and sign-ins).
+# The repo is public, and anyone signed in to GitHub can download a public repo's artifacts, so
+# the file is encrypted with BACKUP_PASSPHRASE before upload. Restore steps: infra/README.md.
+name: Backup
+
+on:
+  schedule:
+    - cron: "17 8 * * *" # 08:17 UTC, about 2 a.m. in Dallas
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MONGODB_URI: ${{ secrets.BACKUP_MONGODB_URI }}
+      MONGODB_DB: finvantage
+      SPACETIME_TOKEN: ${{ secrets.BACKUP_SPACETIME_TOKEN }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Check the secrets are set
+        id: ready
+        run: |
+          if [ -z "$MONGODB_URI" ] || [ -z "$SPACETIME_TOKEN" ] || [ ${#BACKUP_PASSPHRASE} -lt 32 ]; then
+            echo "::warning::Backups are off: set BACKUP_MONGODB_URI, BACKUP_SPACETIME_TOKEN and BACKUP_PASSPHRASE (32+ characters). See infra/README.md."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.ready.outputs.run == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.ready.outputs.run == 'true'
+        with:
+          node-version: 22
+
+      - name: Install the MongoDB driver
+        if: steps.ready.outputs.run == 'true'
+        run: npm install --prefix infra/backup --no-save --no-package-lock --no-audit --no-fund mongodb@7.8.0
+
+      - name: Export both databases
+        if: steps.ready.outputs.run == 'true'
+        run: node infra/backup/backup.mjs backup.json.gz
+
+      - name: Encrypt
+        if: steps.ready.outputs.run == 'true'
+        run: |
+          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -pass env:BACKUP_PASSPHRASE \
+            -in backup.json.gz -out "finvantage-backup-${{ steps.ready.outputs.date }}.json.gz.enc"
+          rm backup.json.gz
+
+      - uses: actions/upload-artifact@v4
+        if: steps.ready.outputs.run == 'true'
+        with:
+          name: finvantage-backup-${{ steps.ready.outputs.date }}
+          path: finvantage-backup-*.json.gz.enc
+          retention-days: 30
+          if-no-files-found: error

@@ -74,6 +74,8 @@ export interface LedgerStore {
 
 /** Nested, variable-shape records. Backed by MongoDB Atlas. */
 export interface DocumentStore {
+  /** Throws if the database can't be reached. Memory stores leave it out. */
+  ping?(): Promise<void>;
   listLifeEvents(userId: string): Promise<LifeEvent[]>;
   saveLifeEvent(event: LifeEvent): Promise<LifeEvent>;
   /** False if the user has no such event. Used to undo a confirmed life scenario. */

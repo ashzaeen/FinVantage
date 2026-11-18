@@ -5,11 +5,44 @@
 | Web app | Vercel project `finvantage-web` (platform owner's account), root directory `apps/web`. Live at https://finvantage-web-ten.vercel.app | `.github/workflows/deploy.yml`, on pushes to `main` that touch it |
 | API | Vercel project `finvantage-api` (same account), root directory `apps/api`. Live at https://finvantage-api.vercel.app | Same workflow |
 | Relational data, auth, live updates | SpacetimeDB Maincloud, database `finvantage` | Published from the platform owner's laptop with `spacetime publish`. Planned, see `SPRINTS.md` |
-| Documents | MongoDB Atlas, database `finvantage` | Live. Collections are created by the store (`packages/data/src/mongo/`) |
+| Documents | MongoDB Atlas free cluster `cluster0.gxiece7` in the platform owner's Atlas account, database `finvantage` | Live. Collections are created by the store (`packages/data/src/mongo/`). Replaced Samyog's cluster on 2026-11-18 after it disappeared; Network Access must allow `0.0.0.0/0` for Vercel |
 | CI | `.github/workflows/ci.yml` | Manual only (Actions tab > CI > Run workflow) |
+| Monitoring | `.github/workflows/health.yml` | Every 30 minutes. Fails, and emails, when `/health` or the web app is down |
+| Backups | `.github/workflows/backup.yml` | Nightly, encrypted, kept 30 days. Off until its three secrets are set (below) |
 | LLM | Gemini API | Server-side key only |
 
 Tiger Data and Vultr are no longer used. See `docs/DECISIONS.md`.
+
+## Health checks and monitoring
+
+`GET /health` queries each database in use (SpacetimeDB and MongoDB) and answers 503 if one is down, with `stores` saying which: `{"ok":false,"stores":{"spacetime":"ok","mongodb":"down"}}`. Error details go only to the Vercel log. A result is reused for 15 seconds. The deploy workflow's smoke test uses it too, so a deploy fails while a database is down.
+
+`.github/workflows/health.yml` calls it every 30 minutes, with three tries to ride out a cold start. GitHub emails a failed scheduled run to whoever last edited the workflow's `cron` line, so that person is the one alerted. Run it by hand from Actions > Health > Run workflow.
+
+## Backups
+
+Free MongoDB clusters have no backups, and the old cluster vanished with its data. `.github/workflows/backup.yml` exports both databases every night with `infra/backup/backup.mjs`: every MongoDB collection, and every SpacetimeDB table (read from the module's schema, so new tables are included). It encrypts the file with AES-256 and uploads it as an artifact kept for 30 days. The repo is public and anyone signed in to GitHub can download a public repo's artifacts, which is why the file is encrypted.
+
+**To turn it on**, the repo owner adds three secrets (Settings > Secrets and variables > Actions):
+
+| Secret | Value |
+| --- | --- |
+| `BACKUP_MONGODB_URI` | The same value as `MONGODB_URI` on Vercel |
+| `BACKUP_SPACETIME_TOKEN` | A token that can read every table: the module owner's, from `spacetime login show --token` |
+| `BACKUP_PASSPHRASE` | A random value of 32 or more characters, such as `openssl rand -base64 36`. Keep a copy in a password manager: without it the backups can't be opened |
+
+Until all three exist, the workflow passes with a warning and backs up nothing. After adding them, run it once by hand (Actions > Backup > Run workflow) and check that an artifact appears.
+
+**To restore MongoDB:** download the artifact, then
+
+```bash
+openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in finvantage-backup-DATE.json.gz.enc -out backup.json.gz
+MONGODB_URI='mongodb+srv://...' node infra/backup/restore-mongo.mjs backup.json.gz
+```
+
+It refuses to write into a collection that already has documents unless you add `--replace`. Tested on 2026-11-18: binary PDFs, dates and nested documents come back identical.
+
+**SpacetimeDB** rows are in the same file under `spacetime.tables`, as each table's schema and rows. There is no automatic restore: reducers own every write, so recovering means republishing the module and replaying the rows through an admin reducer written for the occasion. Treat the backup as the record to rebuild from.
 
 ## How the API runs on Vercel
 

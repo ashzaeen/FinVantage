@@ -50,8 +50,17 @@ class MongoDocumentStore implements DocumentStore {
         this.db.collection("email_schedule_logs").createIndex({ id: 1 }, { unique: true }),
         this.db.collection("report_pdfs").createIndex({ userId: 1, reportId: 1 }, { unique: true }),
       ]);
-    })();
+    })().catch((error: unknown) => {
+      // Forget a failed attempt, so the next request tries again instead of failing until a redeploy.
+      this.initialized = null;
+      throw error;
+    });
     return this.initialized;
+  }
+
+  async ping() {
+    await this.ready();
+    await this.db.command({ ping: 1 });
   }
 
   private async save(collection: string, value: { id: string; userId: string }) {

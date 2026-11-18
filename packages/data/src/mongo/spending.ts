@@ -16,7 +16,11 @@ class MongoSpendingStore implements SpendingStore {
     this.initialized ??= (async () => {
       await this.client.connect();
       await this.db.collection("spending_profiles").createIndex({ userId: 1 }, { unique: true });
-    })();
+    })().catch((error: unknown) => {
+      // Forget a failed attempt, so the next request tries again instead of failing until a redeploy.
+      this.initialized = null;
+      throw error;
+    });
     return this.initialized;
   }
 

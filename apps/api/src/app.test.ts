@@ -1933,3 +1933,29 @@ test("deleting a life event removes it and saves a fresh run without it", async 
   assert.equal(latest?.id, run.id, "the fresh run is the latest saved one");
   await assert.rejects(client.deleteLifeEvent({ params: { id: event.id } }), /No such life event/);
 });
+
+test("/health checks each database, and says only up or down", async () => {
+  const { app, deps } = setup();
+  const quiet = console.error;
+  console.error = () => {};
+  try {
+    deps.health = [];
+    const memory = await app.request("/health");
+    assert.equal(memory.status, 200);
+    assert.deepEqual(((await memory.json()) as { stores: unknown }).stores, {});
+
+    const { deps: downDeps } = setup();
+    downDeps.health = [
+      { name: "spacetime", check: async () => {} },
+      { name: "mongodb", check: async () => { throw new Error("querySrv ENOTFOUND cluster0.secret-host"); } },
+    ];
+    const response = await createApp(downDeps, {}).request("/health");
+    assert.equal(response.status, 503);
+    const body = (await response.json()) as { ok: boolean; stores: Record<string, string> };
+    assert.equal(body.ok, false);
+    assert.deepEqual(body.stores, { spacetime: "ok", mongodb: "down" });
+    assert.doesNotMatch(JSON.stringify(body), /secret-host/, "error details stay in the log");
+  } finally {
+    console.error = quiet;
+  }
+});

@@ -8,6 +8,8 @@ import { MemorySubscriptionStore, type SubscriptionStore } from "./subscriptions
 import type { DocumentStore, LedgerStore } from "./stores";
 import { MemoryBankTokenStore, parseTokenKey, SpacetimeBankTokenStore, type BankTokenStore } from "./bank-tokens";
 import { SpacetimeLedgerStore } from "./spacetime/ledger";
+import { SpacetimeHttp } from "./spacetime/client";
+import type { HealthCheck } from "./health";
 
 export * from "./stores";
 export * from "./profile";
@@ -25,6 +27,7 @@ export * from "./subscriptions";
 export * from "./subscription-catalog";
 export { goalStatusForBalance, MemoryDocumentStore, MemoryLedgerStore } from "./memory";
 export { SpacetimeLedgerStore } from "./spacetime/ledger";
+export { runHealthChecks, type HealthCheck, type HealthReport } from "./health";
 export { SpacetimeHttp, SpacetimeError, sqlString, decodeSats, type SpacetimeConfig } from "./spacetime/client";
 
 const MONGODB_CONFIGURATION_ERROR =
@@ -79,18 +82,29 @@ export function createStores(env: NodeJS.ProcessEnv = process.env): {
   bankTokens: BankTokenStore;
   spending: SpendingStore;
   subscriptions: SubscriptionStore;
+  /** One check per database in use, for `GET /health`. Empty when everything runs in memory. */
+  health: HealthCheck[];
 } {
   const spacetime = spacetimeConfig(env);
+  const docs = createDocumentStore(env, env.DOCUMENT_BACKEND ?? "memory");
+  const health: HealthCheck[] = [];
+  if (spacetime) {
+    const http = new SpacetimeHttp(spacetime);
+    // `admin` is a tiny private table, so this proves the database, the module and the token.
+    health.push({ name: "spacetime", check: async () => void (await http.sql("SELECT * FROM admin")) });
+  }
+  if (docs.ping) health.push({ name: "mongodb", check: () => docs.ping!() });
   return {
     // Once a user links a bank, it replaces their demo copy's accounts. See linked-banks.ts.
     ledger: preferLinkedBanks(spacetime ? new SpacetimeLedgerStore(spacetime) : new MemoryLedgerStore()),
-    docs: createDocumentStore(env, env.DOCUMENT_BACKEND ?? "memory"),
+    docs,
     // Bank tokens live next to the ledger. In Spacetime they are encrypted with PLAID_TOKEN_KEY.
     bankTokens: spacetime ? spacetimeTokenStore(env, spacetime) : new MemoryBankTokenStore(),
     // Spending settings are per-user documents, so they live with the other documents.
     spending: createSpendingStore(env, env.DOCUMENT_BACKEND ?? "memory"),
     // The user's subscription choices are per-user documents too: MongoDB in production, else memory.
     subscriptions: createSubscriptionStore(env, env.DOCUMENT_BACKEND ?? "memory"),
+    health,
   };
 }
 
