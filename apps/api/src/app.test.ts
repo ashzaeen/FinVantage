@@ -1122,6 +1122,30 @@ test("subscriptions split the recurring charges into subscriptions and bills, wi
   assert.ok(!("history" in streamflix));
 });
 
+test("the demo's subscriptions fire each flag where they should, and the totals match a hand sum", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const { subscriptions, subscriptionTotals } = await client.listSubscriptions();
+  const byName = Object.fromEntries(subscriptions.map((s) => [s.merchant, s]));
+  const flags = (name: string) => byName[name]!.flags.map((f) => f.type);
+
+  // StreamFlix went from $11.99 to $15.49 on 3 October, and is the one with a rival.
+  const rise = byName.StreamFlix!.flags.find((f) => f.type === "price_up");
+  assert.deepEqual([rise?.previousCents, rise?.changedOn], [1199, "2026-10-03"]);
+  assert.deepEqual(flags("StreamFlix"), ["price_up", "possible_duplicate"]);
+  // Showreel started in October, and shares Video Streaming with StreamFlix.
+  assert.deepEqual(flags("Showreel"), ["possible_duplicate", "started_recently"]);
+  assert.equal(byName.Showreel!.flags[0]!.group, "Video Streaming");
+  // Skyvault renews on 26 November; its last charge is from before the ledger begins.
+  assert.deepEqual(flags("Skyvault Storage"), ["annual_coming"]);
+  assert.deepEqual([byName["Skyvault Storage"]!.cadence, byName["Skyvault Storage"]!.lastChargeDate], ["yearly", null]);
+  // The steady ones raise nothing.
+  for (const name of ["Peak Fitness", "Tunewave", "Daily Ledger News"]) assert.deepEqual(flags(name), [], name);
+
+  // 4500 + 1549 + 999 + 1099 + 899 + 833 a month; the yearly one is 9999 a year, 833.25 a month rounded once.
+  assert.deepEqual(subscriptionTotals, { monthlyCents: 9879, annualCents: 118_551, count: 6, unknownCadenceCount: 0 });
+});
+
 test("one subscription comes with its charges, and an id that is not one is a 404", async () => {
   const { app, client, deps } = setup();
   deps.today = () => "2026-11-20";

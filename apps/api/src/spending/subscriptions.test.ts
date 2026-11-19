@@ -92,6 +92,16 @@ test("a rise in price is flagged with what it was and when it changed", () => {
   assert.deepEqual(flag, { type: "price_up", previousCents: 1099, changedOn: "2026-11-04", group: null });
 });
 
+test("a subscription costs its latest charge, and a bill keeps the bank's usual amount", () => {
+  // The bank's amount is an average across the price change; the latest charge is what is billed now.
+  const [sub, bill] = build({
+    charges: [charge("StreamFlix", 1263), charge("Water", 4522, { category: "utilities.water" })],
+    transactions: [EARLY, tx("StreamFlix", "2026-10-04", 1199), tx("StreamFlix", "2026-11-04", 1549), tx("Water", "2026-11-04", 4800)],
+  });
+  assert.deepEqual([sub!.amountCents, sub!.monthlyCents, sub!.annualCents], [-1549, 1549, 18_588]);
+  assert.deepEqual([bill!.amountCents, bill!.monthlyCents], [-4522, 4522]);
+});
+
 test("history is matched whatever the bank prints, and carries only charges, oldest first", () => {
   const [sub] = build({
     charges: [charge("Netflix", 1549)],

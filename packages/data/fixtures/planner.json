@@ -15,8 +15,8 @@
     "monthlyIncomeCents": 570000,
     "monthlyFixedCostsCents": 176800,
     "monthlyDebtPaymentsCents": 195900,
-    "monthlySpendingCents": 400338,
-    "monthlySavingsCents": 169662,
+    "monthlySpendingCents": 400123,
+    "monthlySavingsCents": 169877,
     "paydayDayOfMonth": 15
   },
   "goals": [
@@ -178,8 +178,8 @@
         {
           "account_id": "acc_travel_card",
           "balances": {
-            "available": 11929.06,
-            "current": 70.94,
+            "available": 11909.08,
+            "current": 90.92,
             "limit": 12000,
             "iso_currency_code": "USD"
           },
@@ -220,7 +220,7 @@
       ],
       "transactions": [
         {
-          "transaction_id": "txn_20261108_0452",
+          "transaction_id": "txn_20261108_0454",
           "account_id": "acc_travel_card",
           "amount": 8.99,
           "iso_currency_code": "USD",
@@ -241,7 +241,28 @@
           }
         },
         {
-          "transaction_id": "txn_20261107_0456",
+          "transaction_id": "txn_20261107_0452",
+          "account_id": "acc_travel_card",
+          "amount": 9.99,
+          "iso_currency_code": "USD",
+          "date": "2026-11-07",
+          "authorized_date": "2026-11-07",
+          "name": "SHOWREEL",
+          "merchant_name": "Showreel",
+          "merchant_entity_id": null,
+          "logo_url": null,
+          "website": null,
+          "payment_channel": "online",
+          "pending": false,
+          "pending_transaction_id": null,
+          "personal_finance_category": {
+            "primary": "ENTERTAINMENT",
+            "detailed": "ENTERTAINMENT_TV_AND_MOVIES",
+            "confidence_level": "VERY_HIGH"
+          }
+        },
+        {
+          "transaction_id": "txn_20261107_0458",
           "account_id": "acc_card",
           "amount": 24.76,
           "iso_currency_code": "USD",
@@ -262,7 +283,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261106_0447",
+          "transaction_id": "txn_20261106_0448",
           "account_id": "acc_checking",
           "amount": -650,
           "iso_currency_code": "USD",
@@ -283,7 +304,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261106_0451",
+          "transaction_id": "txn_20261106_0453",
           "account_id": "acc_travel_card",
           "amount": 10.99,
           "iso_currency_code": "USD",
@@ -304,7 +325,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261106_0458",
+          "transaction_id": "txn_20261106_0460",
           "account_id": "acc_card",
           "amount": 50.62,
           "iso_currency_code": "USD",
@@ -325,7 +346,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261105_0449",
+          "transaction_id": "txn_20261105_0450",
           "account_id": "acc_checking",
           "amount": 389,
           "iso_currency_code": "USD",
@@ -346,7 +367,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261105_0457",
+          "transaction_id": "txn_20261105_0459",
           "account_id": "acc_card",
           "amount": 6.76,
           "iso_currency_code": "USD",
@@ -367,7 +388,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261104_0453",
+          "transaction_id": "txn_20261104_0455",
           "account_id": "acc_card",
           "amount": 45,
           "iso_currency_code": "USD",
@@ -388,7 +409,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261104_0454",
+          "transaction_id": "txn_20261104_0456",
           "account_id": "acc_card",
           "amount": 122.04,
           "iso_currency_code": "USD",
@@ -409,7 +430,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261103_0450",
+          "transaction_id": "txn_20261103_0451",
           "account_id": "acc_travel_card",
           "amount": 15.49,
           "iso_currency_code": "USD",
@@ -430,7 +451,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261102_0455",
+          "transaction_id": "txn_20261102_0457",
           "account_id": "acc_card",
           "amount": 51.16,
           "iso_currency_code": "USD",
@@ -451,7 +472,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261101_0444",
+          "transaction_id": "txn_20261101_0445",
           "account_id": "acc_checking",
           "amount": -2850,
           "iso_currency_code": "USD",
@@ -472,7 +493,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261101_0445",
+          "transaction_id": "txn_20261101_0446",
           "account_id": "acc_savings",
           "amount": -62.03,
           "iso_currency_code": "USD",
@@ -493,7 +514,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261101_0448",
+          "transaction_id": "txn_20261101_0449",
           "account_id": "acc_checking",
           "amount": 1320,
           "iso_currency_code": "USD",
@@ -514,7 +535,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261028_0497",
+          "transaction_id": "txn_20261028_0499",
           "account_id": "acc_checking",
           "amount": 200,
           "iso_currency_code": "USD",
@@ -535,7 +556,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261028_0498",
+          "transaction_id": "txn_20261028_0500",
           "account_id": "acc_promo",
           "amount": -200,
           "iso_currency_code": "USD",
@@ -556,9 +577,9 @@
           }
         },
         {
-          "transaction_id": "txn_20261027_0495",
+          "transaction_id": "txn_20261027_0497",
           "account_id": "acc_checking",
-          "amount": 35.47,
+          "amount": 31.97,
           "iso_currency_code": "USD",
           "date": "2026-10-27",
           "authorized_date": "2026-10-27",
@@ -577,9 +598,9 @@
           }
         },
         {
-          "transaction_id": "txn_20261027_0496",
+          "transaction_id": "txn_20261027_0498",
           "account_id": "acc_travel_card",
-          "amount": -35.47,
+          "amount": -31.97,
           "iso_currency_code": "USD",
           "date": "2026-10-27",
           "authorized_date": "2026-10-27",
@@ -598,7 +619,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261026_0437",
+          "transaction_id": "txn_20261026_0438",
           "account_id": "acc_card",
           "amount": 51.35,
           "iso_currency_code": "USD",
@@ -619,7 +640,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261025_0493",
+          "transaction_id": "txn_20261025_0495",
           "account_id": "acc_checking",
           "amount": 1228.94,
           "iso_currency_code": "USD",
@@ -640,7 +661,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261025_0494",
+          "transaction_id": "txn_20261025_0496",
           "account_id": "acc_card",
           "amount": -1228.94,
           "iso_currency_code": "USD",
@@ -682,7 +703,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261024_0427",
+          "transaction_id": "txn_20261024_0428",
           "account_id": "acc_card",
           "amount": 105.99,
           "iso_currency_code": "USD",
@@ -703,7 +724,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261023_0433",
+          "transaction_id": "txn_20261023_0434",
           "account_id": "acc_card",
           "amount": 17.31,
           "iso_currency_code": "USD",
@@ -724,7 +745,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261023_0439",
+          "transaction_id": "txn_20261023_0440",
           "account_id": "acc_card",
           "amount": 41.64,
           "iso_currency_code": "USD",
@@ -787,7 +808,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261020_0442",
+          "transaction_id": "txn_20261020_0443",
           "account_id": "acc_card",
           "amount": 17.16,
           "iso_currency_code": "USD",
@@ -808,7 +829,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261019_0432",
+          "transaction_id": "txn_20261019_0433",
           "account_id": "acc_card",
           "amount": 55.26,
           "iso_currency_code": "USD",
@@ -892,7 +913,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261017_0426",
+          "transaction_id": "txn_20261017_0427",
           "account_id": "acc_card",
           "amount": 147.78,
           "iso_currency_code": "USD",
@@ -955,7 +976,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261016_0436",
+          "transaction_id": "txn_20261016_0437",
           "account_id": "acc_card",
           "amount": 46.94,
           "iso_currency_code": "USD",
@@ -997,7 +1018,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261015_0441",
+          "transaction_id": "txn_20261015_0442",
           "account_id": "acc_card",
           "amount": 57.25,
           "iso_currency_code": "USD",
@@ -1018,7 +1039,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261014_0434",
+          "transaction_id": "txn_20261014_0435",
           "account_id": "acc_card",
           "amount": 5.69,
           "iso_currency_code": "USD",
@@ -1039,7 +1060,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261013_0428",
+          "transaction_id": "txn_20261013_0429",
           "account_id": "acc_card",
           "amount": 32.21,
           "iso_currency_code": "USD",
@@ -1081,7 +1102,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261012_0431",
+          "transaction_id": "txn_20261012_0432",
           "account_id": "acc_card",
           "amount": 33.4,
           "iso_currency_code": "USD",
@@ -1102,7 +1123,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261011_0438",
+          "transaction_id": "txn_20261011_0439",
           "account_id": "acc_card",
           "amount": 51.82,
           "iso_currency_code": "USD",
@@ -1144,7 +1165,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261010_0425",
+          "transaction_id": "txn_20261010_0426",
           "account_id": "acc_card",
           "amount": 106.41,
           "iso_currency_code": "USD",
@@ -1165,7 +1186,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261009_0440",
+          "transaction_id": "txn_20261009_0441",
           "account_id": "acc_card",
           "amount": 42.09,
           "iso_currency_code": "USD",
@@ -1186,7 +1207,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261008_0422",
+          "transaction_id": "txn_20261008_0423",
           "account_id": "acc_travel_card",
           "amount": 8.99,
           "iso_currency_code": "USD",
@@ -1207,7 +1228,28 @@
           }
         },
         {
-          "transaction_id": "txn_20261007_0430",
+          "transaction_id": "txn_20261007_0421",
+          "account_id": "acc_travel_card",
+          "amount": 9.99,
+          "iso_currency_code": "USD",
+          "date": "2026-10-07",
+          "authorized_date": "2026-10-07",
+          "name": "SHOWREEL",
+          "merchant_name": "Showreel",
+          "merchant_entity_id": null,
+          "logo_url": null,
+          "website": null,
+          "payment_channel": "online",
+          "pending": false,
+          "pending_transaction_id": null,
+          "personal_finance_category": {
+            "primary": "ENTERTAINMENT",
+            "detailed": "ENTERTAINMENT_TV_AND_MOVIES",
+            "confidence_level": "VERY_HIGH"
+          }
+        },
+        {
+          "transaction_id": "txn_20261007_0431",
           "account_id": "acc_card",
           "amount": 55.73,
           "iso_currency_code": "USD",
@@ -1228,7 +1270,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261007_0435",
+          "transaction_id": "txn_20261007_0436",
           "account_id": "acc_card",
           "amount": 50.96,
           "iso_currency_code": "USD",
@@ -1249,7 +1291,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261006_0421",
+          "transaction_id": "txn_20261006_0422",
           "account_id": "acc_travel_card",
           "amount": 10.99,
           "iso_currency_code": "USD",
@@ -1270,7 +1312,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261006_0443",
+          "transaction_id": "txn_20261006_0444",
           "account_id": "acc_card",
           "amount": 95,
           "iso_currency_code": "USD",
@@ -1312,7 +1354,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261004_0423",
+          "transaction_id": "txn_20261004_0424",
           "account_id": "acc_card",
           "amount": 45,
           "iso_currency_code": "USD",
@@ -1354,7 +1396,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261003_0424",
+          "transaction_id": "txn_20261003_0425",
           "account_id": "acc_card",
           "amount": 113.39,
           "iso_currency_code": "USD",
@@ -1375,7 +1417,7 @@
           }
         },
         {
-          "transaction_id": "txn_20261002_0429",
+          "transaction_id": "txn_20261002_0430",
           "account_id": "acc_card",
           "amount": 56.33,
           "iso_currency_code": "USD",
@@ -1459,7 +1501,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260928_0491",
+          "transaction_id": "txn_20260928_0493",
           "account_id": "acc_checking",
           "amount": 200,
           "iso_currency_code": "USD",
@@ -1480,7 +1522,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260928_0492",
+          "transaction_id": "txn_20260928_0494",
           "account_id": "acc_promo",
           "amount": -200,
           "iso_currency_code": "USD",
@@ -1501,9 +1543,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260927_0489",
+          "transaction_id": "txn_20260927_0491",
           "account_id": "acc_checking",
-          "amount": 35.47,
+          "amount": 31.97,
           "iso_currency_code": "USD",
           "date": "2026-09-27",
           "authorized_date": "2026-09-27",
@@ -1522,9 +1564,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260927_0490",
+          "transaction_id": "txn_20260927_0492",
           "account_id": "acc_travel_card",
-          "amount": -35.47,
+          "amount": -31.97,
           "iso_currency_code": "USD",
           "date": "2026-09-27",
           "authorized_date": "2026-09-27",
@@ -1585,7 +1627,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260925_0487",
+          "transaction_id": "txn_20260925_0489",
           "account_id": "acc_checking",
           "amount": 1111.24,
           "iso_currency_code": "USD",
@@ -1606,7 +1648,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260925_0488",
+          "transaction_id": "txn_20260925_0490",
           "account_id": "acc_card",
           "amount": -1111.24,
           "iso_currency_code": "USD",
@@ -2301,7 +2343,7 @@
         {
           "transaction_id": "txn_20260903_0378",
           "account_id": "acc_travel_card",
-          "amount": 15.49,
+          "amount": 11.99,
           "iso_currency_code": "USD",
           "date": "2026-09-03",
           "authorized_date": "2026-09-03",
@@ -2446,9 +2488,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260827_0485",
+          "transaction_id": "txn_20260827_0487",
           "account_id": "acc_checking",
-          "amount": 1353.97,
+          "amount": 1350.47,
           "iso_currency_code": "USD",
           "date": "2026-08-27",
           "authorized_date": "2026-08-27",
@@ -2467,9 +2509,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260827_0486",
+          "transaction_id": "txn_20260827_0488",
           "account_id": "acc_travel_card",
-          "amount": -1353.97,
+          "amount": -1350.47,
           "iso_currency_code": "USD",
           "date": "2026-08-27",
           "authorized_date": "2026-08-27",
@@ -2509,7 +2551,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260825_0483",
+          "transaction_id": "txn_20260825_0485",
           "account_id": "acc_checking",
           "amount": 1160.84,
           "iso_currency_code": "USD",
@@ -2530,7 +2572,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260825_0484",
+          "transaction_id": "txn_20260825_0486",
           "account_id": "acc_card",
           "amount": -1160.84,
           "iso_currency_code": "USD",
@@ -3225,7 +3267,7 @@
         {
           "transaction_id": "txn_20260803_0333",
           "account_id": "acc_travel_card",
-          "amount": 15.49,
+          "amount": 11.99,
           "iso_currency_code": "USD",
           "date": "2026-08-03",
           "authorized_date": "2026-08-03",
@@ -3370,9 +3412,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260727_0481",
+          "transaction_id": "txn_20260727_0483",
           "account_id": "acc_checking",
-          "amount": 35.47,
+          "amount": 31.97,
           "iso_currency_code": "USD",
           "date": "2026-07-27",
           "authorized_date": "2026-07-27",
@@ -3391,9 +3433,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260727_0482",
+          "transaction_id": "txn_20260727_0484",
           "account_id": "acc_travel_card",
-          "amount": -35.47,
+          "amount": -31.97,
           "iso_currency_code": "USD",
           "date": "2026-07-27",
           "authorized_date": "2026-07-27",
@@ -3454,7 +3496,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260725_0479",
+          "transaction_id": "txn_20260725_0481",
           "account_id": "acc_checking",
           "amount": 1290.32,
           "iso_currency_code": "USD",
@@ -3475,7 +3517,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260725_0480",
+          "transaction_id": "txn_20260725_0482",
           "account_id": "acc_card",
           "amount": -1290.32,
           "iso_currency_code": "USD",
@@ -4191,7 +4233,7 @@
         {
           "transaction_id": "txn_20260703_0287",
           "account_id": "acc_travel_card",
-          "amount": 15.49,
+          "amount": 11.99,
           "iso_currency_code": "USD",
           "date": "2026-07-03",
           "authorized_date": "2026-07-03",
@@ -4378,9 +4420,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260627_0477",
+          "transaction_id": "txn_20260627_0479",
           "account_id": "acc_checking",
-          "amount": 35.47,
+          "amount": 31.97,
           "iso_currency_code": "USD",
           "date": "2026-06-27",
           "authorized_date": "2026-06-27",
@@ -4399,9 +4441,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260627_0478",
+          "transaction_id": "txn_20260627_0480",
           "account_id": "acc_travel_card",
-          "amount": -35.47,
+          "amount": -31.97,
           "iso_currency_code": "USD",
           "date": "2026-06-27",
           "authorized_date": "2026-06-27",
@@ -4441,7 +4483,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260625_0475",
+          "transaction_id": "txn_20260625_0477",
           "account_id": "acc_checking",
           "amount": 1787.38,
           "iso_currency_code": "USD",
@@ -4462,7 +4504,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260625_0476",
+          "transaction_id": "txn_20260625_0478",
           "account_id": "acc_card",
           "amount": -1787.38,
           "iso_currency_code": "USD",
@@ -5157,7 +5199,7 @@
         {
           "transaction_id": "txn_20260603_0244",
           "account_id": "acc_travel_card",
-          "amount": 15.49,
+          "amount": 11.99,
           "iso_currency_code": "USD",
           "date": "2026-06-03",
           "authorized_date": "2026-06-03",
@@ -5323,9 +5365,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260527_0473",
+          "transaction_id": "txn_20260527_0475",
           "account_id": "acc_checking",
-          "amount": 35.47,
+          "amount": 31.97,
           "iso_currency_code": "USD",
           "date": "2026-05-27",
           "authorized_date": "2026-05-27",
@@ -5344,9 +5386,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260527_0474",
+          "transaction_id": "txn_20260527_0476",
           "account_id": "acc_travel_card",
-          "amount": -35.47,
+          "amount": -31.97,
           "iso_currency_code": "USD",
           "date": "2026-05-27",
           "authorized_date": "2026-05-27",
@@ -5407,7 +5449,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260525_0471",
+          "transaction_id": "txn_20260525_0473",
           "account_id": "acc_checking",
           "amount": 1312.75,
           "iso_currency_code": "USD",
@@ -5428,7 +5470,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260525_0472",
+          "transaction_id": "txn_20260525_0474",
           "account_id": "acc_card",
           "amount": -1312.75,
           "iso_currency_code": "USD",
@@ -6123,7 +6165,7 @@
         {
           "transaction_id": "txn_20260503_0197",
           "account_id": "acc_travel_card",
-          "amount": 15.49,
+          "amount": 11.99,
           "iso_currency_code": "USD",
           "date": "2026-05-03",
           "authorized_date": "2026-05-03",
@@ -6289,9 +6331,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260427_0469",
+          "transaction_id": "txn_20260427_0471",
           "account_id": "acc_checking",
-          "amount": 35.47,
+          "amount": 31.97,
           "iso_currency_code": "USD",
           "date": "2026-04-27",
           "authorized_date": "2026-04-27",
@@ -6310,9 +6352,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260427_0470",
+          "transaction_id": "txn_20260427_0472",
           "account_id": "acc_travel_card",
-          "amount": -35.47,
+          "amount": -31.97,
           "iso_currency_code": "USD",
           "date": "2026-04-27",
           "authorized_date": "2026-04-27",
@@ -6352,7 +6394,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260425_0467",
+          "transaction_id": "txn_20260425_0469",
           "account_id": "acc_checking",
           "amount": 1575.01,
           "iso_currency_code": "USD",
@@ -6373,7 +6415,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260425_0468",
+          "transaction_id": "txn_20260425_0470",
           "account_id": "acc_card",
           "amount": -1575.01,
           "iso_currency_code": "USD",
@@ -7089,7 +7131,7 @@
         {
           "transaction_id": "txn_20260403_0154",
           "account_id": "acc_travel_card",
-          "amount": 15.49,
+          "amount": 11.99,
           "iso_currency_code": "USD",
           "date": "2026-04-03",
           "authorized_date": "2026-04-03",
@@ -7255,9 +7297,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260327_0465",
+          "transaction_id": "txn_20260327_0467",
           "account_id": "acc_checking",
-          "amount": 35.47,
+          "amount": 31.97,
           "iso_currency_code": "USD",
           "date": "2026-03-27",
           "authorized_date": "2026-03-27",
@@ -7276,9 +7318,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260327_0466",
+          "transaction_id": "txn_20260327_0468",
           "account_id": "acc_travel_card",
-          "amount": -35.47,
+          "amount": -31.97,
           "iso_currency_code": "USD",
           "date": "2026-03-27",
           "authorized_date": "2026-03-27",
@@ -7339,7 +7381,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260325_0463",
+          "transaction_id": "txn_20260325_0465",
           "account_id": "acc_checking",
           "amount": 1398.99,
           "iso_currency_code": "USD",
@@ -7360,7 +7402,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260325_0464",
+          "transaction_id": "txn_20260325_0466",
           "account_id": "acc_card",
           "amount": -1398.99,
           "iso_currency_code": "USD",
@@ -8055,7 +8097,7 @@
         {
           "transaction_id": "txn_20260303_0107",
           "account_id": "acc_travel_card",
-          "amount": 15.49,
+          "amount": 11.99,
           "iso_currency_code": "USD",
           "date": "2026-03-03",
           "authorized_date": "2026-03-03",
@@ -8200,9 +8242,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260227_0461",
+          "transaction_id": "txn_20260227_0463",
           "account_id": "acc_checking",
-          "amount": 35.47,
+          "amount": 31.97,
           "iso_currency_code": "USD",
           "date": "2026-02-27",
           "authorized_date": "2026-02-27",
@@ -8221,9 +8263,9 @@
           }
         },
         {
-          "transaction_id": "txn_20260227_0462",
+          "transaction_id": "txn_20260227_0464",
           "account_id": "acc_travel_card",
-          "amount": -35.47,
+          "amount": -31.97,
           "iso_currency_code": "USD",
           "date": "2026-02-27",
           "authorized_date": "2026-02-27",
@@ -8263,7 +8305,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260225_0459",
+          "transaction_id": "txn_20260225_0461",
           "account_id": "acc_checking",
           "amount": 1197.54,
           "iso_currency_code": "USD",
@@ -8284,7 +8326,7 @@
           }
         },
         {
-          "transaction_id": "txn_20260225_0460",
+          "transaction_id": "txn_20260225_0462",
           "account_id": "acc_card",
           "amount": -1197.54,
           "iso_currency_code": "USD",
@@ -8979,7 +9021,7 @@
         {
           "transaction_id": "txn_20260203_0063",
           "account_id": "acc_travel_card",
-          "amount": 15.49,
+          "amount": 11.99,
           "iso_currency_code": "USD",
           "date": "2026-02-03",
           "authorized_date": "2026-02-03",
@@ -9840,7 +9882,7 @@
         {
           "transaction_id": "txn_20260103_0020",
           "account_id": "acc_travel_card",
-          "amount": 15.49,
+          "amount": 11.99,
           "iso_currency_code": "USD",
           "date": "2026-01-03",
           "authorized_date": "2026-01-03",
@@ -9993,9 +10035,9 @@
               }
             ],
             "is_overdue": false,
-            "last_payment_amount": 35.47,
+            "last_payment_amount": 45.46,
             "last_payment_date": "2026-10-27",
-            "last_statement_balance": 35.47,
+            "last_statement_balance": 45.46,
             "minimum_payment_amount": 25,
             "next_payment_due_date": "2026-11-27"
           },
@@ -10069,7 +10111,7 @@
               "txn_20260915_0359",
               "txn_20261001_0402",
               "txn_20261015_0403",
-              "txn_20261101_0444"
+              "txn_20261101_0445"
             ],
             "average_amount": {
               "amount": -2850,
@@ -10109,7 +10151,7 @@
               "txn_20260801_0319",
               "txn_20260901_0364",
               "txn_20261001_0406",
-              "txn_20261101_0448"
+              "txn_20261101_0449"
             ],
             "average_amount": {
               "amount": 1320,
@@ -10147,7 +10189,7 @@
               "txn_20260805_0320",
               "txn_20260905_0365",
               "txn_20261005_0407",
-              "txn_20261105_0449"
+              "txn_20261105_0450"
             ],
             "average_amount": {
               "amount": 389,
@@ -10407,10 +10449,10 @@
               "txn_20260803_0333",
               "txn_20260903_0378",
               "txn_20261003_0420",
-              "txn_20261103_0450"
+              "txn_20261103_0451"
             ],
             "average_amount": {
-              "amount": 15.49,
+              "amount": 12.63,
               "iso_currency_code": "USD"
             },
             "last_amount": {
@@ -10444,8 +10486,8 @@
               "txn_20260706_0288",
               "txn_20260806_0334",
               "txn_20260906_0379",
-              "txn_20261006_0421",
-              "txn_20261106_0451"
+              "txn_20261006_0422",
+              "txn_20261106_0453"
             ],
             "average_amount": {
               "amount": 10.99,
@@ -10482,8 +10524,8 @@
               "txn_20260708_0289",
               "txn_20260808_0335",
               "txn_20260908_0380",
-              "txn_20261008_0422",
-              "txn_20261108_0452"
+              "txn_20261008_0423",
+              "txn_20261108_0454"
             ],
             "average_amount": {
               "amount": 8.99,
@@ -10520,8 +10562,8 @@
               "txn_20260704_0290",
               "txn_20260804_0336",
               "txn_20260904_0381",
-              "txn_20261004_0423",
-              "txn_20261104_0453"
+              "txn_20261004_0424",
+              "txn_20261104_0455"
             ],
             "average_amount": {
               "amount": 45,
@@ -10536,6 +10578,61 @@
             "personal_finance_category": {
               "primary": "PERSONAL_CARE",
               "detailed": "PERSONAL_CARE_GYMS_AND_FITNESS_CENTERS",
+              "confidence_level": "VERY_HIGH"
+            }
+          },
+          {
+            "stream_id": "stream_showreel",
+            "account_id": "acc_travel_card",
+            "description": "SHOWREEL",
+            "merchant_name": "Showreel",
+            "first_date": "2026-10-07",
+            "last_date": "2026-11-07",
+            "predicted_next_date": "2026-12-07",
+            "frequency": "MONTHLY",
+            "transaction_ids": [
+              "txn_20261007_0421",
+              "txn_20261107_0452"
+            ],
+            "average_amount": {
+              "amount": 9.99,
+              "iso_currency_code": "USD"
+            },
+            "last_amount": {
+              "amount": 9.99,
+              "iso_currency_code": "USD"
+            },
+            "is_active": true,
+            "status": "MATURE",
+            "personal_finance_category": {
+              "primary": "ENTERTAINMENT",
+              "detailed": "ENTERTAINMENT_TV_AND_MOVIES",
+              "confidence_level": "VERY_HIGH"
+            }
+          },
+          {
+            "stream_id": "stream_skyvault",
+            "account_id": "acc_travel_card",
+            "description": "SKYVAULT STORAGE",
+            "merchant_name": "Skyvault Storage",
+            "first_date": "2025-11-26",
+            "last_date": "2025-11-26",
+            "predicted_next_date": "2026-11-26",
+            "frequency": "ANNUALLY",
+            "transaction_ids": [],
+            "average_amount": {
+              "amount": 99.99,
+              "iso_currency_code": "USD"
+            },
+            "last_amount": {
+              "amount": 99.99,
+              "iso_currency_code": "USD"
+            },
+            "is_active": true,
+            "status": "MATURE",
+            "personal_finance_category": {
+              "primary": "GENERAL_SERVICES",
+              "detailed": "GENERAL_SERVICES_OTHER_GENERAL_SERVICES",
               "confidence_level": "VERY_HIGH"
             }
           }
@@ -10598,7 +10695,7 @@
       ],
       "transactions": [
         {
-          "transaction_id": "txn_20261103_0446",
+          "transaction_id": "txn_20261103_0447",
           "account_id": "acc_brokerage",
           "amount": -14.95,
           "iso_currency_code": "USD",
@@ -11612,7 +11709,7 @@
     {
       "accountId": "acc_checking",
       "date": "2026-01-31",
-      "balanceCents": 214607
+      "balanceCents": 211457
     },
     {
       "accountId": "acc_savings",
@@ -11632,7 +11729,7 @@
     {
       "accountId": "acc_travel_card",
       "date": "2026-01-31",
-      "balanceCents": 3547
+      "balanceCents": 3197
     },
     {
       "accountId": "acc_promo",
@@ -11672,7 +11769,7 @@
     {
       "accountId": "acc_checking",
       "date": "2026-02-28",
-      "balanceCents": 197640
+      "balanceCents": 194840
     },
     {
       "accountId": "acc_savings",
@@ -11692,7 +11789,7 @@
     {
       "accountId": "acc_travel_card",
       "date": "2026-02-28",
-      "balanceCents": 3547
+      "balanceCents": 3197
     },
     {
       "accountId": "acc_promo",
@@ -11732,7 +11829,7 @@
     {
       "accountId": "acc_checking",
       "date": "2026-03-31",
-      "balanceCents": 164080
+      "balanceCents": 161630
     },
     {
       "accountId": "acc_savings",
@@ -11752,7 +11849,7 @@
     {
       "accountId": "acc_travel_card",
       "date": "2026-03-31",
-      "balanceCents": 3547
+      "balanceCents": 3197
     },
     {
       "accountId": "acc_promo",
@@ -11792,7 +11889,7 @@
     {
       "accountId": "acc_checking",
       "date": "2026-04-30",
-      "balanceCents": 327762
+      "balanceCents": 325662
     },
     {
       "accountId": "acc_savings",
@@ -11812,7 +11909,7 @@
     {
       "accountId": "acc_travel_card",
       "date": "2026-04-30",
-      "balanceCents": 3547
+      "balanceCents": 3197
     },
     {
       "accountId": "acc_promo",
@@ -11852,7 +11949,7 @@
     {
       "accountId": "acc_checking",
       "date": "2026-05-31",
-      "balanceCents": 303062
+      "balanceCents": 301312
     },
     {
       "accountId": "acc_savings",
@@ -11872,7 +11969,7 @@
     {
       "accountId": "acc_travel_card",
       "date": "2026-05-31",
-      "balanceCents": 3547
+      "balanceCents": 3197
     },
     {
       "accountId": "acc_promo",
@@ -11912,7 +12009,7 @@
     {
       "accountId": "acc_checking",
       "date": "2026-06-30",
-      "balanceCents": 319483
+      "balanceCents": 318083
     },
     {
       "accountId": "acc_savings",
@@ -11932,7 +12029,7 @@
     {
       "accountId": "acc_travel_card",
       "date": "2026-06-30",
-      "balanceCents": 3547
+      "balanceCents": 3197
     },
     {
       "accountId": "acc_promo",
@@ -11972,7 +12069,7 @@
     {
       "accountId": "acc_checking",
       "date": "2026-07-31",
-      "balanceCents": 293705
+      "balanceCents": 292655
     },
     {
       "accountId": "acc_savings",
@@ -11992,7 +12089,7 @@
     {
       "accountId": "acc_travel_card",
       "date": "2026-07-31",
-      "balanceCents": 135397
+      "balanceCents": 135047
     },
     {
       "accountId": "acc_promo",
@@ -12032,7 +12129,7 @@
     {
       "accountId": "acc_checking",
       "date": "2026-08-31",
-      "balanceCents": 147757
+      "balanceCents": 147057
     },
     {
       "accountId": "acc_savings",
@@ -12052,7 +12149,7 @@
     {
       "accountId": "acc_travel_card",
       "date": "2026-08-31",
-      "balanceCents": 3547
+      "balanceCents": 3197
     },
     {
       "accountId": "acc_promo",
@@ -12092,7 +12189,7 @@
     {
       "accountId": "acc_checking",
       "date": "2026-09-30",
-      "balanceCents": 196333
+      "balanceCents": 195983
     },
     {
       "accountId": "acc_savings",
@@ -12112,7 +12209,7 @@
     {
       "accountId": "acc_travel_card",
       "date": "2026-09-30",
-      "balanceCents": 3547
+      "balanceCents": 3197
     },
     {
       "accountId": "acc_promo",
@@ -12172,7 +12269,7 @@
     {
       "accountId": "acc_travel_card",
       "date": "2026-10-31",
-      "balanceCents": 3547
+      "balanceCents": 4546
     },
     {
       "accountId": "acc_promo",

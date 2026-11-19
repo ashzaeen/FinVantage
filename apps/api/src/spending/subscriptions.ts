@@ -81,6 +81,10 @@ export function buildSubscriptions(input: SubscriptionInput): SubscriptionDetail
 
   return unique.map(({ charge, kind, id }) => {
     const history = (charged.get(historyKey(charge.accountId, charge.merchant)) ?? []).sort((a, b) => a.date.localeCompare(b.date));
+    // A subscription has one price, so it costs what it last charged; the bank's average would sit
+    // between the old and new price after a rise. A bill varies, so it keeps the bank's usual amount.
+    const latest = history[history.length - 1];
+    const amountCents = kind === "subscription" && latest ? latest.amountCents : charge.amountCents;
     const flags: SubscriptionFlag[] = [];
     const change = priceChange(history, today);
     if (change) flags.push({ type: "price_up", previousCents: change.previousCents, changedOn: change.changedOn, group: null });
@@ -90,12 +94,13 @@ export function buildSubscriptions(input: SubscriptionInput): SubscriptionDetail
     if (annualComing(charge.cadence, charge.nextDate, today)) flags.push({ type: "annual_coming", previousCents: null, changedOn: null, group: null });
     return {
       ...charge,
+      amountCents,
       id,
       kind,
       status: "active" as const,
-      monthlyCents: monthlyCostCents(charge.amountCents, charge.cadence),
-      annualCents: annualCostCents(charge.amountCents, charge.cadence),
-      lastChargeDate: history[history.length - 1]?.date ?? null,
+      monthlyCents: monthlyCostCents(amountCents, charge.cadence),
+      annualCents: annualCostCents(amountCents, charge.cadence),
+      lastChargeDate: latest?.date ?? null,
       flags,
       history: history.slice(-DETAIL_HISTORY_LIMIT),
     };

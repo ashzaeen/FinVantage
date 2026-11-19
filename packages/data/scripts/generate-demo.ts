@@ -161,6 +161,7 @@ const C = {
   carService: ["GENERAL_SERVICES", "GENERAL_SERVICES_AUTOMOTIVE"],
   streaming: ["ENTERTAINMENT", "ENTERTAINMENT_TV_AND_MOVIES"],
   music: ["ENTERTAINMENT", "ENTERTAINMENT_MUSIC_AND_AUDIO"],
+  software: ["GENERAL_SERVICES", "GENERAL_SERVICES_OTHER_GENERAL_SERVICES"],
   events: ["ENTERTAINMENT", "ENTERTAINMENT_SPORTING_EVENTS_AMUSEMENT_PARKS_AND_MUSEUMS"],
   gym: ["PERSONAL_CARE", "PERSONAL_CARE_GYMS_AND_FITNESS_CENTERS"],
   hair: ["PERSONAL_CARE", "PERSONAL_CARE_HAIR_AND_BEAUTY"],
@@ -233,7 +234,11 @@ for (const [index, m] of months.entries()) {
   add(day(m, 18), A.brokerage.id, -BROKERAGE_TRANSFER, "Deposit from Everyday Checking", cat(C.transferIn), "online");
 
   // Subscriptions on the travel card.
-  card(day(m, 3), A.travelCard.id, 15.49, "StreamFlix", C.streaming, "online");
+  // StreamFlix raised its price in October, and Showreel is a newer streaming service that started
+  // then, so the Subscriptions page has a price rise, a possible duplicate and a recent start.
+  // Neither draws a random number, so the rest of the profile is unchanged.
+  card(day(m, 3), A.travelCard.id, mm >= 10 ? 15.49 : 11.99, "StreamFlix", C.streaming, "online");
+  if (mm >= 10) card(day(m, 7), A.travelCard.id, 9.99, "Showreel", C.streaming, "online");
   card(day(m, 6), A.travelCard.id, 10.99, "Tunewave", C.music, "online");
   card(day(m, 8), A.travelCard.id, 8.99, "Daily Ledger News", C.books, "online");
   card(day(m, 4), A.cashCard.id, 45, "Peak Fitness", C.gym);
@@ -426,10 +431,33 @@ for (const [merchant, category, account, id] of [
   ["Tunewave", C.music, A.travelCard.id, "stream_tunewave"],
   ["Daily Ledger News", C.books, A.travelCard.id, "stream_news"],
   ["Peak Fitness", C.gym, A.cashCard.id, "stream_gym"],
+  ["Showreel", C.streaming, A.travelCard.id, "stream_showreel"],
 ] as const) {
   for (const t of txns) if (t.merchant === merchant) t.stream = id;
   outflowStreams.push(stream(id, account, merchant, category, "MONTHLY"));
 }
+
+// A yearly subscription that renews soon. Its last charge was a year ago, before the eleven months
+// above begin, so the bank knows the stream but the ledger has no charge for it. That is what makes
+// the Subscriptions page warn about an annual charge coming up.
+const annualNext = addDays(AS_OF, 18);
+const annualLast = addDays(annualNext, -365);
+outflowStreams.push({
+  stream_id: "stream_skyvault",
+  account_id: A.travelCard.id,
+  description: "SKYVAULT STORAGE",
+  merchant_name: "Skyvault Storage",
+  first_date: annualLast,
+  last_date: annualLast,
+  predicted_next_date: annualNext,
+  frequency: "ANNUALLY",
+  transaction_ids: [],
+  average_amount: { amount: 99.99, iso_currency_code: "USD" },
+  last_amount: { amount: 99.99, iso_currency_code: "USD" },
+  is_active: true,
+  status: "MATURE",
+  personal_finance_category: { primary: C.software[0], detailed: C.software[1], confidence_level: "VERY_HIGH" },
+});
 
 // ---------- Write the fixture ----------
 
