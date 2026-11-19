@@ -12,6 +12,7 @@ Everything depends on this package, so a change here affects everyone.
 | `src/copilot.ts` | Context, metrics, card, events |
 | `src/advisory.ts` | Situations, recommendations, quarterly reports |
 | `src/spending.ts` | Budgets, recurring charges, mocked portfolio and credit |
+| `src/subscription.ts` | Subscriptions and bills, their flags, status and totals (no routes yet) |
 | `src/live.ts` | Pushed messages |
 | `src/api.ts` | **The route table** |
 | `src/client.ts` | `createApiClient` |

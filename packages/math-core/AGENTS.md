@@ -10,7 +10,11 @@ Assumptions are named constants at the top of `src/index.ts`. The reasoning behi
 
 `src/advisor.ts` holds the Advisor's figures: goal plans, spending cuts, the calculator's parser, loan, growth, and payoff formulas, and `applyScenario`, which turns a what-if scenario into simulator inputs. Its assumptions are named constants at its top.
 
+`src/subscriptions.ts` holds the Subscriptions page's figures: monthly and yearly cost by cadence, totals, merchant normalization and stable ids, the subscription-or-bill rule, duplicate groups, price changes, recent starts, a cancelled charge that kept charging, and savings so far. Plan: `docs/workstreams/subscriptions.md`.
+
 Known limits:
+
+- Subscriptions: duplicate groups match whole words in a merchant name, so an unrelated merchant that shares a word with a listed one ("Peacock Lane Diner") lands in the group. The category list is short and fixed.
 
 - Current housing is the mortgage payment. Someone who rents today has no rent field in the snapshot, so it counts as 0.
 - Vehicle total cost includes interest, not insurance or running costs.

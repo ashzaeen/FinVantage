@@ -10,6 +10,7 @@ import { monthsBetween } from "./dates";
 
 export * from "./dates";
 export * from "./life-scenario";
+export * from "./subscriptions";
 
 /*
  * The deterministic math core. Every figure on a Copilot card comes from here, before any LLM
