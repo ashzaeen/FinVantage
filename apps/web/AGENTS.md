@@ -23,6 +23,8 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
 | `src/lib/useLiveEvents.ts` | Subscribes to pushed updates: SpacetimeDB when signed in, SSE otherwise |
 | `src/spacetime/` | Generated SpacetimeDB client bindings. Do not edit: run `npm run generate -w @finvantage/spacetime` |
 | `src/lib/nav.ts` | Navigation items |
+| `src/lib/subscriptions.ts` | Words and ordering for the Subscriptions page: cadence and flag labels, one sentence per flag from the API's figures, sorting, and the 30-day upcoming window. Tested in `subscriptions.test.ts`. It computes no financial figures |
+| `src/app/(app)/subscriptions` | The Subscriptions page (Intelligence): headline tiles, Needs a Look, the subscription and bill lists with a filter and sort, and Upcoming Charges. Plan: `docs/workstreams/subscriptions.md` |
 | `src/app/globals.css` | Design tokens for light and dark |
 
 ## Rules
