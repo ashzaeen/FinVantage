@@ -1,7 +1,8 @@
 import type { CSSProperties } from "react";
 import { formatUsd, type Subscription } from "@finvantage/contracts";
 import { CategoryIcon } from "@/components/spending/CategoryIcon";
-import { CADENCE_LABEL, FLAG_LABEL, FLAG_TONE, shortDate, type FlagTone } from "@/lib/subscriptions";
+import { CADENCE_LABEL, FLAG_LABEL, FLAG_TONE, flagDetail, shortDate, type FlagTone } from "@/lib/subscriptions";
+import { SubscriptionActions } from "./SubscriptionActions";
 
 const TONE_COLOR: Record<FlagTone, string> = {
   warning: "var(--warning)",
@@ -26,9 +27,20 @@ export function FlagChip({ type }: { type: Subscription["flags"][number]["type"]
   );
 }
 
+/** Where the user has put a charge, when it is not simply active. */
+function StatusChip({ status }: { status: Subscription["status"] }) {
+  if (status !== "keep" && status !== "cancelling") return null;
+  return (
+    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+      {status === "keep" ? "Keeping" : "Cancelling"}
+    </span>
+  );
+}
+
 /** One subscription or bill: what it is, what it costs, when it next charges, and anything flagged. */
 export function SubscriptionRow({ item, categoryLabel, index }: { item: Subscription; categoryLabel: string; index: number }) {
   const showMonthly = item.cadence !== "monthly" && item.monthlyCents !== null;
+  const cancelled = item.status === "cancelled";
   return (
     <li className="row-cascade tile-lift rounded-xl px-3 py-2.5" style={{ background: "var(--surface-inset)", "--i": index } as CSSProperties}>
       <div className="flex items-center justify-between gap-3">
@@ -47,18 +59,32 @@ export function SubscriptionRow({ item, categoryLabel, index }: { item: Subscrip
             <span className="ml-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>{CADENCE_LABEL[item.cadence]}</span>
           </span>
           <span className="block text-xs" style={{ color: "var(--ink-muted)" }}>
-            Next {shortDate(item.nextDate)}
-            {showMonthly && ` · ${formatUsd(item.monthlyCents!)} a month`}
+            {cancelled ? (
+              item.cancelledOn && `Cancelled ${shortDate(item.cancelledOn)}`
+            ) : (
+              <>
+                Next {shortDate(item.nextDate)}
+                {showMonthly && ` · ${formatUsd(item.monthlyCents!)} a month`}
+              </>
+            )}
           </span>
+          {cancelled && item.savedSoFarCents !== null && (
+            <span className="block text-xs font-medium" style={{ color: "var(--gain)" }}>Saved {formatUsd(item.savedSoFarCents)} so far</span>
+          )}
         </span>
       </div>
-      {item.flags.length > 0 && (
+      {(item.flags.length > 0 || item.status === "keep" || item.status === "cancelling") && (
         <div className="mt-2 flex flex-wrap gap-1.5 pl-[3.25rem]">
+          <StatusChip status={item.status} />
           {item.flags.map((flag) => (
             <FlagChip key={flag.type} type={flag.type} />
           ))}
         </div>
       )}
+      {cancelled && item.flags.map((flag) => (
+        <p key={flag.type} className="mt-1.5 pl-[3.25rem] text-xs" style={{ color: "var(--ink-secondary)" }}>{flagDetail(flag, item)}</p>
+      ))}
+      <SubscriptionActions item={item} />
     </li>
   );
 }

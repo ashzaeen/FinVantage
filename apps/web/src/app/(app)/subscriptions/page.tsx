@@ -28,7 +28,8 @@ export default async function SubscriptionsPage() {
   const labels = Object.fromEntries(categories.map((c) => [c.id, c.label]));
   const labelOf = (id: string | null) => (id ? (labels[id] ?? id) : "Uncategorized");
   const all = [...overview.subscriptions, ...overview.bills];
-  const flagged = needsLook(all);
+  // A cancelled subscription that charged again needs a look too, so it joins the ones still active.
+  const flagged = needsLook([...all, ...overview.cancelled]);
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = upcomingWithin(all, today, UPCOMING_DAYS);
   const { subscriptionTotals: totals } = overview;
@@ -102,7 +103,14 @@ export default async function SubscriptionsPage() {
           )}
         </Card>
 
-        <SubscriptionsClient subscriptions={overview.subscriptions} bills={overview.bills} billTotals={overview.billTotals} labels={labels} />
+        <SubscriptionsClient
+          subscriptions={overview.subscriptions}
+          bills={overview.bills}
+          cancelled={overview.cancelled}
+          billTotals={overview.billTotals}
+          savedSoFarCents={overview.savedSoFarCents}
+          labels={labels}
+        />
 
         <Card title="Upcoming Charges" subtitle={`The next ${UPCOMING_DAYS} days, soonest first`} lift={false}>
           {upcoming.length === 0 ? (

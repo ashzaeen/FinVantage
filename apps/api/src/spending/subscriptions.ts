@@ -1,3 +1,4 @@
+import type { SubscriptionState } from "@finvantage/data";
 import {
   type RecurringCharge,
   type Subscription,
@@ -15,8 +16,10 @@ import {
   monthlyCostCents,
   normalizeMerchant,
   priceChange,
+  savedSoFarCents,
   shareOfIncome,
   startedRecently,
+  stillCharging,
   subscriptionId,
   sumCosts,
 } from "@finvantage/math-core";
@@ -33,6 +36,8 @@ export interface SubscriptionInput {
   transactions: Transaction[];
   monthlyIncomeCents: number | null;
   today: string;
+  /** What the user chose about each subscription. */
+  states: readonly SubscriptionState[];
 }
 
 const historyKey = (accountId: string, merchant: string) => `${accountId}|${normalizeMerchant(merchant)}`;
@@ -49,19 +54,26 @@ function sortByCost(a: Subscription, b: Subscription): number {
 /**
  * Every repeating charge as a subscription or a bill, with its cost and what is worth a look.
  * Charges that are neither (saving, investing, income) are left out. Pure: the route supplies
- * the data. Statuses are all "active" until the user's choices are stored.
+ * the data. The user's choices are applied here: a chosen group wins over the rule, "keep" mutes
+ * the flags, and a cancelled subscription stays listed from its saved snapshot after the bank's
+ * stream ends, flagged if charges continue and credited with what it has saved if they stopped.
  */
 export function buildSubscriptions(input: SubscriptionInput): SubscriptionDetail[] {
   const { transactions, today } = input;
+  const stateOf = new Map(input.states.map((s) => [s.id, s]));
   const items = [
     ...input.loans.map((charge) => ({ charge, isLiabilityPayment: true })),
     ...withoutCoveredStreams(input.charges, input.loans).map((charge) => ({ charge, isLiabilityPayment: false })),
+    // A cancelled subscription's stream ends at the bank; its snapshot keeps it on the list.
+    ...input.states.filter((s) => s.status === "cancelled").map((s) => ({ charge: s.charge, isLiabilityPayment: false })),
   ].flatMap((item) => {
-    const kind = classifyKind({ category: item.charge.category, isLiabilityPayment: item.isLiabilityPayment });
-    return kind ? [{ ...item, kind, id: subscriptionId(item.charge.accountId, item.charge.merchant) }] : [];
+    const id = subscriptionId(item.charge.accountId, item.charge.merchant);
+    const kind = classifyKind({ category: item.charge.category, isLiabilityPayment: item.isLiabilityPayment, override: stateOf.get(id)?.kind });
+    return kind ? [{ ...item, kind, id }] : [];
   });
 
-  // The same account and merchant can appear twice (a stream and a due date); keep the first.
+  // The same account and merchant can appear twice (a stream and a due date, or a stream and its
+  // snapshot); keep the first, which is the live one.
   const seen = new Set<string>();
   const unique = items.filter((item) => (seen.has(item.id) ? false : (seen.add(item.id), true)));
 
@@ -85,19 +97,32 @@ export function buildSubscriptions(input: SubscriptionInput): SubscriptionDetail
     // between the old and new price after a rise. A bill varies, so it keeps the bank's usual amount.
     const latest = history[history.length - 1];
     const amountCents = kind === "subscription" && latest ? latest.amountCents : charge.amountCents;
+    const state = stateOf.get(id);
+    const status = state?.status ?? "active";
+    const cancelledOn = status === "cancelled" ? (state?.cancelledOn ?? null) : null;
     const flags: SubscriptionFlag[] = [];
-    const change = priceChange(history, today);
-    if (change) flags.push({ type: "price_up", previousCents: change.previousCents, changedOn: change.changedOn, group: null });
-    const group = duplicates.get(id);
-    if (group) flags.push({ type: "possible_duplicate", previousCents: null, changedOn: null, group });
-    if (startedRecently(history, ledgerStart, today)) flags.push({ type: "started_recently", previousCents: null, changedOn: null, group: null });
-    if (annualComing(charge.cadence, charge.nextDate, today)) flags.push({ type: "annual_coming", previousCents: null, changedOn: null, group: null });
+    let saved: number | null = null;
+    if (status === "cancelled") {
+      // Only one thing matters once it is cancelled: did the charges stop?
+      const again = cancelledOn ? stillCharging(cancelledOn, charge.cadence, history) : null;
+      if (again) flags.push({ type: "still_charging", previousCents: null, changedOn: again.date, group: null });
+      else if (cancelledOn) saved = savedSoFarCents(amountCents, charge.cadence, latest?.date ?? cancelledOn, today);
+    } else if (status !== "keep") {
+      const change = priceChange(history, today);
+      if (change) flags.push({ type: "price_up", previousCents: change.previousCents, changedOn: change.changedOn, group: null });
+      const group = duplicates.get(id);
+      if (group) flags.push({ type: "possible_duplicate", previousCents: null, changedOn: null, group });
+      if (startedRecently(history, ledgerStart, today)) flags.push({ type: "started_recently", previousCents: null, changedOn: null, group: null });
+      if (annualComing(charge.cadence, charge.nextDate, today)) flags.push({ type: "annual_coming", previousCents: null, changedOn: null, group: null });
+    }
     return {
       ...charge,
       amountCents,
       id,
       kind,
-      status: "active" as const,
+      status,
+      cancelledOn,
+      savedSoFarCents: saved,
       monthlyCents: monthlyCostCents(amountCents, charge.cadence),
       annualCents: annualCostCents(amountCents, charge.cadence),
       lastChargeDate: latest?.date ?? null,
@@ -115,13 +140,17 @@ export function overviewOf(details: SubscriptionDetail[], monthlyIncomeCents: nu
     rows.filter((r) => r.kind === kind && (r.status === "cancelled") === cancelled).sort(sortByCost);
   const subscriptions = by("subscription", false);
   const bills = by("bill", false);
-  const subscriptionTotals = sumCosts(subscriptions);
+  // A cancelled charge that keeps posting still costs money, so it stays in the totals until it stops.
+  const stillCosting = (kind: Subscription["kind"]) =>
+    rows.filter((r) => r.kind === kind && r.status === "cancelled" && r.flags.some((f) => f.type === "still_charging")).map((r) => ({ ...r, status: "active" as const }));
+  const subscriptionTotals = sumCosts([...subscriptions, ...stillCosting("subscription")]);
   return {
     subscriptions,
     bills,
     cancelled: rows.filter((r) => r.status === "cancelled").sort(sortByCost),
     subscriptionTotals,
-    billTotals: sumCosts(bills),
+    billTotals: sumCosts([...bills, ...stillCosting("bill")]),
     shareOfIncome: shareOfIncome(subscriptionTotals.monthlyCents, monthlyIncomeCents),
+    savedSoFarCents: rows.reduce((sum, r) => sum + (r.savedSoFarCents ?? 0), 0),
   };
 }

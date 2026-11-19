@@ -3,6 +3,7 @@ import { preferLinkedBanks } from "./linked-banks";
 import { createMongoDocumentStore } from "./mongo";
 import { createMongoSpendingStore } from "./mongo/spending";
 import { MemorySpendingStore, type SpendingStore } from "./spending";
+import { MemorySubscriptionStore, type SubscriptionStore } from "./subscriptions";
 import type { DocumentStore, LedgerStore } from "./stores";
 import { MemoryBankTokenStore, parseTokenKey, SpacetimeBankTokenStore, type BankTokenStore } from "./bank-tokens";
 import { SpacetimeLedgerStore } from "./spacetime/ledger";
@@ -19,6 +20,7 @@ export * from "./bank-tokens";
 export * from "./market";
 export { createMarketData, LiveMarketData, type LiveMarketOptions } from "./market-live";
 export * from "./spending";
+export * from "./subscriptions";
 export { goalStatusForBalance, MemoryDocumentStore, MemoryLedgerStore } from "./memory";
 export { SpacetimeLedgerStore } from "./spacetime/ledger";
 export { SpacetimeHttp, SpacetimeError, sqlString, decodeSats, type SpacetimeConfig } from "./spacetime/client";
@@ -65,6 +67,7 @@ export function createStores(env: NodeJS.ProcessEnv = process.env): {
   docs: DocumentStore;
   bankTokens: BankTokenStore;
   spending: SpendingStore;
+  subscriptions: SubscriptionStore;
 } {
   const spacetime = spacetimeConfig(env);
   return {
@@ -75,6 +78,8 @@ export function createStores(env: NodeJS.ProcessEnv = process.env): {
     bankTokens: spacetime ? spacetimeTokenStore(env, spacetime) : new MemoryBankTokenStore(),
     // Spending settings are per-user documents, so they live with the other documents.
     spending: createSpendingStore(env, env.DOCUMENT_BACKEND ?? "memory"),
+    // Memory only for now: choices last until the API restarts. See subscriptions.ts.
+    subscriptions: new MemorySubscriptionStore(),
   };
 }
 

@@ -7,6 +7,7 @@ import {
   type DocumentStore,
   type MarketDataProvider,
   type SpendingStore,
+  type SubscriptionStore,
   type LedgerStore,
 } from "@finvantage/data";
 import { createLiveBus, type LiveBus } from "@finvantage/live";
@@ -26,6 +27,8 @@ export interface AppDeps {
   docs: DocumentStore;
   /** Spending categories, budgets, rules and the split: MongoDB in production, else memory. */
   spending: SpendingStore;
+  /** What the user chose about each subscription: keep, cancelling, cancelled, bill or subscription. */
+  subscriptions: SubscriptionStore;
   llm: LlmClient;
   live: LiveBus;
   bank: BankDataProvider;

@@ -1166,6 +1166,107 @@ test("one subscription comes with its charges, and an id that is not one is a 40
   assert.equal((await missing.json() as { error: { code: string } }).error.code, "not_found");
 });
 
+test("marking a subscription cancelled takes it off the totals, and putting it back restores them", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const before = await client.listSubscriptions();
+  const id = before.subscriptions.find((s) => s.merchant === "Peak Fitness")!.id;
+
+  const cancelled = await client.updateSubscription({ params: { id }, body: { status: "cancelled", cancelledOn: "2026-11-05" } });
+  assert.deepEqual([cancelled.status, cancelled.cancelledOn, cancelled.flags], ["cancelled", "2026-11-05", []]);
+  // The last charge was 4 November, so nothing has been missed yet: saved so far is zero, not unknown.
+  assert.equal(cancelled.savedSoFarCents, 0);
+
+  const after = await client.listSubscriptions();
+  assert.ok(!after.subscriptions.some((s) => s.id === id));
+  assert.deepEqual(after.cancelled.map((s) => s.merchant), ["Peak Fitness"]);
+  assert.equal(after.subscriptionTotals.monthlyCents, before.subscriptionTotals.monthlyCents - 4500);
+  assert.equal(after.subscriptionTotals.count, before.subscriptionTotals.count - 1);
+
+  const back = await client.updateSubscription({ params: { id }, body: { status: "active" } });
+  assert.deepEqual([back.status, back.cancelledOn], ["active", null]);
+  assert.deepEqual((await client.listSubscriptions()).subscriptionTotals, before.subscriptionTotals);
+});
+
+test("a cancelled subscription whose charges kept coming is flagged with the date of the first one", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const before = await client.listSubscriptions();
+  const id = before.subscriptions.find((s) => s.merchant === "Tunewave")!.id;
+  // Cancelled on 1 August, yet Tunewave charged again on 6 September, past the month's grace.
+  const detail = await client.updateSubscription({ params: { id }, body: { status: "cancelled", cancelledOn: "2026-08-01" } });
+  assert.deepEqual(detail.flags, [{ type: "still_charging", previousCents: null, changedOn: "2026-09-06", group: null }]);
+  assert.equal(detail.savedSoFarCents, null);
+  const overview = await client.listSubscriptions();
+  assert.deepEqual([overview.cancelled.map((s) => s.merchant), overview.savedSoFarCents], [["Tunewave"], 0]);
+  // It is still being charged, so the monthly total has not dropped.
+  assert.deepEqual(overview.subscriptionTotals, before.subscriptionTotals);
+});
+
+test("keeping a subscription mutes its flags, and the choice of group sticks through other changes", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const find = async (name: string) => (await client.listSubscriptions()).subscriptions.find((s) => s.merchant === name)!;
+  const streamflix = await find("StreamFlix");
+  assert.ok(streamflix.flags.length > 0);
+  const kept = await client.updateSubscription({ params: { id: streamflix.id }, body: { status: "keep" } });
+  assert.deepEqual([kept.status, kept.flags], ["keep", []]);
+  assert.deepEqual((await find("Showreel")).flags.map((f) => f.type), ["possible_duplicate", "started_recently"]);
+
+  const gym = await find("Peak Fitness");
+  await client.updateSubscription({ params: { id: gym.id }, body: { kind: "bill" } });
+  let overview = await client.listSubscriptions();
+  assert.ok(overview.bills.some((b) => b.merchant === "Peak Fitness") && !overview.subscriptions.some((s) => s.merchant === "Peak Fitness"));
+  // A later status change keeps the group; sending null goes back to the rule.
+  await client.updateSubscription({ params: { id: gym.id }, body: { status: "keep" } });
+  assert.equal((await client.getSubscription({ params: { id: gym.id } })).kind, "bill");
+  await client.updateSubscription({ params: { id: gym.id }, body: { kind: null } });
+  overview = await client.listSubscriptions();
+  assert.ok(overview.subscriptions.some((s) => s.merchant === "Peak Fitness" && s.status === "keep"));
+});
+
+test("a subscription update must name something to change, and the date must make sense", async () => {
+  const { app, asDemo, client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const { id } = (await client.listSubscriptions()).subscriptions[0]!;
+  const patch = (path: string, body: unknown) => raw(asDemo, "PATCH", path, body);
+
+  assert.deepEqual((await patch(`/v1/subscriptions/${id}`, {})).status, 400);
+  assert.equal((await patch(`/v1/subscriptions/${id}`, { status: "gone" })).status, 400);
+  const future = await patch(`/v1/subscriptions/${id}`, { status: "cancelled", cancelledOn: "2026-11-21" });
+  assert.deepEqual([future.status, future.json.error?.code], [400, "invalid_request"]);
+  const loose = await patch(`/v1/subscriptions/${id}`, { status: "keep", cancelledOn: "2026-11-01" });
+  assert.deepEqual([loose.status, loose.json.error?.code], [400, "invalid_request"]);
+  const missing = await patch("/v1/subscriptions/sub_nope", { status: "keep" });
+  assert.deepEqual([missing.status, missing.json.error?.code], [404, "not_found"]);
+  // Nothing above changed anything.
+  assert.ok((await client.listSubscriptions()).subscriptions.every((s) => s.status === "active"));
+
+  // Cancelling today is allowed, and the date defaults to today.
+  const today = await client.updateSubscription({ params: { id }, body: { status: "cancelled" } });
+  assert.equal(today.cancelledOn, "2026-11-20");
+  // The shared demo token can read but not write.
+  const shared = await app.request(`/v1/subscriptions/${id}`, {
+    method: "PATCH",
+    headers: { authorization: "Bearer demo-token", "content-type": "application/json" },
+    body: JSON.stringify({ status: "keep" }),
+  });
+  assert.equal(shared.status, 403);
+  assert.equal(((await shared.json()) as { error: { code: string } }).error.code, "demo_read_only");
+});
+
+test("one visitor's subscription choices never reach another", async () => {
+  const { clientFor, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const anon = clientFor("");
+  const [a, b] = [clientFor((await anon.startGuestSession()).token), clientFor((await anon.startGuestSession()).token)];
+  const gymOf = async (c: typeof a) => (await c.listSubscriptions()).subscriptions.find((s) => s.merchant === "Peak Fitness");
+  await a.updateSubscription({ params: { id: (await gymOf(a))!.id }, body: { status: "cancelled" } });
+  assert.equal(await gymOf(a), undefined);
+  assert.equal((await gymOf(b))?.status, "active");
+  assert.equal((await b.listSubscriptions()).cancelled.length, 0);
+});
+
 test("subscriptions need a sign-in, and the shared demo token can read them", async () => {
   const { app, clientFor } = setup();
   assert.equal((await app.request("/v1/subscriptions")).status, 401);

@@ -46,6 +46,13 @@ export const Subscription = RecurringCharge.extend({
   annualCents: Cents.nullable(),
   /** The most recent charge seen, or null when the ledger has none. */
   lastChargeDate: IsoDate.nullable().default(null),
+  /** The day the user said they cancelled. Set only while the status is "cancelled". */
+  cancelledOn: IsoDate.nullable().default(null),
+  /**
+   * What a cancellation has kept in the user's pocket: the charges that would have posted since the
+   * last one. Null unless the status is "cancelled" and the charges have stopped.
+   */
+  savedSoFarCents: Cents.nullable().default(null),
   flags: z.array(SubscriptionFlag).default([]),
 });
 export type Subscription = z.infer<typeof Subscription>;
@@ -69,9 +76,26 @@ export const SubscriptionOverview = z.object({
   billTotals: SubscriptionTotals,
   /** Subscription spend as a share of monthly income (0.05 is 5%), or null when income is unknown. */
   shareOfIncome: Rate.nullable(),
+  /** Added up over the cancelled charges that really stopped. */
+  savedSoFarCents: Cents.default(0),
 });
 export type SubscriptionOverview = z.infer<typeof SubscriptionOverview>;
 
 /** One subscription with the charges behind it, oldest first (the last 36 at most). */
 export const SubscriptionDetail = Subscription.extend({ history: z.array(SubscriptionCharge) });
 export type SubscriptionDetail = z.infer<typeof SubscriptionDetail>;
+
+/**
+ * What the user can change about a subscription. Recording a choice does nothing at the provider:
+ * FinVantage never cancels or pays anything, so "cancelled" only means the user says they did.
+ * `kind` moves it between subscriptions and bills; null goes back to the automatic choice.
+ * `cancelledOn` is when they cancelled, today if left out, and cannot be in the future.
+ */
+export const UpdateSubscription = z
+  .object({
+    status: SubscriptionStatus.optional(),
+    kind: SubscriptionKind.nullable().optional(),
+    cancelledOn: IsoDate.optional(),
+  })
+  .refine((body) => body.status !== undefined || body.kind !== undefined, { message: "Send a status or a kind to change." });
+export type UpdateSubscription = z.infer<typeof UpdateSubscription>;

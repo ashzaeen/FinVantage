@@ -6,12 +6,25 @@ import { Card } from "@/components/ui/Card";
 import { needsLook, SORT_LABEL, sortSubscriptions, type SubscriptionSort } from "@/lib/subscriptions";
 import { SubscriptionRow } from "./SubscriptionRow";
 
-type Filter = "all" | "look";
+type Filter = "all" | "look" | "cancelling";
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "look", label: "Needs a Look" },
+  { id: "cancelling", label: "Cancelling" },
 ];
+
+const EMPTY: Record<Filter, { subscriptions: string; bills: string }> = {
+  all: { subscriptions: "No subscriptions found.", bills: "No bills found." },
+  look: { subscriptions: "None of your subscriptions needs a look right now.", bills: "None of your bills needs a look right now." },
+  cancelling: { subscriptions: "You are not cancelling any subscriptions.", bills: "You are not cancelling any bills." },
+};
+
+function apply(items: Subscription[], filter: Filter) {
+  if (filter === "look") return needsLook(items);
+  if (filter === "cancelling") return items.filter((i) => i.status === "cancelling");
+  return items;
+}
 
 function List({ items, labels, empty }: { items: Subscription[]; labels: Record<string, string>; empty: string }) {
   if (items.length === 0) return <p className="text-sm" style={{ color: "var(--ink-muted)" }}>{empty}</p>;
@@ -28,19 +41,23 @@ function List({ items, labels, empty }: { items: Subscription[]; labels: Record<
 export function SubscriptionsClient({
   subscriptions,
   bills,
+  cancelled,
   billTotals,
+  savedSoFarCents,
   labels,
 }: {
   subscriptions: Subscription[];
   bills: Subscription[];
+  cancelled: Subscription[];
   billTotals: SubscriptionTotals;
+  savedSoFarCents: number;
   labels: Record<string, string>;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<SubscriptionSort>("cost");
 
-  const shown = sortSubscriptions(filter === "look" ? needsLook(subscriptions) : subscriptions, sort);
-  const shownBills = sortSubscriptions(filter === "look" ? needsLook(bills) : bills, sort);
+  const shown = sortSubscriptions(apply(subscriptions, filter), sort);
+  const shownBills = sortSubscriptions(apply(bills, filter), sort);
 
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
@@ -78,7 +95,7 @@ export function SubscriptionsClient({
             </button>
           ))}
         </div>
-        <List items={shown} labels={labels} empty={filter === "look" ? "None of your subscriptions needs a look right now." : "No subscriptions found."} />
+        <List items={shown} labels={labels} empty={EMPTY[filter].subscriptions} />
       </Card>
 
       <Card
@@ -86,8 +103,19 @@ export function SubscriptionsClient({
         subtitle={`Repeating payments you owe · ${formatUsd(billTotals.monthlyCents)} a month`}
         lift={false}
       >
-        <List items={shownBills} labels={labels} empty={filter === "look" ? "None of your bills needs a look right now." : "No bills found."} />
+        <List items={shownBills} labels={labels} empty={EMPTY[filter].bills} />
       </Card>
+
+      {cancelled.length > 0 && (
+        <Card
+          title="Cancelled"
+          subtitle={`What you cancelled · ${formatUsd(savedSoFarCents)} saved so far`}
+          lift={false}
+          className="md:col-span-2"
+        >
+          <List items={sortSubscriptions(cancelled, "name")} labels={labels} empty="Nothing cancelled." />
+        </Card>
+      )}
     </div>
   );
 }

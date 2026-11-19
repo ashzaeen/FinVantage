@@ -56,13 +56,15 @@ function asVisitor(request: NextRequest): typeof fetch {
 }
 
 // Dashboard pages only. The landing page, sign-in, and legal pages stay public and session-free.
+// A new dashboard route must be added to the list below, or a visitor who opens it directly gets the
+// shared read-only demo token instead of their own guest session, and every write on it fails.
 // Link prefetches are skipped: each would start a session the visitor may never open, and Next
 // hides the prefetch headers from `request`, so the matcher has to filter them.
 export const config = {
   matcher: [
     {
       source:
-        "/:section(app|accounts|advisor|copilot|credit|goals|income|life-events|portfolio|reports|settings|spending|transactions)/:path*",
+        "/:section(app|accounts|advisor|copilot|credit|goals|income|life-events|portfolio|reports|settings|spending|subscriptions|transactions)/:path*",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

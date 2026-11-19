@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { RecurringCharge, Transaction } from "@finvantage/contracts";
+import type { SubscriptionState } from "@finvantage/data";
+import { subscriptionId } from "@finvantage/math-core";
 import { buildSubscriptions, overviewOf, type SubscriptionInput } from "./subscriptions";
 
 const TODAY = "2026-11-20";
@@ -44,7 +46,7 @@ function tx(merchant: string, date: string, amountCents: number, overrides: Part
 const EARLY = tx("Corner Market", "2026-01-05", 4000, { isRecurring: false });
 
 function build(overrides: Partial<SubscriptionInput> = {}) {
-  return buildSubscriptions({ charges: [], loans: [], transactions: [EARLY], monthlyIncomeCents: 500_000, today: TODAY, ...overrides });
+  return buildSubscriptions({ charges: [], loans: [], transactions: [EARLY], monthlyIncomeCents: 500_000, today: TODAY, states: [], ...overrides });
 }
 
 const flagTypes = (s: { flags: { type: string }[] }) => s.flags.map((f) => f.type);
@@ -197,4 +199,111 @@ test("ids are stable between builds and differ between merchants", () => {
   const b = build({ charges: [charge("StreamFlix", 1549), charge("Tunewave", 1099)] });
   assert.deepEqual(a.map((s) => s.id), b.map((s) => s.id));
   assert.notEqual(a[0]!.id, a[1]!.id);
+});
+
+/* ─── What the user chose ──────────────────────────────────────────────── */
+
+const stateFor = (c: RecurringCharge, overrides: Partial<SubscriptionState> = {}): SubscriptionState => ({
+  id: subscriptionId(c.accountId, c.merchant),
+  charge: c,
+  status: "active",
+  kind: null,
+  cancelledOn: null,
+  updatedAt: "2026-11-19T00:00:00.000Z",
+  ...overrides,
+});
+
+test("the user's choice of group wins over the rule, in both directions", () => {
+  const stream = charge("StreamFlix", 1549);
+  const water = charge("Water", 4522, { category: "utilities.water" });
+  const built = build({ charges: [stream, water], states: [stateFor(stream, { kind: "bill" }), stateFor(water, { kind: "subscription" })] });
+  assert.deepEqual(Object.fromEntries(built.map((s) => [s.merchant, s.kind])), { StreamFlix: "bill", Water: "subscription" });
+});
+
+test("keeping a subscription mutes its flags but not its rival's, and it still counts", () => {
+  const netflix = charge("Netflix", 1549);
+  const hulu = charge("Hulu", 1099);
+  const history = [tx("Netflix", "2026-09-04", 1099), tx("Netflix", "2026-10-04", 1549), tx("Netflix", "2026-11-04", 1549)];
+  const loud = build({ charges: [netflix, hulu], transactions: [EARLY, ...history] });
+  assert.deepEqual(flagTypes(loud.find((s) => s.merchant === "Netflix")!), ["price_up", "possible_duplicate"]);
+
+  const kept = build({ charges: [netflix, hulu], transactions: [EARLY, ...history], states: [stateFor(netflix, { status: "keep" })] });
+  const [keptNetflix, keptHulu] = [kept.find((s) => s.merchant === "Netflix")!, kept.find((s) => s.merchant === "Hulu")!];
+  assert.deepEqual([keptNetflix.status, keptNetflix.flags], ["keep", []]);
+  assert.deepEqual(flagTypes(keptHulu), ["possible_duplicate"]);
+  assert.equal(overviewOf(kept, null).subscriptionTotals.count, 2);
+});
+
+test("a subscription being cancelled still counts and still shows its flags", () => {
+  const stream = charge("StreamFlix", 1549);
+  const built = build({ charges: [stream], states: [stateFor(stream, { status: "cancelling" })] });
+  assert.equal(built[0]!.status, "cancelling");
+  const overview = overviewOf(built, null);
+  assert.deepEqual([overview.subscriptions.length, overview.subscriptionTotals.monthlyCents, overview.cancelled.length], [1, 1549, 0]);
+});
+
+test("a cancelled subscription whose charges stopped moves to the cancelled list and is credited with what it saved", () => {
+  const stream = charge("StreamFlix", 1549);
+  const built = build({
+    charges: [stream],
+    transactions: [EARLY, tx("StreamFlix", "2026-09-04", 1549), tx("StreamFlix", "2026-10-04", 1549)],
+    states: [stateFor(stream, { status: "cancelled", cancelledOn: "2026-10-10" })],
+  });
+  // The last charge was 4 October. By 20 November one more would have posted (47 days, a month apart).
+  assert.deepEqual([built[0]!.status, built[0]!.cancelledOn, built[0]!.flags, built[0]!.savedSoFarCents], ["cancelled", "2026-10-10", [], 1549]);
+  const overview = overviewOf(built, 500_000);
+  assert.deepEqual([overview.subscriptions, overview.cancelled.length], [[], 1]);
+  assert.deepEqual(overview.subscriptionTotals, { monthlyCents: 0, annualCents: 0, count: 0, unknownCadenceCount: 0 });
+  assert.equal(overview.savedSoFarCents, 1549);
+});
+
+test("a cancelled subscription that charges again is flagged with the date, and saves nothing yet", () => {
+  const stream = charge("StreamFlix", 1549);
+  const built = build({
+    charges: [stream],
+    transactions: [EARLY, tx("StreamFlix", "2026-09-03", 1549), tx("StreamFlix", "2026-10-03", 1549), tx("StreamFlix", "2026-11-03", 1549)],
+    states: [stateFor(stream, { status: "cancelled", cancelledOn: "2026-09-10" })],
+  });
+  // 3 October is inside the month's grace, 3 November is not.
+  assert.deepEqual(built[0]!.flags, [{ type: "still_charging", previousCents: null, changedOn: "2026-11-03", group: null }]);
+  assert.equal(built[0]!.savedSoFarCents, null);
+  const overview = overviewOf(built, null);
+  assert.equal(overview.savedSoFarCents, 0);
+  // It is listed as cancelled, but it still costs $15.49 a month, so the totals still count it.
+  assert.deepEqual([overview.subscriptions.length, overview.cancelled.length], [0, 1]);
+  assert.deepEqual(overview.subscriptionTotals, { monthlyCents: 1549, annualCents: 18_588, count: 1, unknownCadenceCount: 0 });
+});
+
+test("a cancelled subscription stays listed from its snapshot after the bank's stream ends", () => {
+  const stream = charge("StreamFlix", 1549);
+  const built = build({
+    charges: [], // the bank no longer reports the stream
+    transactions: [EARLY, tx("StreamFlix", "2026-10-04", 1549)],
+    states: [stateFor(stream, { status: "cancelled", cancelledOn: "2026-10-10" })],
+  });
+  assert.deepEqual([built.length, built[0]!.merchant, built[0]!.status, built[0]!.savedSoFarCents], [1, "StreamFlix", "cancelled", 1549]);
+});
+
+test("a stream that is still live is not listed twice beside its snapshot", () => {
+  const stream = charge("StreamFlix", 1549);
+  const built = build({ charges: [stream], states: [stateFor(stream, { status: "cancelled", cancelledOn: "2026-10-10" })] });
+  assert.equal(built.length, 1);
+});
+
+test("a cancelled subscription with no charges on file counts from the day it was cancelled", () => {
+  const stream = charge("StreamFlix", 1549);
+  const built = build({ charges: [stream], transactions: [EARLY], states: [stateFor(stream, { status: "cancelled", cancelledOn: "2026-10-20" })] });
+  assert.equal(built[0]!.savedSoFarCents, 1549); // 31 days: one charge
+});
+
+test("a cancelled subscription keeps the group the user chose", () => {
+  const stream = charge("StreamFlix", 1549);
+  const built = build({ charges: [], states: [stateFor(stream, { status: "cancelled", kind: "bill", cancelledOn: "2026-10-10" })] });
+  assert.equal(built[0]!.kind, "bill");
+});
+
+test("a choice about a charge the bank no longer reports is ignored unless it was cancelled", () => {
+  const stream = charge("StreamFlix", 1549);
+  assert.deepEqual(build({ charges: [], states: [stateFor(stream, { status: "keep" })] }), []);
+  assert.deepEqual(build({ charges: [], states: [stateFor(stream, { status: "cancelling" })] }), []);
 });
