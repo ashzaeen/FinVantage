@@ -71,3 +71,7 @@ export const SubscriptionOverview = z.object({
   shareOfIncome: Rate.nullable(),
 });
 export type SubscriptionOverview = z.infer<typeof SubscriptionOverview>;
+
+/** One subscription with the charges behind it, oldest first (the last 36 at most). */
+export const SubscriptionDetail = Subscription.extend({ history: z.array(SubscriptionCharge) });
+export type SubscriptionDetail = z.infer<typeof SubscriptionDetail>;

@@ -225,7 +225,7 @@ Notes:
 Each step ends with `npm run check` passing and, for UI steps, a look at the page at desktop and phone width.
 
 1. **Math and contracts.** *Done 2026-11-19, on the `subscriptions` branch, uncommitted.* `subscription.ts` schemas, `math-core/src/subscriptions.ts` with 30 tests, merchant normalization with tests. No UI. This is where the numbers get proven. Routes are not added until step 2.
-2. **Classification and API read.** Kind rule, stable id, `listSubscriptions` and `getSubscription` from existing data, and tests in `app.test.ts`.
+2. **Classification and API read.** *Done 2026-11-19, on the `subscriptions` branch.* Kind rule, stable id, `listSubscriptions` and `getSubscription` from existing data, and tests in `app.test.ts`. The builder is `apps/api/src/spending/subscriptions.ts` (pure, tested on its own); the recurring sources moved out of `routes/spending.ts` into `spending/recurring.ts` so both routes share them. Every status is `active` and `cancelled` is empty until step 5 stores the user's choices.
 3. **Demo data.** Extend the generator, regenerate, confirm the flags fire.
 4. **Page, read-only.** Nav item, header, stats, Needs a Look, All Subscriptions, Bills, Upcoming, empty states, loading and error states.
 5. **State.** `SubscriptionStore` (memory), `updateSubscription`, Keep and mark-as-bill, Cancelling and Cancelled with confirmation, Still Charging.

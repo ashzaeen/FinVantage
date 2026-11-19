@@ -2,34 +2,26 @@ import { randomUUID } from "node:crypto";
 import type { Hono } from "hono";
 import {
   MAX_CATEGORY_DEPTH,
-  PLAID_DETAILED_CATEGORY,
   assignCategory,
   canonicalCategoryId,
   categoryDepth,
   parentCategoryId,
   routes,
   topCategoryId,
-  type Account,
   type Budget,
   type BudgetedBucket,
-  type RecurringCharge,
   type Transaction,
 } from "@finvantage/contracts";
-import type { RecurringStream, SpendingProfile } from "@finvantage/data";
+import type { SpendingProfile } from "@finvantage/data";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
+import { addDays, liabilityBills, recurringChargesFor, withoutCoveredStreams } from "../spending/recurring";
 import { buildCatalog, bucketOf, categoryIdOf, countsToward, isSpending, ruleCategoryFor, type Catalog } from "../spending/catalog";
 
 const BILL_WINDOW_DAYS = 14;
 const SUGGESTION_MONTHS = 3;
 
 const monthKey = (date: string) => date.slice(0, 7);
-
-function addDays(date: string, days: number) {
-  const next = new Date(`${date}T00:00:00.000Z`);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next.toISOString().slice(0, 10);
-}
 
 function shiftMonth(month: string, by: number) {
   const date = new Date(`${month}-01T00:00:00.000Z`);
@@ -75,76 +67,6 @@ function budgetRow(
     status: spentCents > limitCents ? "over" : projectedCents > limitCents ? "at_risk" : "on_track",
     suggestedLimitCents: recentSeen ? Math.round(recentCents / SUGGESTION_MONTHS) : null,
   };
-}
-
-const CADENCE: Record<RecurringStream["frequency"], RecurringCharge["cadence"]> = {
-  WEEKLY: "weekly",
-  BIWEEKLY: "biweekly",
-  SEMI_MONTHLY: "semi_monthly",
-  MONTHLY: "monthly",
-  ANNUALLY: "yearly",
-  UNKNOWN: "unknown",
-};
-
-function streamCharge(stream: RecurringStream): RecurringCharge | null {
-  if (!stream.predictedNextDate) return null;
-  const mapped = stream.categoryDetailed ? PLAID_DETAILED_CATEGORY[stream.categoryDetailed] : undefined;
-  return {
-    merchant: stream.merchant,
-    amountCents: -stream.amountCents,
-    cadence: CADENCE[stream.frequency],
-    nextDate: stream.predictedNextDate,
-    accountId: stream.accountId,
-    category: mapped ?? null,
-    source: "bank",
-  };
-}
-
-/** The category a loan or card payment falls in, matching how Plaid categorizes the payment. */
-function liabilityCategory(account: Account): string {
-  if (account.type === "mortgage") return "housing.mortgage";
-  if (account.type === "credit_card") return "transfers.credit_card_payment";
-  // `loanKind` has no student value yet, so student loans read as personal loans.
-  return account.loanKind === "auto" ? "debt_payments.car" : "debt_payments.personal";
-}
-
-/** Loan and card payments with a due date, from the bank's liability data. */
-function liabilityBills(accounts: Account[]): RecurringCharge[] {
-  return accounts.flatMap((a) =>
-    a.nextPaymentDueOn && a.minimumPaymentCents
-      ? [
-          {
-            merchant: a.name,
-            amountCents: -a.minimumPaymentCents,
-            cadence: "monthly" as const,
-            nextDate: a.nextPaymentDueOn,
-            accountId: a.id,
-            category: liabilityCategory(a),
-            source: "bank" as const,
-          },
-        ]
-      : [],
-  );
-}
-
-/** Without the bank's streams: recurring transactions, assumed monthly. */
-function estimatedCharges(transactions: Transaction[]): RecurringCharge[] {
-  const latest = new Map<string, Transaction>();
-  for (const t of transactions) {
-    if (!t.isRecurring || t.amountCents >= 0) continue;
-    const key = `${t.accountId}:${t.merchant.toLowerCase()}`;
-    const previous = latest.get(key);
-    if (!previous || t.date > previous.date) latest.set(key, t);
-  }
-  return [...latest.values()].map((t) => ({
-    merchant: t.merchant,
-    amountCents: t.amountCents,
-    cadence: "monthly" as const,
-    nextDate: addDays(t.date, 30),
-    accountId: t.accountId,
-    category: t.subcategory ?? t.category,
-    source: "estimate" as const,
-  }));
 }
 
 export function registerSpendingRoutes(app: Hono<AppEnv>, deps: AppDeps) {
@@ -361,11 +283,7 @@ export function registerSpendingRoutes(app: Hono<AppEnv>, deps: AppDeps) {
 
   /* ─── Recurring charges and bills ──────────────────────────────────────── */
 
-  const recurringCharges = async (userId: string) => {
-    const streams = (await deps.ledger.listRecurringStreams?.(userId)) ?? [];
-    const fromBank = streams.flatMap((s) => streamCharge(s) ?? []);
-    return fromBank.length ? fromBank : estimatedCharges(await transactionsOf(userId));
-  };
+  const recurringCharges = (userId: string) => recurringChargesFor(deps, userId);
 
   mount(app, deps, routes.listRecurring, async ({ userId }) =>
     (await recurringCharges(userId)).sort((a, b) => a.nextDate.localeCompare(b.nextDate)),
@@ -374,9 +292,7 @@ export function registerSpendingRoutes(app: Hono<AppEnv>, deps: AppDeps) {
   mount(app, deps, routes.listUpcomingBills, async ({ userId }) => {
     const [charges, accounts] = await Promise.all([recurringCharges(userId), deps.ledger.listAccounts(userId)]);
     const loans = liabilityBills(accounts);
-    // A due date already covers that kind of payment, so drop its matching stream.
-    const covered = new Set(loans.map((l) => l.category));
-    const streams = charges.filter((c) => !c.category || !covered.has(c.category));
+    const streams = withoutCoveredStreams(charges, loans);
     const today = deps.today();
     const end = addDays(today, BILL_WINDOW_DAYS);
     return [...loans, ...streams]

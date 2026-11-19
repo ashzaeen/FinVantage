@@ -1097,6 +1097,57 @@ test("recurring charges and bills come from the bank's streams and due dates", a
   assert.deepEqual(bills.map((b) => b.nextDate), [...bills.map((b) => b.nextDate)].sort());
 });
 
+test("subscriptions split the recurring charges into subscriptions and bills, with totals that add up", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const overview = await client.listSubscriptions();
+  const subs = overview.subscriptions.map((s) => s.merchant);
+  const bills = overview.bills.map((s) => s.merchant);
+  for (const name of ["StreamFlix", "Tunewave", "Peak Fitness", "Daily Ledger News"]) assert.ok(subs.includes(name), name);
+  for (const name of ["Fiberlink Internet", "Condo Mortgage", "Bluewave Mobile"]) assert.ok(bills.includes(name), name);
+  // The mortgage stream is covered by the mortgage's due date, so it is not listed twice.
+  assert.ok(!bills.includes("Lakeside Home Loans"), bills.join(", "));
+  assert.ok(overview.subscriptions.every((s) => s.kind === "subscription") && overview.bills.every((s) => s.kind === "bill"));
+
+  const sum = (rows: typeof overview.subscriptions, key: "monthlyCents" | "annualCents") => rows.reduce((total, r) => total + (r[key] ?? 0), 0);
+  assert.equal(overview.subscriptionTotals.monthlyCents, sum(overview.subscriptions, "monthlyCents"));
+  assert.equal(overview.subscriptionTotals.annualCents, sum(overview.subscriptions, "annualCents"));
+  assert.equal(overview.billTotals.monthlyCents, sum(overview.bills, "monthlyCents"));
+  assert.equal(overview.subscriptionTotals.count, overview.subscriptions.length);
+  // A $15.49 monthly charge is $185.88 a year, not twelve times a rounded month.
+  const streamflix = overview.subscriptions.find((s) => s.merchant === "StreamFlix")!;
+  assert.deepEqual([streamflix.monthlyCents, streamflix.annualCents], [1549, 18_588]);
+  assert.deepEqual(overview.subscriptions.map((s) => s.monthlyCents), [...overview.subscriptions.map((s) => s.monthlyCents)].sort((a, b) => b! - a!));
+  assert.ok(overview.shareOfIncome !== null && overview.shareOfIncome > 0 && overview.shareOfIncome < 1);
+  assert.ok(!("history" in streamflix));
+});
+
+test("one subscription comes with its charges, and an id that is not one is a 404", async () => {
+  const { app, client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const overview = await client.listSubscriptions();
+  const listed = overview.subscriptions.find((s) => s.merchant === "StreamFlix")!;
+  const detail = await client.getSubscription({ params: { id: listed.id } });
+  assert.equal(detail.id, listed.id);
+  assert.equal(detail.merchant, "StreamFlix");
+  assert.ok(detail.history.length > 0 && detail.history.every((c) => c.amountCents < 0));
+  assert.deepEqual(detail.history.map((c) => c.date), [...detail.history.map((c) => c.date)].sort());
+  assert.equal(detail.lastChargeDate, detail.history.at(-1)!.date);
+  // The id holds from one request to the next.
+  const again = await client.listSubscriptions();
+  assert.deepEqual(again.subscriptions.map((s) => s.id), overview.subscriptions.map((s) => s.id));
+
+  const missing = await app.request("/v1/subscriptions/sub_nope", { headers: { authorization: "Bearer demo-token" } });
+  assert.equal(missing.status, 404);
+  assert.equal((await missing.json() as { error: { code: string } }).error.code, "not_found");
+});
+
+test("subscriptions need a sign-in, and the shared demo token can read them", async () => {
+  const { app, clientFor } = setup();
+  assert.equal((await app.request("/v1/subscriptions")).status, 401);
+  assert.ok((await clientFor("demo-token").listSubscriptions()).subscriptions.length > 0);
+});
+
 test("top expenses are this month's largest purchases, without transfers", async () => {
   const { client, deps } = setup();
   const [account] = await client.listAccounts();

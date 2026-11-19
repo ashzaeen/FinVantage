@@ -21,6 +21,7 @@ import { registerProfileRoutes } from "./routes/profile";
 import { registerSimulationRoutes } from "./routes/simulations";
 import { registerIncomeRoutes } from "./routes/income";
 import { registerSpendingRoutes } from "./routes/spending";
+import { registerSubscriptionRoutes } from "./routes/subscriptions";
 import { registerTransactionRoutes } from "./routes/transactions";
 import { AUTH_RULES, COMPUTE_RULES, MODEL_RULES, RateLimiter, rateLimit } from "./rate-limit";
 
@@ -136,6 +137,7 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   registerAccountRoutes(app, deps);
   registerTransactionRoutes(app, deps);
   registerSpendingRoutes(app, deps);
+  registerSubscriptionRoutes(app, deps);
   registerIncomeRoutes(app, deps);
   registerGoalRoutes(app, deps);
   registerLifeEventRoutes(app, deps);

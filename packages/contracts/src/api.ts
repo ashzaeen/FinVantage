@@ -25,6 +25,7 @@ import {
   CopilotEvent,
 } from "./copilot";
 import { Goal, NewGoal } from "./goal";
+import { SubscriptionDetail, SubscriptionOverview } from "./subscription";
 import {
   LifeScenario,
   LifeScenarioAnalysis,
@@ -388,6 +389,10 @@ export const routes = {
     path: "/v1/reports/schedule/logs",
     response: z.array(EmailScheduleLogEntry),
   }),
+
+  // Subscriptions: recurring charges split into subscriptions and bills, with what is worth a look
+  listSubscriptions: route({ method: "GET", path: "/v1/subscriptions", response: SubscriptionOverview }),
+  getSubscription: route({ method: "GET", path: "/v1/subscriptions/:id", response: SubscriptionDetail }),
 
   // Spending (P1)
   listBudgets: route({ method: "GET", path: "/v1/budgets", response: z.array(Budget) }),
