@@ -5,8 +5,7 @@ import { formatLongDate, generateSubscriptionDraft, type SubscriptionDraftInput 
 import { billingChannel, normalizeMerchant } from "@finvantage/math-core";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
-import { liabilityBills, recurringChargesFor } from "../spending/recurring";
-import { buildSubscriptions, overviewOf } from "../spending/subscriptions";
+import { loadSubscriptions, overviewOf } from "../spending/subscriptions";
 
 /** How a charge's schedule reads in a sentence: "I currently pay $15.49 a month". */
 const CADENCE_PHRASE: Record<Subscription["cadence"], string> = {
@@ -19,28 +18,7 @@ const CADENCE_PHRASE: Record<Subscription["cadence"], string> = {
 };
 
 export function registerSubscriptionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
-  const load = async (userId: string) => {
-    const [charges, accounts, transactions, income, states] = await Promise.all([
-      recurringChargesFor(deps, userId),
-      deps.ledger.listAccounts(userId),
-      deps.ledger.listTransactions(userId, 5000),
-      deps.ledger.getIncomeProfile(userId),
-      deps.subscriptions.list(userId),
-    ]);
-    const monthlyIncomeCents = income?.monthlyIncomeCents ?? null;
-    return {
-      monthlyIncomeCents,
-      states,
-      details: buildSubscriptions({
-        charges,
-        loans: liabilityBills(accounts),
-        transactions,
-        monthlyIncomeCents,
-        today: deps.today(),
-        states,
-      }),
-    };
-  };
+  const load = (userId: string) => loadSubscriptions(deps, userId);
 
   mount(app, deps, routes.listSubscriptions, async ({ userId }) => {
     const { details, monthlyIncomeCents } = await load(userId);

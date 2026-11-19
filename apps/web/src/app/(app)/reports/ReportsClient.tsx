@@ -7,6 +7,7 @@ import { formatUsd, type InvestmentsOverview, type QuarterlyReport, type Spendin
 import { ProbabilityRange } from "@/components/finance/ProbabilityRange";
 import { Card } from "@/components/ui/Card";
 import { api, API_TOKEN, API_URL, currentToken } from "@/lib/api";
+import { shortDate } from "@/lib/subscriptions";
 import { QuarterlyReportCharts } from "./QuarterlyReportCharts";
 
 /** Same icon and color palette as the Overview page's stat cards, so the two pages read as one system. */
@@ -264,6 +265,41 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
           </div>
         </div>
       </ReportSection>
+
+      {latest.visuals.subscriptions && (
+        <ReportSection title="Subscriptions" eyebrow="This quarter">
+          {(() => {
+            const subs = latest.visuals.subscriptions!;
+            const compare =
+              subs.changeCents === null
+                ? "There is not enough history to compare with last quarter."
+                : subs.changeCents === 0
+                  ? "That is the same as last quarter."
+                  : `That is ${formatUsd(Math.abs(subs.changeCents))} ${subs.changeCents > 0 ? "more" : "less"} than last quarter.`;
+            return (
+              <div className="space-y-3 text-sm leading-6">
+                <p>
+                  You were charged <span className="font-semibold tabular-nums">{formatUsd(subs.spendCents)}</span> across {subs.chargedCount}{" "}
+                  {subs.chargedCount === 1 ? "subscription" : "subscriptions"} this quarter. {compare}
+                </p>
+                {subs.cancelled.length > 0 && (
+                  <ul className="space-y-1">
+                    {subs.cancelled.map((c) => (
+                      <li key={`${c.merchant}-${c.cancelledOn}`} className="rounded-xl bg-inset px-3 py-2">
+                        You marked <span className="font-semibold">{c.merchant}</span> as cancelled on {shortDate(c.cancelledOn)}
+                        {c.monthlyCents !== null && `, which was ${formatUsd(c.monthlyCents)} a month`}.
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <Link href="/subscriptions" className="inline-block font-semibold text-accent hover:underline">
+                  See Subscriptions
+                </Link>
+              </div>
+            );
+          })()}
+        </ReportSection>
+      )}
 
       <ReportSection title="Goal outlook" eyebrow="Forward estimates">
         <div className="grid gap-3 lg:grid-cols-2">

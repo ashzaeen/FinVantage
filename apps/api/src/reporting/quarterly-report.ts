@@ -12,6 +12,7 @@ import {
 } from "@finvantage/contracts";
 import { isDemoCopy } from "@finvantage/data";
 import type { AppDeps } from "../deps";
+import { loadSubscriptions, quarterSubscriptions } from "../spending/subscriptions";
 import { runSimulation } from "../services";
 import { averageCashFlow, monthlyCashFlow } from "./cashflow";
 
@@ -280,6 +281,7 @@ export async function buildQuarterlyEvidence(
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   // Linked users only see their bank's transactions here (packages/data/src/linked-banks.ts).
   const transactions = await deps.ledger.listTransactions(userId, 5_000);
+  const subscriptionData = await loadSubscriptions(deps, userId);
   const monthlyBreakdown = monthlyCashFlow(transactions, monthKeysOf(quarter)).map((month) => ({
     month: `${monthNames[Number(month.monthKey.slice(5, 7)) - 1]} ${month.monthKey.slice(0, 4)}`,
     ...month,
@@ -326,6 +328,7 @@ export async function buildQuarterlyEvidence(
             { quarter, monthlySpendingCents: assumed.monthlySpendingCents },
           ],
     monthlyBreakdown,
+    subscriptions: quarterSubscriptions(subscriptionData.details, currentWindow, previousWindow, subscriptionData.ledgerStart),
     goalComparisons: comparisons.map(({ goalId, goalName, before, after }) => ({
       goalId,
       goalName,

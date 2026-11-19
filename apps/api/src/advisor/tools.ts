@@ -237,6 +237,43 @@ export function advisorTools(ctx: AdvisorToolContext): AdvisorTool[] {
       };
     }),
 
+    tool(
+      "get_subscriptions",
+      "Subscriptions and bills split apart, each with its cost per month and per year, schedule, next charge, the status the user set (keep, cancelling, cancelled) and flags: price went up (with the old price and the date), possible duplicate (with the group), started recently, still charging after being cancelled, annual charge coming. Also the totals, the share of income, and what cancelling has saved. FinVantage cannot cancel or pay anything: the user does that, and the Subscriptions page has cancellation steps and drafted messages to copy.",
+      none,
+      async () => {
+        const overview = await api.listSubscriptions();
+        const shape = (s: (typeof overview.subscriptions)[number]) => ({
+          merchant: s.merchant,
+          kind: s.kind,
+          category: label(s.category),
+          cadence: s.cadence,
+          amountCents: Math.abs(s.amountCents),
+          monthlyCents: s.monthlyCents,
+          annualCents: s.annualCents,
+          nextDate: s.nextDate,
+          status: s.status,
+          cancelledOn: s.cancelledOn,
+          savedSoFarCents: s.savedSoFarCents,
+          flags: s.flags.map((f) => ({ type: f.type, previousCents: f.previousCents, changedOn: f.changedOn, group: f.group })),
+        });
+        return {
+          data: forModel({
+            subscriptions: overview.subscriptions.map(shape),
+            bills: overview.bills.map(shape),
+            cancelled: overview.cancelled.map(shape),
+            subscriptionTotals: overview.subscriptionTotals,
+            billTotals: overview.billTotals,
+            // A share, written out so the model never has to turn a fraction into a percentage.
+            shareOfIncome: overview.shareOfIncome === null ? null : `${(overview.shareOfIncome * 100).toFixed(1)}%`,
+            savedSoFarCents: overview.savedSoFarCents,
+          }),
+          citation: "Subscriptions",
+          summary: overview.subscriptions.slice(0, 4).map((s) => `${s.merchant}: ${s.monthlyCents === null ? "schedule unknown" : `${formatUsd(s.monthlyCents)} a month`}.`),
+        };
+      },
+    ),
+
     tool("get_income", "Income this month, last month, average, year to date, savings rate, stability, debt-to-income, sources, and recent deposits.", none, async () => {
       const income = await api.getIncomeSummary();
       return {

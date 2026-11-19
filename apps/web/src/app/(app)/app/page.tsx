@@ -1,4 +1,5 @@
-import { Building2, CircleDollarSign, CreditCard, TrendingUp, Wallet } from "lucide-react";
+import Link from "next/link";
+import { Building2, CircleDollarSign, CreditCard, Repeat, TrendingUp, Wallet } from "lucide-react";
 import { formatUsd } from "@finvantage/contracts";
 import { AnalyticsChart } from "@/components/finance/AnalyticsChart";
 import { CreditCards } from "@/components/finance/CreditCards";
@@ -7,6 +8,7 @@ import { StatCard } from "@/components/ui/Stat";
 import { OverviewCharts } from "./OverviewCharts";
 import { OverviewSearch } from "./OverviewSearch";
 import { api } from "@/lib/api";
+import { needsLook } from "@/lib/subscriptions";
 
 /* ─── Merchant Logo / Avatar ───────────────────────────────────────────────── */
 function MerchantLogo({ name }: { name: string }) {
@@ -50,7 +52,7 @@ function MerchantLogo({ name }: { name: string }) {
 }
 
 export default async function OverviewPage() {
-  const [netWorth, goals, transactions, accounts, spending, investments, categories] = await Promise.all([
+  const [netWorth, goals, transactions, accounts, spending, investments, categories, subscriptions] = await Promise.all([
     api.getNetWorth(),
     api.listGoals(),
     api.listTransactions({ query: { limit: 500 } }),
@@ -58,6 +60,8 @@ export default async function OverviewPage() {
     api.getSpendingSummary(),
     api.getInvestments(),
     api.listSpendingCategories(),
+    // A card, not the page: if this fails, the card is left out and everything else still shows.
+    api.listSubscriptions().catch(() => null),
   ]);
 
   const displayTx = transactions.slice(0, 5);
@@ -123,6 +127,46 @@ export default async function OverviewPage() {
           href="/portfolio"
         />
       </div>
+
+      {/* ── Subscriptions ────────────────────────────────────────────── */}
+      {subscriptions && (
+        <Link
+          href="/subscriptions"
+          className="block rounded-3xl border border-[#edf0f7] bg-white p-5 shadow-[0_2px_12px_rgba(22,25,44,0.03)] transition duration-200 hover:border-[#d7d4ff] hover:shadow-[0_8px_24px_rgba(84,74,247,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] sm:p-6"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-5">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef1fc] text-[#544af7]">
+                <Repeat size={22} strokeWidth={2} aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="font-poppins text-lg font-bold text-[#16192c]">Subscriptions</h2>
+                <p className="mt-0.5 text-xs text-[#8d94a8]">Charges that repeat, and what needs a look</p>
+              </div>
+            </div>
+            <dl className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-4">
+              <div>
+                <dt className="text-xs text-[#8d94a8]">Monthly Cost</dt>
+                <dd className="font-poppins text-xl font-bold tabular-nums text-[#16192c]">{formatUsd(subscriptions.subscriptionTotals.monthlyCents)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-[#8d94a8]">Active</dt>
+                <dd className="font-poppins text-xl font-bold tabular-nums text-[#16192c]">{subscriptions.subscriptionTotals.count}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-[#8d94a8]">Needs a Look</dt>
+                <dd className="font-poppins text-xl font-bold tabular-nums text-[#16192c]">
+                  {needsLook([...subscriptions.subscriptions, ...subscriptions.bills, ...subscriptions.cancelled]).length}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-[#8d94a8]">Saved So Far</dt>
+                <dd className="font-poppins text-xl font-bold tabular-nums text-[#16192c]">{formatUsd(subscriptions.savedSoFarCents)}</dd>
+              </div>
+            </dl>
+          </div>
+        </Link>
+      )}
 
       {/* ── Cash Flow and Credit Accounts ────────────────────────────── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_330px]">

@@ -803,6 +803,9 @@ test("a quarterly report compares consecutive quarters and saves a PDF; the shar
   assert.equal(report.visuals.goalComparisons.length, current.goalOutcomes.length);
   assert.equal(report.visuals.goalPathways.length, current.goalOutcomes.length);
   assert.equal(report.visuals.suggestions.length, current.goalOutcomes.length);
+  // Subscriptions: Peak Fitness $45, StreamFlix $11.99, Tunewave $10.99 and Daily Ledger News $8.99
+  // charged in each of July, August and September, and the same four in the quarter before.
+  assert.deepEqual(report.visuals.subscriptions, { spendCents: 23_091, previousSpendCents: 23_091, changeCents: 0, chargedCount: 4, cancelled: [] });
   // The demo profile's own transactions for the quarter, transfers left out.
   const expectedMonths = monthlyCashFlow(await client.listTransactions({ query: { limit: 500 } }), ["2026-07", "2026-08", "2026-09"]);
   assert.deepEqual(
@@ -844,7 +847,30 @@ test("a first-quarter report generates without a previous simulation", async () 
   assert.deepEqual(report.visuals.spendingTrend.map((point) => point.quarter), ["2026-Q1"]);
   assert.equal(report.visuals.goalComparisons.length, 0);
   assert.equal(report.visuals.suggestions.length, current.goalOutcomes.length);
+  // The demo ledger starts on 1 January, so it has the whole quarter but nothing before it.
+  assert.equal(report.visuals.subscriptions?.previousSpendCents, null);
+  assert.equal(report.visuals.subscriptions?.changeCents, null);
   assert.equal(report.pdf.status, "ready");
+});
+
+test("a quarterly report lists what the user cancelled in the quarter", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const run = await client.runSimulation({ body: { persist: false, seed: 43 } });
+  await deps.docs.saveSimulationRun({ ...run, id: "run_subs_q3", createdAt: "2026-08-15T12:00:00.000Z", persisted: true });
+  const { subscriptions } = await client.listSubscriptions();
+  const tune = subscriptions.find((s) => s.merchant === "Tunewave")!;
+  await client.updateSubscription({ params: { id: tune.id }, body: { status: "cancelled", cancelledOn: "2026-08-10" } });
+
+  const report = await client.generateReport({ body: { quarter: "2026-Q3", email: false } });
+  // Cancelling does not remove the charges that already posted, so the quarter's spend is unchanged.
+  assert.deepEqual(report.visuals.subscriptions, {
+    spendCents: 23_091,
+    previousSpendCents: 23_091,
+    changeCents: 0,
+    chargedCount: 4,
+    cancelled: [{ merchant: "Tunewave", cancelledOn: "2026-08-10", monthlyCents: 1099 }],
+  });
 });
 
 test("a saved email schedule can send on demand and records the outcome", async () => {
@@ -1492,6 +1518,26 @@ test("the Advisor saves conversations and grounds answers in tool results", asyn
 
   await client.deleteAdvisorConversation({ params: { id: conversation.id } });
   assert.equal((await client.listAdvisorConversations()).length, 0);
+});
+
+test("the Advisor can read subscriptions, with the flags and the figures the page shows", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  type Row = { merchant: string; monthly: string | null; flags: Array<{ type: string; previous: string | null }> };
+  const fake = toolCallingLlm([{ name: "get_subscriptions" }], (results) => {
+    const data = (results as Array<{ response: { result: { subscriptions: Row[]; subscriptionTotals: { monthly: string }; shareOfIncome: string } } }>)[0]!.response.result;
+    const flix = data.subscriptions.find((s) => s.merchant === "StreamFlix")!;
+    const rise = flix.flags.find((f) => f.type === "price_up");
+    return `Your subscriptions cost ${data.subscriptionTotals.monthly} a month. StreamFlix is ${flix.monthly} a month, up from ${rise!.previous}.`;
+  });
+  deps.llm = fake.llm;
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "What am I subscribed to?" } });
+  assert.equal(turn.reply.source, "gemini");
+  assert.equal(turn.reply.content, "Your subscriptions cost $98.79 a month. StreamFlix is $15.49 a month, up from $11.99.");
+  assert.deepEqual(turn.reply.citations.map((c) => c.label), ["Subscriptions"]);
+  // The tool is read-only: asking about subscriptions changes nothing the user set.
+  assert.ok((await client.listSubscriptions()).subscriptions.every((s) => s.status === "active"));
 });
 
 test("an Advisor answer with an invented figure falls back to a safe answer from code", async () => {

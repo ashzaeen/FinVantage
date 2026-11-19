@@ -10,7 +10,7 @@ Everything depends on this package, so a change here affects everyone.
 | `src/user.ts`, `account.ts`, `goal.ts`, `life-event.ts` | Core entities |
 | `src/simulation.ts` | Snapshot, what-if, runs, fan chart, diffs |
 | `src/copilot.ts` | Context, metrics, card, events |
-| `src/advisory.ts` | Situations, recommendations, quarterly reports |
+| `src/advisory.ts` | Situations, recommendations, quarterly reports (`ReportVisuals` includes the nullable `subscriptions` figures) |
 | `src/spending.ts` | Budgets, recurring charges, mocked portfolio and credit |
 | `src/subscription.ts` | Subscriptions and bills, their flags, status and totals, the cancellation guide, and the drafted messages |
 | `src/live.ts` | Pushed messages |

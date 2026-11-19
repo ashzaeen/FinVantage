@@ -1,6 +1,7 @@
 import type { SubscriptionState } from "@finvantage/data";
 import {
   type RecurringCharge,
+  type ReportSubscriptions,
   type Subscription,
   type SubscriptionCharge,
   type SubscriptionDetail,
@@ -23,7 +24,8 @@ import {
   subscriptionId,
   sumCosts,
 } from "@finvantage/math-core";
-import { withoutCoveredStreams } from "./recurring";
+import type { AppDeps } from "../deps";
+import { liabilityBills, recurringChargesFor, withoutCoveredStreams } from "./recurring";
 
 /** How many past charges a subscription's detail carries. */
 export const DETAIL_HISTORY_LIMIT = 36;
@@ -152,5 +154,65 @@ export function overviewOf(details: SubscriptionDetail[], monthlyIncomeCents: nu
     billTotals: sumCosts([...bills, ...stillCosting("bill")]),
     shareOfIncome: shareOfIncome(subscriptionTotals.monthlyCents, monthlyIncomeCents),
     savedSoFarCents: rows.reduce((sum, r) => sum + (r.savedSoFarCents ?? 0), 0),
+  };
+}
+
+/** The date of the earliest posted transaction, or null with none. Past that, the ledger says nothing. */
+export function ledgerStartOf(transactions: readonly Transaction[]): string | null {
+  let start: string | null = null;
+  for (const t of transactions) if (!t.pending && (start === null || t.date < start)) start = t.date;
+  return start;
+}
+
+/** Everything the Subscriptions page and the quarterly report need, loaded for one user. */
+export async function loadSubscriptions(deps: AppDeps, userId: string) {
+  const [charges, accounts, transactions, income, states] = await Promise.all([
+    recurringChargesFor(deps, userId),
+    deps.ledger.listAccounts(userId),
+    deps.ledger.listTransactions(userId, 5000),
+    deps.ledger.getIncomeProfile(userId),
+    deps.subscriptions.list(userId),
+  ]);
+  const monthlyIncomeCents = income?.monthlyIncomeCents ?? null;
+  return {
+    monthlyIncomeCents,
+    states,
+    ledgerStart: ledgerStartOf(transactions),
+    details: buildSubscriptions({ charges, loans: liabilityBills(accounts), transactions, monthlyIncomeCents, today: deps.today(), states }),
+  };
+}
+
+interface Window {
+  start: string;
+  endInclusive: string;
+}
+
+/**
+ * What subscriptions cost in a quarter and the one before it, from the charges that posted. Null
+ * when there are no subscriptions, or the ledger does not reach back over the whole quarter (a
+ * part-quarter would read as a saving). The previous quarter's figure is null on its own when the
+ * ledger does not cover it, so there is no change to show rather than a false one.
+ */
+export function quarterSubscriptions(
+  details: readonly SubscriptionDetail[],
+  current: Window,
+  previous: Window,
+  ledgerStart: string | null,
+): ReportSubscriptions | null {
+  const subscriptions = details.filter((d) => d.kind === "subscription");
+  if (subscriptions.length === 0 || ledgerStart === null || ledgerStart > current.start) return null;
+  const within = (date: string, w: Window) => date >= w.start && date <= w.endInclusive;
+  const spend = (w: Window) =>
+    subscriptions.reduce((sum, d) => sum + d.history.filter((h) => within(h.date, w)).reduce((s, h) => s + Math.abs(h.amountCents), 0), 0);
+  const spendCents = spend(current);
+  const previousSpendCents = ledgerStart <= previous.start ? spend(previous) : null;
+  return {
+    spendCents,
+    previousSpendCents,
+    changeCents: previousSpendCents === null ? null : spendCents - previousSpendCents,
+    chargedCount: subscriptions.filter((d) => d.history.some((h) => within(h.date, current))).length,
+    cancelled: subscriptions
+      .filter((d) => d.status === "cancelled" && d.cancelledOn !== null && within(d.cancelledOn, current))
+      .map((d) => ({ merchant: d.merchant, cancelledOn: d.cancelledOn!, monthlyCents: d.monthlyCents })),
   };
 }

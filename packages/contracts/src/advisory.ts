@@ -180,6 +180,26 @@ export const MonthlyContribution = z.object({
 });
 export type MonthlyContribution = z.infer<typeof MonthlyContribution>;
 
+/**
+ * What subscriptions cost in the quarter, from the charges themselves. Null when the ledger does
+ * not reach back over the whole quarter or there are no subscriptions. It counts the subscriptions
+ * FinVantage knows about, so one whose recurring stream ended without being marked cancelled is
+ * missing from both quarters.
+ */
+export const ReportSubscriptions = z.object({
+  /** Subscription charges that posted in the quarter. */
+  spendCents: Cents.nonnegative(),
+  /** The same for the quarter before, or null when the ledger does not reach back over all of it. */
+  previousSpendCents: Cents.nonnegative().nullable(),
+  /** This quarter less last quarter, computed here so no page has to. Null with no previous figure. */
+  changeCents: Cents.nullable(),
+  /** How many different subscriptions charged in the quarter. */
+  chargedCount: z.number().int().nonnegative(),
+  /** Subscriptions the user marked cancelled during the quarter. */
+  cancelled: z.array(z.object({ merchant: z.string(), cancelledOn: IsoDate, monthlyCents: Cents.nullable() })),
+});
+export type ReportSubscriptions = z.infer<typeof ReportSubscriptions>;
+
 export const ReportVisuals = z.object({
   /** "bank" once the user has linked a bank; "demo" while the report runs on the sample profile. */
   dataSource: z.enum(["bank", "demo"]).default("demo"),
@@ -231,6 +251,8 @@ export const ReportVisuals = z.object({
       ),
     }),
   ),
+  /** Added with the Subscriptions feature, so reports saved before it have none. */
+  subscriptions: ReportSubscriptions.nullable().default(null),
   suggestions: z.array(
     z.object({
       category: z.enum(["maintain", "review", "explore"]),

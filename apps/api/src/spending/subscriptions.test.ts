@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { RecurringCharge, Transaction } from "@finvantage/contracts";
 import type { SubscriptionState } from "@finvantage/data";
 import { subscriptionId } from "@finvantage/math-core";
-import { buildSubscriptions, overviewOf, type SubscriptionInput } from "./subscriptions";
+import { buildSubscriptions, ledgerStartOf, overviewOf, quarterSubscriptions, type SubscriptionInput } from "./subscriptions";
 
 const TODAY = "2026-11-20";
 
@@ -306,4 +306,80 @@ test("a choice about a charge the bank no longer reports is ignored unless it wa
   const stream = charge("StreamFlix", 1549);
   assert.deepEqual(build({ charges: [], states: [stateFor(stream, { status: "keep" })] }), []);
   assert.deepEqual(build({ charges: [], states: [stateFor(stream, { status: "cancelling" })] }), []);
+});
+
+/* ─── The quarterly report ─────────────────────────────────────────────── */
+
+const Q3 = { start: "2026-07-01", endInclusive: "2026-09-30" };
+const Q2 = { start: "2026-04-01", endInclusive: "2026-06-30" };
+
+/** StreamFlix at $10 a month through June, then $15 a month; plus a water bill that must not count. */
+function twoQuarters() {
+  const stream = charge("StreamFlix", 1500);
+  const water = charge("Water", 4522, { category: "utilities.water" });
+  const transactions = [
+    ...["04", "05", "06"].map((m) => tx("StreamFlix", `2026-${m}-04`, 1000)),
+    ...["07", "08", "09"].map((m) => tx("StreamFlix", `2026-${m}-04`, 1500)),
+    ...["04", "05", "06", "07", "08", "09"].map((m) => tx("Water", `2026-${m}-20`, 4500)),
+    EARLY,
+  ];
+  return { stream, water, transactions };
+}
+
+test("a quarter's subscription spend is what posted in it, with the change from the quarter before", () => {
+  const { stream, water, transactions } = twoQuarters();
+  const details = build({ charges: [stream, water], transactions });
+  assert.deepEqual(quarterSubscriptions(details, Q3, Q2, "2026-01-05"), {
+    spendCents: 4500,
+    previousSpendCents: 3000,
+    changeCents: 1500,
+    chargedCount: 1,
+    cancelled: [],
+  });
+});
+
+test("a fall in spend is a negative change", () => {
+  const { stream, transactions } = twoQuarters();
+  const details = build({ charges: [stream], transactions });
+  assert.equal(quarterSubscriptions(details, Q2, Q3, "2026-01-05")?.changeCents, -1500);
+});
+
+test("with no ledger before the quarter, there is no previous figure and no change, not a false one", () => {
+  const { stream, transactions } = twoQuarters();
+  const details = build({ charges: [stream], transactions });
+  const figures = quarterSubscriptions(details, Q3, Q2, "2026-05-01");
+  assert.deepEqual([figures?.spendCents, figures?.previousSpendCents, figures?.changeCents], [4500, null, null]);
+});
+
+test("a quarter the ledger only partly covers has no figures at all", () => {
+  const { stream, transactions } = twoQuarters();
+  const details = build({ charges: [stream], transactions });
+  assert.equal(quarterSubscriptions(details, Q3, Q2, "2026-07-15"), null);
+  assert.equal(quarterSubscriptions(details, Q3, Q2, null), null);
+});
+
+test("with no subscriptions there is nothing to report, even when there are bills", () => {
+  const { water, transactions } = twoQuarters();
+  assert.equal(quarterSubscriptions(build({ charges: [water], transactions }), Q3, Q2, "2026-01-05"), null);
+  assert.equal(quarterSubscriptions([], Q3, Q2, "2026-01-05"), null);
+});
+
+test("only subscriptions cancelled during the quarter are listed, and their charges still count", () => {
+  const { stream, transactions } = twoQuarters();
+  const tune = charge("Tunewave", 1099, { category: "entertainment.music" });
+  const old = charge("Old Club", 500, { category: "shopping.online" });
+  const details = build({
+    charges: [stream, tune, old],
+    transactions: [...transactions, tx("Tunewave", "2026-07-06", 1099), tx("Tunewave", "2026-08-06", 1099), tx("Old Club", "2026-04-09", 500)],
+    states: [stateFor(tune, { status: "cancelled", cancelledOn: "2026-08-20" }), stateFor(old, { status: "cancelled", cancelledOn: "2026-06-20" })],
+  });
+  const figures = quarterSubscriptions(details, Q3, Q2, "2026-01-05")!;
+  assert.deepEqual(figures.cancelled, [{ merchant: "Tunewave", cancelledOn: "2026-08-20", monthlyCents: 1099 }]);
+  // StreamFlix and Tunewave charged this quarter; Old Club charged only in the quarter before.
+  assert.deepEqual([figures.chargedCount, figures.spendCents, figures.previousSpendCents], [2, 4500 + 2198, 3000 + 500]);
+});
+
+test("the ledger starts at the earliest posted transaction, and pending ones do not count", () => {
+  assert.equal(ledgerStartOf([tx("A", "2026-03-02", 1), tx("B", "2026-01-09", 1), tx("C", "2026-01-02", 1, { pending: true })]), "2026-01-09");
+  assert.equal(ledgerStartOf([]), null);
 });

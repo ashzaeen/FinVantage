@@ -17,6 +17,7 @@ const READ_ROUTES = [
   "listBudgets",
   "listRecurring",
   "listUpcomingBills",
+  "listSubscriptions",
   "getSpendingSummary",
   "listSpendingCategories",
   "getBucketSummary",
