@@ -10,7 +10,7 @@ import {
 } from "@finvantage/contracts";
 import { DEMO_USER_ID } from "@finvantage/data";
 import { createApp, demoTokenMayCall, MAX_BODY_BYTES, originMatcher } from "./app";
-import { RateLimiter, sameSecret } from "./rate-limit";
+import { MODEL_RULES, RateLimiter, sameSecret } from "./rate-limit";
 import { createDeps } from "./deps";
 import { monthlyCashFlow } from "./reporting/cashflow";
 
@@ -1265,6 +1265,101 @@ test("one visitor's subscription choices never reach another", async () => {
   assert.equal(await gymOf(a), undefined);
   assert.equal((await gymOf(b))?.status, "active");
   assert.equal((await b.listSubscriptions()).cancelled.length, 0);
+});
+
+test("a subscription's guide is steps to follow, from the catalog or from the billing channel", async () => {
+  const { asDemo, client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const { subscriptions, bills } = await client.listSubscriptions();
+  const idOf = (name: string) => [...subscriptions, ...bills].find((s) => s.merchant === name)!.id;
+
+  const catalog = await client.getSubscriptionGuide({ params: { id: idOf("StreamFlix") } });
+  assert.deepEqual([catalog.source, catalog.title, catalog.channel, catalog.url, catalog.lastChecked], ["catalog", "Cancel StreamFlix", "direct", null, null]);
+  assert.ok(catalog.steps.length > 0);
+
+  // Not in the catalog: generic steps that name the merchant.
+  const generic = await client.getSubscriptionGuide({ params: { id: idOf("Fiberlink Internet") } });
+  assert.deepEqual([generic.source, generic.title], ["generic", "Cancel Fiberlink Internet"]);
+
+  assert.equal((await raw(asDemo, "GET", "/v1/subscriptions/sub_nope/guide")).status, 404);
+});
+
+test("a drafted message uses the user's own figures, from the template when no model answers", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const { subscriptions } = await client.listSubscriptions();
+  const id = subscriptions.find((s) => s.merchant === "StreamFlix")!.id;
+
+  const cancel = await client.draftSubscriptionMessage({ params: { id }, body: { action: "cancel" } });
+  assert.equal(cancel.source, "template");
+  assert.ok(cancel.text.includes("StreamFlix") && cancel.text.includes("$15.49 a month"), cancel.text);
+
+  // StreamFlix went from $11.99 to $15.49 on 3 October.
+  const lower = await client.draftSubscriptionMessage({ params: { id }, body: { action: "lower_bill" } });
+  assert.ok(lower.text.includes("$11.99") && lower.text.includes("$15.49") && lower.text.includes("October 3, 2026"), lower.text);
+});
+
+test("a message from the model is used only when every number in it is the user's", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const { subscriptions } = await client.listSubscriptions();
+  const id = subscriptions.find((s) => s.merchant === "StreamFlix")!.id;
+  const reply = (text: string) => ({ provider: "fake", generate: async () => JSON.stringify({ text }) });
+
+  const good = "Hello, please cancel my StreamFlix subscription. I pay $15.49 a month. Please confirm in writing. Thank you.";
+  deps.llm = reply(good);
+  assert.deepEqual(await client.draftSubscriptionMessage({ params: { id }, body: { action: "cancel" } }), { action: "cancel", text: good, source: "model" });
+
+  deps.llm = reply("Hello, please cancel my StreamFlix subscription. I pay $12.99 a month. Thank you.");
+  const invented = await client.draftSubscriptionMessage({ params: { id }, body: { action: "cancel" } });
+  assert.equal(invented.source, "template");
+  assert.ok(!invented.text.includes("$12.99"));
+});
+
+test("a dispute is drafted only for a cancelled subscription that was charged again", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const { subscriptions } = await client.listSubscriptions();
+  const id = subscriptions.find((s) => s.merchant === "Tunewave")!.id;
+  const ask = () => client.draftSubscriptionMessage({ params: { id }, body: { action: "dispute" } });
+
+  await assert.rejects(ask(), (e: unknown) => e instanceof ApiError && e.status === 400);
+  // Cancelled on 1 August, yet charged $10.99 again on 6 September.
+  await client.updateSubscription({ params: { id }, body: { status: "cancelled", cancelledOn: "2026-08-01" } });
+  const dispute = await ask();
+  for (const part of ["Tunewave", "August 1, 2026", "$10.99", "September 6, 2026"]) assert.ok(dispute.text.includes(part), `${part}: ${dispute.text}`);
+  // A cancelled subscription is not asked to cancel again.
+  await assert.rejects(client.draftSubscriptionMessage({ params: { id }, body: { action: "cancel" } }), (e: unknown) => e instanceof ApiError && e.status === 400);
+});
+
+test("a message about a price is refused when there is no rise on record", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const { subscriptions } = await client.listSubscriptions();
+  const id = subscriptions.find((s) => s.merchant === "Peak Fitness")!.id;
+  await assert.rejects(client.draftSubscriptionMessage({ params: { id }, body: { action: "lower_bill" } }), (e: unknown) => e instanceof ApiError && e.status === 400 && e.code === "invalid_request");
+});
+
+test("drafting needs a real action, a real subscription, and a signed-in user, and is limited like the other model routes", async () => {
+  const { app, asDemo, client } = setup();
+  const { subscriptions } = await client.listSubscriptions();
+  const id = subscriptions[0]!.id;
+  assert.equal((await raw(asDemo, "POST", `/v1/subscriptions/${id}/draft`, { action: "send" })).status, 400);
+  assert.equal((await raw(asDemo, "POST", `/v1/subscriptions/${id}/draft`, {})).status, 400);
+  assert.equal((await raw(asDemo, "POST", "/v1/subscriptions/sub_nope/draft", { action: "cancel" })).status, 404);
+
+  // The shared demo token is read-only, so it cannot ask the model for anything.
+  const shared = await app.request(`/v1/subscriptions/${id}/draft`, {
+    method: "POST",
+    headers: { authorization: "Bearer demo-token", "content-type": "application/json" },
+    body: JSON.stringify({ action: "cancel" }),
+  });
+  assert.equal(shared.status, 403);
+
+  const limited = (path: string) => MODEL_RULES.some((rule) => rule.method === "POST" && rule.path.test(path));
+  assert.equal(limited(`/v1/subscriptions/${id}/draft`), true);
+  assert.equal(limited(`/v1/subscriptions/${id}`), false);
+  assert.equal(limited(`/v1/subscriptions/${id}/guide`), false);
 });
 
 test("subscriptions need a sign-in, and the shared demo token can read them", async () => {

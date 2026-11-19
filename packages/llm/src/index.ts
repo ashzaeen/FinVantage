@@ -27,6 +27,14 @@ export {
 } from "./guardrails";
 export { generateCopilotCard, templateCard } from "./copilot-card";
 export { parseLifeEvent } from "./life-event-parser";
+export {
+  MAX_DRAFT_WORDS,
+  formatLongDate,
+  generateSubscriptionDraft,
+  templateDraft,
+  type GeneratedDraft,
+  type SubscriptionDraftInput,
+} from "./subscription-draft";
 export { generateOptions, type AdvisoryInput } from "./advisory";
 export {
   ADVISOR_SYSTEM_PROMPT,

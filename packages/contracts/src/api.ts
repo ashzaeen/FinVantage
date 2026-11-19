@@ -25,7 +25,7 @@ import {
   CopilotEvent,
 } from "./copilot";
 import { Goal, NewGoal } from "./goal";
-import { SubscriptionDetail, SubscriptionOverview, UpdateSubscription } from "./subscription";
+import { CancellationGuide, SubscriptionDetail, SubscriptionDraft, SubscriptionDraftRequest, SubscriptionOverview, UpdateSubscription } from "./subscription";
 import {
   LifeScenario,
   LifeScenarioAnalysis,
@@ -394,6 +394,9 @@ export const routes = {
   listSubscriptions: route({ method: "GET", path: "/v1/subscriptions", response: SubscriptionOverview }),
   getSubscription: route({ method: "GET", path: "/v1/subscriptions/:id", response: SubscriptionDetail }),
   updateSubscription: route({ method: "PATCH", path: "/v1/subscriptions/:id", body: UpdateSubscription, response: SubscriptionDetail }),
+  getSubscriptionGuide: route({ method: "GET", path: "/v1/subscriptions/:id/guide", response: CancellationGuide }),
+  // Calls the model, so it is rate limited with the other model routes. It sends nothing anywhere.
+  draftSubscriptionMessage: route({ method: "POST", path: "/v1/subscriptions/:id/draft", body: SubscriptionDraftRequest, response: SubscriptionDraft }),
 
   // Spending (P1)
   listBudgets: route({ method: "GET", path: "/v1/budgets", response: z.array(Budget) }),

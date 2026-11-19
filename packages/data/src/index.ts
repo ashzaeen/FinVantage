@@ -21,6 +21,7 @@ export * from "./market";
 export { createMarketData, LiveMarketData, type LiveMarketOptions } from "./market-live";
 export * from "./spending";
 export * from "./subscriptions";
+export * from "./subscription-catalog";
 export { goalStatusForBalance, MemoryDocumentStore, MemoryLedgerStore } from "./memory";
 export { SpacetimeLedgerStore } from "./spacetime/ledger";
 export { SpacetimeHttp, SpacetimeError, sqlString, decodeSats, type SpacetimeConfig } from "./spacetime/client";

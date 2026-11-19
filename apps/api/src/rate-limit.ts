@@ -24,7 +24,7 @@ export interface RateRule {
 }
 
 const MINUTE = 60_000;
-const MODEL_ROUTES = /^\/v1\/(?:copilot\/evaluate|life-events\/parse|advisory|advisory\/chat|advisory\/conversations\/[^/]+\/messages|reports\/quarterly)$/;
+const MODEL_ROUTES = /^\/v1\/(?:copilot\/evaluate|life-events\/parse|advisory|advisory\/chat|advisory\/conversations\/[^/]+\/messages|reports\/quarterly|subscriptions\/[^/]+\/draft)$/;
 const ADVISOR_ROUTES = /^\/v1\/advisory\/(?:chat|conversations\/[^/]+\/messages)$/;
 
 /** Before sign-in: counted per address. */

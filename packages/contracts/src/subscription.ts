@@ -99,3 +99,43 @@ export const UpdateSubscription = z
   })
   .refine((body) => body.status !== undefined || body.kind !== undefined, { message: "Send a status or a kind to change." });
 export type UpdateSubscription = z.infer<typeof UpdateSubscription>;
+
+/** Where a charge is billed, which decides where it can be cancelled. */
+export const BillingChannel = z.enum(["direct", "apple", "google_play", "paypal"]);
+export type BillingChannel = z.infer<typeof BillingChannel>;
+
+/**
+ * How to cancel one subscription: steps for the user to follow themselves. FinVantage cancels
+ * nothing. A catalog entry is hand-written and may be out of date; `lastChecked` says when
+ * someone last confirmed it, or is null if no one has.
+ */
+export const CancellationGuide = z.object({
+  channel: BillingChannel,
+  title: z.string(),
+  steps: z.array(z.string()).min(1),
+  /** The provider's own page, https only, or null when there is no stable link. */
+  url: z.string().refine((u) => u.startsWith("https://"), { message: "A guide link must be https." }).nullable(),
+  /** "catalog" when written for this merchant, "generic" when it follows from the billing channel. */
+  source: z.enum(["catalog", "generic"]),
+  lastChecked: IsoDate.nullable(),
+});
+export type CancellationGuide = z.infer<typeof CancellationGuide>;
+
+/** The three messages FinVantage can draft. Each needs figures on record, or the request is refused. */
+export const SubscriptionDraftAction = z.enum(["cancel", "lower_bill", "dispute"]);
+export type SubscriptionDraftAction = z.infer<typeof SubscriptionDraftAction>;
+
+export const SubscriptionDraftRequest = z.object({ action: SubscriptionDraftAction });
+export type SubscriptionDraftRequest = z.infer<typeof SubscriptionDraftRequest>;
+
+/**
+ * A message for the user to read and send themselves. FinVantage never sends it. "model" means
+ * an AI model wrote it and every number in it was checked against the user's own figures;
+ * "template" is the standard wording with those figures filled in.
+ */
+export const SubscriptionDraft = z.object({
+  action: SubscriptionDraftAction,
+  text: z.string(),
+  source: z.enum(["model", "template"]),
+});
+export type SubscriptionDraft = z.infer<typeof SubscriptionDraft>;

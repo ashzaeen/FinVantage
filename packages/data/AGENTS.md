@@ -10,6 +10,7 @@ Storage and data sources. Read the root `AGENTS.md` first. Briefs: `docs/workstr
 | `src/spacetime/` | `SpacetimeLedgerStore` and its HTTP client (SQL and reducer calls, SATS-JSON decoding) |
 | `src/mongo/` | MongoDB Atlas `DocumentStore` implementation |
 | `src/subscriptions.ts` | `SubscriptionStore`: what each user chose about each subscription (keep, cancelling, cancelled, subscription or bill). **Memory only for now**, so choices last until the API restarts and are not shared between serverless instances; the MongoDB version is the last step of `docs/workstreams/subscriptions.md` and needs the platform owner's agreement |
+| `src/subscription-catalog.ts` | How to cancel a subscription: a small hand-written sample of 17 merchants (11 real, 6 from the demo) and generic steps by billing channel (Apple, Google Play, PayPal, direct). **Not checked against the live sites**: every entry has `lastChecked: null` and the page says so |
 | `src/bank.ts` | Bank providers: synthetic demo data |
 | `src/market.ts` | `MarketDataProvider` and the sample prices, statistics and headlines behind the Investments page |
 | `src/plaid/` | Plaid's objects (`schema.ts`), the mapper to app types (`map.ts`), and Spacetime rows (`spacetime-rows.ts`). See `docs/DATA-MODEL.md` |

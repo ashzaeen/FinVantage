@@ -1,5 +1,6 @@
 import {
   canonicalCategoryId,
+  type BillingChannel,
   categoryBucket,
   topCategoryId,
   type RecurringCharge,
@@ -316,4 +317,19 @@ export function savedSoFarCents(amountCents: number, cadence: Cadence, lastCharg
   if (cadence === "unknown") return 0;
   const missed = Math.floor(Math.max(0, daysApart(lastChargeDate, today)) / DAYS_BETWEEN_CHARGES[cadence]);
   return missed * Math.abs(amountCents);
+}
+
+/* ─── Where it can be cancelled ────────────────────────────────────────── */
+
+/**
+ * Where a charge is billed, from the name the bank printed. A subscription bought through Apple,
+ * Google Play or PayPal can only be cancelled there, not on the provider's own site, so the guide
+ * differs. A guess from the descriptor: "direct" is the answer when none of these show.
+ */
+export function billingChannel(merchant: string): BillingChannel {
+  const m = merchant.normalize("NFKC").toLowerCase().trim();
+  if (/^apple\b|apple\.com\/bill|itunes|app store/.test(m)) return "apple";
+  if (/^google\s*\*|google\s*play|googleplay/.test(m)) return "google_play";
+  if (/^paypal\b/.test(m)) return "paypal";
+  return "direct";
 }

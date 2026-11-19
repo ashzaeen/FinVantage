@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type { SubscriptionCharge } from "@finvantage/contracts";
 import {
   annualComing,
+  billingChannel,
   annualCostCents,
   cancelGraceDays,
   classifyKind,
@@ -269,4 +270,16 @@ test("saved so far counts the whole charges that would have posted since the las
   assert.equal(savedSoFarCents(-17_999, "yearly", "2025-12-01", TODAY), 0); // under a year
   assert.equal(savedSoFarCents(-1499, "unknown", "2026-08-05", TODAY), 0);
   assert.equal(savedSoFarCents(-1499, "monthly", "2026-12-01", TODAY), 0); // a charge dated after today
+});
+
+/* ─── Billing channel ──────────────────────────────────────────────────── */
+
+test("a charge through Apple, Google Play or PayPal is cancelled there", () => {
+  for (const raw of ["APPLE.COM/BILL", "Apple Music", "Apple TV+", "ITUNES.COM/BILL", "App Store Purchase"]) assert.equal(billingChannel(raw), "apple", raw);
+  for (const raw of ["GOOGLE *YouTube Premium", "Google Play", "GOOGLEPLAY"]) assert.equal(billingChannel(raw), "google_play", raw);
+  for (const raw of ["PAYPAL *HULU", "Paypal"]) assert.equal(billingChannel(raw), "paypal", raw);
+});
+
+test("anything else is billed directly, including names that only look like a store", () => {
+  for (const raw of ["Netflix", "Google One", "Applebee's", "Pineapple Fitness", "Amazon Prime", "StreamFlix", ""]) assert.equal(billingChannel(raw), "direct", raw);
 });

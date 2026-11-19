@@ -10,6 +10,7 @@ All model use, with Gemini as the provider. Read the root `AGENTS.md` first. Bri
 | `src/life-event-parser.ts` | Free-text parsing | life-events |
 | `src/advisory.ts` | Advisory Agent | advisory |
 | `src/quarterly.ts` | Quarterly report | advisory |
+| `src/subscription-draft.ts` | Messages about a subscription (cancel, lower the bill, dispute a late charge): template first, the model's wording only if it passes `validateNumbers`, a 120-word cap, and a few tripwires (links, threats, fairness claims). Never sent anywhere | subscriptions |
 
 ## Routing
 
