@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>FinVantage Trailer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0b0d1a;
+    --accent: #544af7;
+    --accent-hi: #8b84ff;
+    --ink: #f4f5fb;
+    --muted: #9aa0b8;
+    --card: #141833;
+    --card-line: #262b52;
+    --good: #2ecc8f;
+    --warn: #f5a524;
+    --bad: #ff5d73;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #000; }
+  body { font-family: Poppins, system-ui, sans-serif; color: var(--ink); }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+  canvas { position: absolute; inset: 0; }
+  .layer { position: absolute; inset: 0; opacity: 0; will-change: transform, opacity, filter; }
+  .center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .headline { font-weight: 800; font-size: 112px; letter-spacing: -2px; line-height: 1.05; }
+  .sub { font-weight: 500; font-size: 40px; color: var(--muted); }
+  .accent { color: var(--accent-hi); }
+  .caption { position: absolute; left: 0; right: 0; bottom: 92px; text-align: center; font-weight: 700; font-size: 56px; letter-spacing: -0.5px; text-shadow: 0 6px 30px rgba(0,0,0,.6); }
+  .label { font-weight: 600; font-size: 22px; letter-spacing: 6px; text-transform: uppercase; color: var(--accent-hi); }
+  .vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%); }
+  .bar { position: absolute; left: 0; right: 0; height: 64px; background: #000; }
+  .flash { position: absolute; inset: 0; background: radial-gradient(circle at center, #c9c5ff 0%, #544af7 45%, rgba(84,74,247,0) 75%); opacity: 0; mix-blend-mode: screen; }
+
+  /* Scene 2: the plain dashboard */
+  .dash { position: absolute; left: 360px; top: 190px; width: 1200px; height: 640px; background: #10132a; border: 1px solid var(--card-line); border-radius: 28px; padding: 36px 40px; box-shadow: 0 40px 120px rgba(0,0,0,.5); }
+  .dash h3 { margin: 0 0 24px; font-size: 30px; font-weight: 700; }
+  .balances { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .bal { background: var(--card); border: 1px solid var(--card-line); border-radius: 20px; padding: 22px 24px; }
+  .bal p { margin: 0; color: var(--muted); font-size: 20px; }
+  .bal b { display: block; margin-top: 6px; font-size: 38px; font-weight: 700; }
+  .rows { margin-top: 26px; background: var(--card); border: 1px solid var(--card-line); border-radius: 20px; padding: 8px 24px; }
+  .row { display: flex; justify-content: space-between; padding: 15px 0; font-size: 23px; border-top: 1px solid var(--card-line); }
+  .row:first-child { border-top: 0; }
+  .row span:last-child { font-weight: 600; }
+
+  /* Scene 3: checkout page and Copilot */
+  .browser { position: absolute; left: 150px; top: 96px; width: 1620px; height: 780px; background: #f6f6fb; border-radius: 26px; overflow: hidden; box-shadow: 0 50px 140px rgba(0,0,0,.6); color: #16192c; }
+  .chrome { height: 70px; background: #e7e8f1; display: flex; align-items: center; gap: 14px; padding: 0 26px; }
+  .dot { width: 16px; height: 16px; border-radius: 50%; }
+  .url { margin-left: 20px; flex: 1; height: 40px; border-radius: 20px; background: #fff; display: flex; align-items: center; padding: 0 22px; font-size: 20px; color: #4a4f68; }
+  .product { position: absolute; left: 70px; top: 130px; width: 760px; height: 560px; border-radius: 24px; background: linear-gradient(160deg, #eceaf6, #dcd9ee); }
+  .pinfo { position: absolute; z-index: 1; left: 890px; top: 150px; width: 640px; }
+  .pinfo .brand { font-size: 22px; color: #8d94a8; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; }
+  .pinfo h2 { margin: 10px 0 0; font-size: 54px; font-weight: 800; letter-spacing: -1px; }
+  .pinfo .price { margin-top: 18px; font-size: 64px; font-weight: 800; }
+  .pinfo .stars { margin-top: 10px; font-size: 24px; color: #f5a524; }
+  .buy { margin-top: 44px; width: 420px; height: 88px; border-radius: 44px; background: #16192c; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700; }
+  .cursor { position: absolute; width: 44px; height: 44px; }
+  .shade { position: absolute; inset: 70px 0 0 0; background: rgba(11,13,26,.55); opacity: 0; }
+  .copilot { position: absolute; left: 100px; top: 150px; width: 640px; background: #fff; border-radius: 28px; padding: 30px 34px; box-shadow: 0 30px 90px rgba(84,74,247,.45), 0 0 0 3px rgba(84,74,247,.9); color: #16192c; }
+  .cp-head { display: flex; align-items: center; gap: 14px; font-weight: 700; font-size: 24px; }
+  .mark { width: 46px; height: 46px; border-radius: 14px; background: var(--accent); display: flex; align-items: center; justify-content: center; }
+  .pill { margin-left: auto; padding: 6px 16px; border-radius: 20px; background: #fff4e0; color: #b9770e; font-size: 18px; font-weight: 700; }
+  .copilot h4 { margin: 22px 0 0; font-size: 36px; line-height: 1.2; font-weight: 800; letter-spacing: -0.5px; }
+  .copilot p { margin: 14px 0 0; font-size: 24px; color: #4a4f68; line-height: 1.4; }
+  .shift { margin-top: 24px; padding: 18px 20px; border-radius: 18px; background: #f3f2ff; font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 14px; }
+  .shift .old { color: #8d94a8; text-decoration: line-through; }
+  .shift .new { color: var(--accent); }
+
+  /* Scene 4: simulation */
+  .sim-title { position: absolute; left: 150px; top: 120px; }
+  .sim-range { position: absolute; right: 150px; top: 150px; text-align: right; }
+  .sim-range b { display: block; font-size: 120px; font-weight: 800; letter-spacing: -3px; line-height: 1; }
+  .sim-range span { font-size: 30px; color: var(--muted); font-weight: 600; }
+  .goal-tag { position: absolute; font-size: 22px; font-weight: 700; color: var(--good); }
+
+  /* Scene 5: the AI that explains */
+  .panel { position: absolute; left: 380px; top: 210px; width: 1160px; height: 600px; background: #10132a; border: 1px solid var(--card-line); border-radius: 30px; padding: 44px 52px; box-shadow: 0 40px 120px rgba(0,0,0,.5); }
+  .bubble { max-width: 820px; padding: 22px 30px; border-radius: 28px; font-size: 30px; line-height: 1.4; }
+  .me { margin-left: auto; background: var(--accent); color: #fff; border-bottom-right-radius: 8px; }
+  .ai { margin-top: 26px; background: var(--card); border: 1px solid var(--card-line); border-bottom-left-radius: 8px; min-height: 92px; }
+  .chips { display: flex; gap: 12px; margin-top: 18px; }
+  .chip { padding: 8px 18px; border-radius: 18px; background: #1d2147; color: var(--accent-hi); font-size: 20px; font-weight: 600; }
+  .typing { display: inline-flex; gap: 10px; }
+  .typing i { width: 14px; height: 14px; border-radius: 50%; background: var(--muted); display: block; }
+  .rep-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; margin-top: 28px; }
+  .rep-item { margin-top: 18px; font-size: 26px; line-height: 1.4; color: #d9dbea; }
+  .rep-item b { color: var(--ink); }
+  .bars { display: flex; align-items: flex-end; gap: 26px; height: 300px; padding-top: 20px; }
+  .bars div { flex: 1; border-radius: 14px 14px 6px 6px; background: linear-gradient(180deg, var(--accent-hi), var(--accent)); }
+  .num { color: var(--accent-hi); font-weight: 700; position: relative; }
+  .check { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; margin-left: 8px; border-radius: 50%; background: var(--good); color: #062; font-size: 22px; font-weight: 800; vertical-align: middle; }
+  .loan { margin-top: 22px; background: #0e1130; border: 2px solid rgba(139,132,255,.55); border-radius: 26px; padding: 26px 30px; display: grid; grid-template-columns: 1fr 1.05fr; gap: 34px; box-shadow: 0 0 60px rgba(84,74,247,.35); }
+  .loan .k { font-size: 18px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent-hi); font-weight: 600; }
+  .loan .big { font-size: 76px; font-weight: 800; letter-spacing: -2px; line-height: 1.05; margin-top: 4px; }
+  .loan .big small { font-size: 30px; color: var(--muted); font-weight: 600; letter-spacing: 0; }
+  .slider { margin-top: 14px; font-size: 20px; color: #d9dbea; }
+  .slider .track { margin-top: 6px; height: 10px; border-radius: 5px; background: #23284f; position: relative; }
+  .slider .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: linear-gradient(90deg, var(--accent), var(--accent-hi)); }
+  .slider .knob { position: absolute; top: -7px; width: 24px; height: 24px; margin-left: -12px; border-radius: 50%; background: #fff; box-shadow: 0 0 14px rgba(139,132,255,.9); }
+  .terms { display: flex; align-items: flex-end; gap: 18px; height: 200px; margin-top: 12px; }
+  .term { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; font-size: 18px; color: var(--muted); }
+  .term .col { width: 100%; border-radius: 12px 12px 4px 4px; background: #2a2f63; }
+  .term.on .col { background: linear-gradient(180deg, var(--accent-hi), var(--accent)); box-shadow: 0 0 24px rgba(139,132,255,.7); }
+  .term.on { color: var(--ink); font-weight: 700; }
+  .term b { font-size: 20px; color: var(--ink); margin-bottom: 6px; }
+  .impact { margin-top: 18px; display: inline-flex; align-items: center; gap: 10px; padding: 10px 18px; border-radius: 16px; background: rgba(46,204,143,.14); color: var(--good); font-size: 21px; font-weight: 700; }
+  .stamp { position: absolute; left: 0; right: 0; top: 380px; text-align: center; }
+
+  /* Scene 6: logo */
+  .logo-mark { width: 220px; height: 220px; border-radius: 60px; background: var(--accent); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 120px rgba(84,74,247,.8); }
+  .wordmark { margin-top: 48px; font-size: 128px; font-weight: 800; letter-spacing: -3px; }
+  .wordmark span { display: inline-block; }
+  .tagline { margin-top: 18px; font-size: 42px; font-weight: 500; color: #c9cbe0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="bg" width="1920" height="1080"></canvas>
+  <canvas id="fan" width="1920" height="1080"></canvas>
+
+  <!-- 1. Cold open -->
+  <div class="layer center" id="s1">
+    <div class="headline" id="s1a">Every money decision</div>
+    <div class="headline accent" id="s1b">has a future.</div>
+  </div>
+
+  <!-- 2. The old way -->
+  <div class="layer" id="s2">
+    <div class="dash" id="dash">
+      <h3>Overview</h3>
+      <div class="balances">
+        <div class="bal" id="b1"><p>Checking</p><b>$4,218.40</b></div>
+        <div class="bal" id="b2"><p>Savings</p><b>$12,950.00</b></div>
+        <div class="bal" id="b3"><p>Credit card</p><b>−$1,342.17</b></div>
+      </div>
+      <div class="rows">
+        <div class="row" id="r1"><span>Paycheck</span><span>+$3,100.00</span></div>
+        <div class="row" id="r2"><span>Whole Foods</span><span>−$86.42</span></div>
+        <div class="row" id="r3"><span>Shell</span><span>−$48.10</span></div>
+        <div class="row" id="r4"><span>Spotify</span><span>−$11.99</span></div>
+        <div class="row" id="r5"><span>Amazon</span><span>−$129.99</span></div>
+      </div>
+    </div>
+    <div class="caption" id="s2cap">Most apps show you the <span class="accent">past.</span></div>
+  </div>
+
+  <!-- 3. Copilot -->
+  <div class="layer" id="s3">
+    <div class="browser" id="browser">
+      <div class="chrome">
+        <div class="dot" style="background:#ff5f57"></div>
+        <div class="dot" style="background:#febc2e"></div>
+        <div class="dot" style="background:#28c840"></div>
+        <div class="url">shop.example.com/sofa</div>
+      </div>
+      <div class="product">
+        <svg width="760" height="560" viewBox="0 0 760 560">
+          <rect x="120" y="250" width="520" height="150" rx="40" fill="#8f86e8" />
+          <rect x="90" y="190" width="100" height="230" rx="40" fill="#7c72e0" />
+          <rect x="570" y="190" width="100" height="230" rx="40" fill="#7c72e0" />
+          <rect x="160" y="150" width="440" height="140" rx="40" fill="#a59df0" />
+          <rect x="150" y="410" width="28" height="60" rx="10" fill="#5b52c9" />
+          <rect x="582" y="410" width="28" height="60" rx="10" fill="#5b52c9" />
+        </svg>
+      </div>
+      <div class="pinfo">
+        <div class="brand">Harbor Living</div>
+        <h2>Harbor 3-Seat Sofa</h2>
+        <div class="stars">★★★★★ <span style="color:#8d94a8">(2,184)</span></div>
+        <div class="price">$1,899</div>
+        <div class="buy" id="buy">Add to cart</div>
+      </div>
+      <div class="shade" id="shade"></div>
+      <div class="copilot" id="copilot">
+        <div class="cp-head">
+          <div class="mark"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M12 2C8.5 6 6 9.5 6 13.5a6 6 0 0 0 12 0c0-4-2.5-7.5-6-11.5z" fill="#fff"/><circle cx="12" cy="14" r="2.5" fill="#544af7"/></svg></div>
+          FinVantage Copilot
+          <span class="pill">Heads up</span>
+        </div>
+        <h4>Your Japan trip moves 3 months later.</h4>
+        <p>Move $800 from savings to keep it on track.</p>
+        <div class="shift">Japan trip <span class="old">Mar 2027</span> → <span class="new">Jun 2027</span></div>
+      </div>
+      <svg class="cursor" id="cursor" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#16192c" stroke="#fff" stroke-width="1.5"/></svg>
+    </div>
+    <div class="caption" id="s3cap">Copilot steps in <span class="accent">before you buy.</span></div>
+  </div>
+
+  <!-- 4. Simulation -->
+  <div class="layer" id="s4">
+    <div class="sim-title">
+      <div class="label">Monte Carlo engine</div>
+      <div class="headline" style="font-size:120px;margin-top:10px"><span id="futures">5,000</span> futures.</div>
+    </div>
+    <div class="sim-range" id="simRange"><b id="rangeNum">0%–0%</b><span>chance your Japan trip lands on time</span></div>
+    <div class="goal-tag" id="goalTag" style="left:170px;top:398px">Goal · $6,000</div>
+    <div class="caption" id="s4cap">Simulated in <span class="accent">0.6 seconds.</span></div>
+  </div>
+
+  <!-- 5a. Advisor -->
+  <div class="layer" id="s5a">
+    <div class="panel" style="top:110px;left:330px;width:1260px;height:auto;padding:36px 46px 40px">
+      <div class="label">AI Advisor</div>
+      <div style="margin-top:20px;display:flex"><div class="bubble me">Can I afford a new car this year?</div></div>
+      <div class="bubble ai" id="aiBubble" style="margin-top:18px;min-height:0;max-width:1100px">
+        <span class="typing" id="typing"><i></i><i></i><i></i></span>
+        <span id="aiText"></span>
+      </div>
+      <div class="loan" id="loan">
+        <div>
+          <div class="k">Loan explorer · $24,000 car</div>
+          <div class="big">$<span id="pay">0</span><small> /mo</small></div>
+          <div class="slider" data-to="0.48">Down payment · $4,000<div class="track"><div class="fill"></div><div class="knob"></div></div></div>
+          <div class="slider" data-to="0.35">APR · 6.5%<div class="track"><div class="fill"></div><div class="knob"></div></div></div>
+          <div class="slider" data-to="0.62">Term · 60 months<div class="track"><div class="fill"></div><div class="knob"></div></div></div>
+        </div>
+        <div>
+          <div class="k">Monthly payment by term</div>
+          <div class="terms" id="terms">
+            <div class="term" data-h="1"><b>$613</b><div class="col"></div>36 mo</div>
+            <div class="term" data-h="0.774"><b>$474</b><div class="col"></div>48 mo</div>
+            <div class="term on" data-h="0.638"><b>$391</b><div class="col"></div>60 mo</div>
+            <div class="term" data-h="0.549"><b>$336</b><div class="col"></div>72 mo</div>
+          </div>
+          <div class="impact" id="impact">✓ House goal stays on track</div>
+        </div>
+      </div>
+    </div>
+    <div class="caption" id="s5acap" style="bottom:84px">Answers in <span class="accent">charts</span>, not just words.</div>
+  </div>
+
+  <!-- 5b. Quarterly report -->
+  <div class="layer" id="s5b">
+    <div class="panel">
+      <div class="label">Quarterly report · Q3 2026</div>
+      <div class="rep-grid">
+        <div>
+          <div style="font-size:44px;font-weight:800;letter-spacing:-1px;margin-top:6px">Your quarter, in plain English.</div>
+          <div class="rep-item" id="ri1">✓ <b>Went well:</b> you saved <span class="num">$1,450</span> more than last quarter.</div>
+          <div class="rep-item" id="ri2">↗ <b>Biggest change:</b> house goal rose from <span class="num">57–77%</span> to <span class="num">75–95%</span>.</div>
+          <div class="rep-item" id="ri3">→ <b>Next step:</b> keep the extra <span class="num">$250</span> a month.</div>
+        </div>
+        <div class="bars" id="bars"><div></div><div></div><div></div><div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5c. Every number checked -->
+  <div class="layer center" id="s5c">
+    <div style="font-size:44px;color:#d9dbea;line-height:1.6;white-space:nowrap">
+      You saved <span class="num">$1,450</span><span class="check" id="c1">✓</span> more. Your house goal rose to <span class="num">75–95%</span><span class="check" id="c2">✓</span>
+    </div>
+    <div class="headline" id="stamp" style="margin-top:56px">Every number <span class="accent">checked.</span></div>
+    <div class="sub" id="stampSub" style="margin-top:18px">AI explains. The math decides.</div>
+  </div>
+
+  <!-- 6. Logo -->
+  <div class="layer center" id="s6">
+    <div class="logo-mark" id="logoMark"><svg width="124" height="124" viewBox="0 0 24 24"><path d="M12 2C8.5 6 6 9.5 6 13.5a6 6 0 0 0 12 0c0-4-2.5-7.5-6-11.5z" fill="#fff"/><circle cx="12" cy="14" r="2.5" fill="#544af7"/></svg></div>
+    <div class="wordmark" id="wordmark"></div>
+    <div class="tagline" id="tagline">See your financial future before you spend.</div>
+  </div>
+
+  <div class="flash" id="flash"></div>
+  <div class="vignette"></div>
+  <div class="bar" style="top:0"></div>
+  <div class="bar" style="bottom:0"></div>
+</div>
+
+<script>
+(() => {
+  const DURATION = 30;
+  const FPS = 30;
+  /** Sound cues in seconds. audio.mjs reads this list, so picture and sound share one timeline. */
+  const CUES = [
+    { t: 0.15, kind: "riser", length: 2.05 },
+    { t: 2.2, kind: "boom", size: 0.8 },
+    { t: 3.4, kind: "tick" }, { t: 3.6, kind: "tick" }, { t: 3.8, kind: "tick" },
+    { t: 4.3, kind: "tick" }, { t: 4.42, kind: "tick" }, { t: 4.54, kind: "tick" }, { t: 4.66, kind: "tick" }, { t: 4.78, kind: "tick" },
+    { t: 5.6, kind: "whooshDown", length: 1.0 },
+    { t: 6.85, kind: "whoosh", length: 0.5 },
+    { t: 8.6, kind: "click" },
+    { t: 8.75, kind: "whoosh", length: 0.35 },
+    { t: 9.05, kind: "hit", size: 0.7 },
+    { t: 12.7, kind: "whoosh", length: 0.5 },
+    { t: 13.5, kind: "riser", length: 2.7 },
+    { t: 16.2, kind: "hit", size: 0.9 },
+    { t: 18.85, kind: "whoosh", length: 0.3 },
+    { t: 19.14, kind: "hit", size: 0.55 },
+    { t: 20.0, kind: "whoosh", length: 0.35 },
+    { t: 20.35, kind: "hit", size: 0.45 },
+    { t: 21.59, kind: "hit", size: 0.55 },
+    { t: 23.06, kind: "hit", size: 0.55 },
+    { t: 23.55, kind: "tick" }, { t: 23.8, kind: "tick" },
+    { t: 24.04, kind: "hit", size: 0.7 },
+    { t: 24.9, kind: "riser", length: 1.1 },
+    { t: 26.0, kind: "boom", size: 1.0 },
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const lerp = (a, b, p) => a + (b - a) * p;
+  const seg = (t, a, b) => clamp((t - a) / (b - a));
+  const outCubic = (p) => 1 - Math.pow(1 - p, 3);
+  const inOutCubic = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+  const outExpo = (p) => (p === 1 ? 1 : 1 - Math.pow(2, -10 * p));
+  const outBack = (p) => { const c = 1.6; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+  /** Fades in over [a, b] and out over [c, d]. */
+  const win = (t, a, b, c, d) => Math.min(seg(t, a, b), 1 - seg(t, c, d));
+  function style(el, { o = 1, x = 0, y = 0, s = 1, blur = 0, filter = "" } = {}) {
+    el.style.opacity = String(clamp(o));
+    el.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
+    el.style.filter = `${blur > 0.05 ? `blur(${blur}px)` : ""} ${filter}`.trim() || "none";
+  }
+
+  function mulberry32(seed) {
+    return () => {
+      seed = (seed + 0x6d2b79f5) | 0;
+      let r = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const rand = mulberry32(2026);
+  const gauss = () => Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand());
+
+  // Background particles, fixed by the seed.
+  const particles = Array.from({ length: 90 }, () => ({ x: rand() * 1920, y: rand() * 1080, r: 0.6 + rand() * 1.8, v: 6 + rand() * 18, a: 0.15 + rand() * 0.35 }));
+
+  // Simulation paths: savings toward a $6,000 goal over 36 months. 5,000 are simulated; 600 are drawn.
+  const MONTHS = 36, DRAWN = 600, START = 1800, GOAL = 6000;
+  const paths = Array.from({ length: DRAWN }, () => {
+    const out = [START];
+    let v = START;
+    for (let m = 1; m <= MONTHS; m++) {
+      v = v * (1 + 0.005 + gauss() * 0.035) + 118 + gauss() * 55;
+      out.push(Math.max(0, v));
+    }
+    return out;
+  });
+  const band = Array.from({ length: MONTHS + 1 }, (_, m) => {
+    const vals = paths.map((p) => p[m]).sort((a, b) => a - b);
+    return { lo: vals[Math.floor(DRAWN * 0.1)], mid: vals[Math.floor(DRAWN * 0.5)], hi: vals[Math.floor(DRAWN * 0.9)] };
+  });
+  const chart = { x0: 170, x1: 1750, y0: 860, y1: 300, vmax: 9000 };
+  const cx = (m) => lerp(chart.x0, chart.x1, m / MONTHS);
+  const cy = (v) => lerp(chart.y0, chart.y1, v / chart.vmax);
+
+  const bg = $("bg").getContext("2d");
+  const fan = $("fan").getContext("2d");
+
+  function drawBackground(t) {
+    bg.fillStyle = "#0b0d1a";
+    bg.fillRect(0, 0, 1920, 1080);
+    // Glow: breathes with the cold open, swells at the logo.
+    const swell = Math.max(win(t, 0, 2.2, 2.6, 3.4) * 0.9, win(t, 25, 26.2, 29.2, 30) * 1.2, 0.35);
+    const gx = 960 + Math.sin(t * 0.4) * 220, gy = 540 + Math.cos(t * 0.3) * 120;
+    const g = bg.createRadialGradient(gx, gy, 0, gx, gy, 900);
+    g.addColorStop(0, `rgba(84,74,247,${0.32 * swell})`);
+    g.addColorStop(1, "rgba(84,74,247,0)");
+    bg.fillStyle = g;
+    bg.fillRect(0, 0, 1920, 1080);
+    // Grid, faint.
+    bg.strokeStyle = "rgba(139,132,255,0.05)";
+    bg.lineWidth = 1;
+    const off = (t * 12) % 80;
+    for (let x = -80 + off; x < 1920; x += 80) { bg.beginPath(); bg.moveTo(x, 0); bg.lineTo(x, 1080); bg.stroke(); }
+    for (let y = 0; y < 1080; y += 80) { bg.beginPath(); bg.moveTo(0, y); bg.lineTo(1920, y); bg.stroke(); }
+    for (const p of particles) {
+      const y = (p.y - t * p.v + 1080 * 10) % 1080;
+      bg.fillStyle = `rgba(200,196,255,${p.a})`;
+      bg.beginPath(); bg.arc(p.x, y, p.r, 0, Math.PI * 2); bg.fill();
+    }
+    // Cold-open pulse ring.
+    const pulse = seg(t, 0.1, 2.2);
+    if (pulse > 0 && pulse < 1) {
+      bg.strokeStyle = `rgba(139,132,255,${0.6 * (1 - pulse)})`;
+      bg.lineWidth = 3;
+      bg.beginPath(); bg.arc(960, 540, 60 + outCubic(pulse) * 700, 0, Math.PI * 2); bg.stroke();
+    }
+    // Logo shockwave.
+    const shock = seg(t, 26, 27.4);
+    if (shock > 0 && shock < 1) {
+      bg.strokeStyle = `rgba(201,197,255,${0.8 * (1 - shock)})`;
+      bg.lineWidth = 6 * (1 - shock) + 1;
+      bg.beginPath(); bg.arc(960, 420, 120 + outExpo(shock) * 1100, 0, Math.PI * 2); bg.stroke();
+    }
+  }
+
+  function drawFan(t) {
+    fan.clearRect(0, 0, 1920, 1080);
+    const o = win(t, 13.1, 13.5, 18.6, 19.0);
+    if (o <= 0) return;
+    fan.save();
+    fan.globalAlpha = o;
+    // Axis and goal line.
+    fan.strokeStyle = "rgba(154,160,184,0.35)";
+    fan.lineWidth = 2;
+    fan.beginPath(); fan.moveTo(chart.x0, chart.y0); fan.lineTo(chart.x1, chart.y0); fan.stroke();
+    fan.setLineDash([14, 12]);
+    fan.strokeStyle = "rgba(46,204,143,0.8)";
+    fan.beginPath(); fan.moveTo(chart.x0, cy(GOAL)); fan.lineTo(chart.x1, cy(GOAL)); fan.stroke();
+    fan.setLineDash([]);
+    const reveal = inOutCubic(seg(t, 13.6, 15.9));
+    const upto = reveal * MONTHS;
+    const full = Math.floor(upto), frac = upto - full;
+    const pointAt = (p, m) => (m < full ? p[m] : m === full ? p[full] : lerp(p[full], p[Math.min(MONTHS, full + 1)], frac));
+    // Band behind the paths once they're all drawn.
+    const bandO = seg(t, 15.7, 16.3);
+    if (bandO > 0) {
+      fan.fillStyle = `rgba(84,74,247,${0.28 * bandO})`;
+      fan.beginPath();
+      band.forEach((b, m) => (m === 0 ? fan.moveTo(cx(m), cy(b.hi)) : fan.lineTo(cx(m), cy(b.hi))));
+      for (let m = MONTHS; m >= 0; m--) fan.lineTo(cx(m), cy(band[m].lo));
+      fan.closePath(); fan.fill();
+    }
+    fan.lineWidth = 1.4;
+    for (let i = 0; i < DRAWN; i++) {
+      const p = paths[i];
+      const hit = p[MONTHS] >= GOAL;
+      fan.strokeStyle = hit ? "rgba(139,132,255,0.11)" : "rgba(255,93,115,0.09)";
+      fan.beginPath();
+      fan.moveTo(cx(0), cy(p[0]));
+      for (let m = 1; m <= full; m++) fan.lineTo(cx(m), cy(p[m]));
+      if (full < MONTHS) fan.lineTo(cx(full + frac), cy(pointAt(p, full + 1)));
+      fan.stroke();
+    }
+    // Median path, bright.
+    fan.strokeStyle = "rgba(255,255,255,0.95)";
+    fan.lineWidth = 5;
+    fan.shadowColor = "rgba(139,132,255,0.9)";
+    fan.shadowBlur = 24;
+    fan.beginPath();
+    fan.moveTo(cx(0), cy(band[0].mid));
+    for (let m = 1; m <= full; m++) fan.lineTo(cx(m), cy(band[m].mid));
+    if (full < MONTHS) fan.lineTo(cx(full + frac), cy(lerp(band[full].mid, band[Math.min(MONTHS, full + 1)].mid, frac)));
+    fan.stroke();
+    // "Today" dot.
+    fan.shadowBlur = 30;
+    fan.fillStyle = "#fff";
+    fan.beginPath(); fan.arc(cx(0), cy(START), 10, 0, Math.PI * 2); fan.fill();
+    fan.restore();
+  }
+
+  const WORD = "FinVantage";
+  $("wordmark").innerHTML = WORD.split("").map((ch) => `<span>${ch}</span>`).join("");
+  const AI_TEXT = "Yes. Here's what a $24,000 car would cost you each month:";
+
+  function renderAt(t) {
+    drawBackground(t);
+    drawFan(t);
+
+    // 1. Cold open (0–3 s)
+    const s1 = win(t, 0.2, 0.6, 2.8, 3.15);
+    style($("s1"), { o: s1, s: lerp(1, 1.08, seg(t, 0, 3.15)), blur: 8 * seg(t, 2.8, 3.15) });
+    const a = outCubic(seg(t, 0.35, 1.2));
+    style($("s1a"), { o: a, y: lerp(40, 0, a) });
+    $("s1a").style.letterSpacing = `${lerp(18, -2, a)}px`;
+    const b = seg(t, 2.2, 2.45);
+    style($("s1b"), { o: b > 0 ? 1 : 0, s: b > 0 ? lerp(1.35, 1, outExpo(b)) : 1 });
+
+    // 2. The old way (3–7 s)
+    const s2 = win(t, 3.1, 3.35, 6.6, 7.0);
+    style($("s2"), { o: s2, s: lerp(1, 0.94, seg(t, 6.6, 7.0)), blur: 10 * seg(t, 6.6, 7.0) });
+    ["b1", "b2", "b3"].forEach((id, i) => { const p = outBack(seg(t, 3.4 + i * 0.2, 3.75 + i * 0.2)); style($(id), { o: seg(t, 3.4 + i * 0.2, 3.6 + i * 0.2), y: lerp(40, 0, p) }); });
+    ["r1", "r2", "r3", "r4", "r5"].forEach((id, i) => { const p = outCubic(seg(t, 4.3 + i * 0.12, 4.6 + i * 0.12)); style($(id), { o: p, x: lerp(-30, 0, p) }); });
+    const dim = seg(t, 5.5, 6.0);
+    style($("dash"), { o: 1, s: lerp(1, 0.97, dim), filter: `grayscale(${dim}) brightness(${lerp(1, 0.45, dim)})` });
+    const cap2 = outCubic(seg(t, 5.6, 6.0));
+    style($("s2cap"), { o: cap2, y: lerp(30, 0, cap2) });
+
+    // 3. Copilot (7–13 s)
+    const s3 = win(t, 6.95, 7.3, 12.65, 13.0);
+    style($("s3"), { o: s3, s: lerp(1.0, 1.05, seg(t, 7, 13)), blur: 10 * seg(t, 12.65, 13.0) });
+    const br = outCubic(seg(t, 6.95, 7.5));
+    style($("browser"), { o: 1, y: lerp(80, 0, br) });
+    const move = inOutCubic(seg(t, 7.5, 8.55));
+    const press = win(t, 8.55, 8.62, 8.7, 8.85);
+    style($("cursor"), { o: seg(t, 7.4, 7.6) * (1 - seg(t, 9.6, 9.9)), x: lerp(1380, 1120, move), y: lerp(760, 520, move), s: 1 - press * 0.15 });
+    style($("buy"), { o: 1, s: 1 - press * 0.04 });
+    const cp = seg(t, 8.75, 9.25);
+    style($("copilot"), { o: seg(t, 8.75, 8.95), x: lerp(-420, 0, outBack(cp)), s: lerp(0.92, 1, outCubic(cp)) });
+    style($("shade"), { o: seg(t, 8.75, 9.2) });
+    const cap3 = outCubic(seg(t, 10.1, 10.5));
+    style($("s3cap"), { o: cap3, y: lerp(30, 0, cap3) });
+
+    // 4. Simulation (13–19 s)
+    const s4 = win(t, 13.1, 13.5, 18.6, 19.0);
+    style($("s4"), { o: s4 });
+    const ft = outCubic(seg(t, 13.3, 13.9));
+    $("futures").textContent = Math.round(lerp(0, 5000, outExpo(seg(t, 13.3, 14.6)))).toLocaleString("en-US");
+    style($("s4").querySelector(".sim-title"), { o: ft, y: lerp(30, 0, ft) });
+    const rg = seg(t, 15.5, 16.2);
+    const lo = Math.round(lerp(0, 75, outCubic(rg))), hi = Math.round(lerp(0, 95, outCubic(rg)));
+    $("rangeNum").textContent = `${lo}%–${hi}%`;
+    const punch = seg(t, 16.2, 16.5);
+    style($("simRange"), { o: seg(t, 15.4, 15.7), s: punch > 0 && punch < 1 ? 1 + 0.12 * (1 - outCubic(punch)) : 1 });
+    style($("goalTag"), { o: seg(t, 13.6, 14.0) });
+    const cap4 = outCubic(seg(t, 16.6, 17.0));
+    style($("s4cap"), { o: cap4, y: lerp(30, 0, cap4) });
+
+    // 5a. Advisor (19–21 s)
+    const s5a = win(t, 18.95, 19.1, 21.45, 21.6);
+    style($("s5a"), { o: s5a, s: lerp(1.04, 1, outCubic(seg(t, 18.95, 19.4))) });
+    const typing = win(t, 19.25, 19.35, 19.6, 19.7);
+    $("typing").style.display = typing > 0 ? "inline-flex" : "none";
+    [...$("typing").children].forEach((d, i) => (d.style.opacity = String(0.35 + 0.65 * Math.abs(Math.sin((t - i * 0.12) * 9)))));
+    const chars = Math.floor(AI_TEXT.length * seg(t, 19.6, 20.05));
+    $("aiText").textContent = AI_TEXT.slice(0, chars);
+    // The graphical reply: the Advisor's interactive loan explorer (packages/contracts/src/advisor-visuals.ts).
+    const ln = outBack(seg(t, 20.0, 20.35));
+    style($("loan"), { o: seg(t, 20.0, 20.15), y: lerp(60, 0, ln), s: lerp(0.94, 1, ln) });
+    $("pay").textContent = String(Math.round(391 * outCubic(seg(t, 20.15, 20.8))));
+    [...document.querySelectorAll("#loan .slider")].forEach((el, i) => {
+      const p = Number(el.dataset.to) * outCubic(seg(t, 20.25 + i * 0.15, 20.6 + i * 0.15));
+      el.querySelector(".fill").style.width = `${p * 100}%`;
+      el.querySelector(".knob").style.left = `${p * 100}%`;
+    });
+    [...$("terms").children].forEach((el, i) => {
+      const p = outCubic(seg(t, 20.3 + i * 0.08, 20.75 + i * 0.08));
+      el.querySelector(".col").style.height = `${150 * Number(el.dataset.h) * p}px`;
+      el.querySelector("b").style.opacity = String(seg(t, 20.6 + i * 0.08, 20.75 + i * 0.08));
+    });
+    const im = seg(t, 20.95, 21.1);
+    style($("impact"), { o: im, s: im > 0 ? lerp(1.3, 1, outBack(im)) : 1 });
+    const cap5 = outCubic(seg(t, 20.5, 20.85));
+    style($("s5acap"), { o: cap5, y: lerp(30, 0, cap5) });
+
+    // 5b. Report (21.6–23 s)
+    const s5b = win(t, 21.55, 21.65, 22.9, 23.02);
+    style($("s5b"), { o: s5b, s: lerp(1.04, 1, outCubic(seg(t, 21.55, 21.95))) });
+    ["ri1", "ri2", "ri3"].forEach((id, i) => { const p = outCubic(seg(t, 21.75 + i * 0.2, 22.0 + i * 0.2)); style($(id), { o: p, x: lerp(-24, 0, p) }); });
+    [0.38, 0.5, 0.66, 0.92].forEach((h, i) => { $("bars").children[i].style.height = `${100 * h * outCubic(seg(t, 21.7 + i * 0.1, 22.3 + i * 0.1))}%`; });
+
+    // 5c. Every number checked (23–25 s)
+    const s5c = win(t, 23.0, 23.1, 24.75, 25.05);
+    style($("s5c"), { o: s5c, blur: 8 * seg(t, 24.75, 25.05) });
+    [["c1", 23.55], ["c2", 23.8]].forEach(([id, at]) => { const p = seg(t, at, at + 0.18); style($(id), { o: p, s: p > 0 ? lerp(1.8, 1, outBack(p)) : 0.01 }); });
+    const st = seg(t, 24.04, 24.24);
+    style($("stamp"), { o: st, s: st > 0 ? lerp(1.6, 1, outExpo(st)) : 1 });
+    style($("stampSub"), { o: seg(t, 24.2, 24.45) });
+
+    // 6. Logo (25–30 s)
+    const s6 = win(t, 25.6, 25.9, 29.3, 30);
+    style($("s6"), { o: s6 });
+    const lm = seg(t, 26.0, 26.5);
+    style($("logoMark"), { o: lm > 0 ? 1 : 0, s: lm > 0 ? outBack(lm) : 0.01 });
+    [...$("wordmark").children].forEach((ch, i) => { const p = outCubic(seg(t, 26.3 + i * 0.06, 26.7 + i * 0.06)); style(ch, { o: p, y: lerp(50, 0, p), blur: 10 * (1 - p) }); });
+    const tg = outCubic(seg(t, 27.4, 28.0));
+    style($("tagline"), { o: tg, y: lerp(20, 0, tg) });
+
+    // Flashes on the hard cuts and the logo.
+    const flash = Math.max(...[2.2, 9.05, 16.2, 19.14, 21.59, 23.06, 24.04].map((c) => 0.35 * (1 - seg(t, c, c + 0.18)) * (t >= c ? 1 : 0)), 0.9 * (1 - seg(t, 26.0, 26.45)) * (t >= 26.0 ? 1 : 0));
+    $("flash").style.opacity = String(flash);
+  }
+
+  window.TRAILER = { duration: DURATION, fps: FPS, cues: CUES };
+  window.renderAt = renderAt;
+  window.trailerReady = document.fonts.ready.then(() => renderAt(0));
+
+  // Opened directly in a browser (not by render.mjs): play it in real time.
+  if (!new URLSearchParams(location.search).has("render")) {
+    window.trailerReady.then(() => {
+      const start = performance.now();
+      const tick = () => { const t = ((performance.now() - start) / 1000) % DURATION; renderAt(t); requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+    });
+  }
+})();
+</script>
+</body>
+</html>

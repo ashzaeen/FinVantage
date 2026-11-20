@@ -1,0 +1,150 @@
+{
+  "note": "Vox-style rewrite of the v4 explainer (script_v4.md, 1:00 to 2:55): a hook, one person (Maya) through the product, then v4's business beats with v4's numbers. Product facts follow the live app: the real Copilot card on a $1,999 MacBook Pro on Amazon keeps the demo House down payment at risk (55–83% to 34–71%), and the Advisor answers a groceries question from the demo data. 'text' is said and captioned; 'say' (optional) is spelled for the AI voice. 'slot' is the shortest the beat may be; a longer take stretches it. Round 4: a dashboard tour beat (16), simpler competition, pricing and revenue lines.",
+  "engine": "gemini",
+  "gemini": {
+    "model": "gemini-2.5-pro-preview-tts",
+    "voice": "Charon",
+    "direction": "Narrate this like a warm, curious Vox explainer host: conversational and clear, a brisk, energetic pace with natural pauses, a slight smile, never salesy. Read exactly these words:"
+  },
+  "tempo": 1.12,
+  "chapters": [
+    {
+      "id": "A",
+      "beats": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "16"
+      ]
+    },
+    {
+      "id": "B",
+      "beats": [
+        "07",
+        "08"
+      ]
+    },
+    {
+      "id": "C",
+      "beats": [
+        "09",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14"
+      ]
+    },
+    {
+      "id": "D",
+      "beats": [
+        "15"
+      ]
+    }
+  ],
+  "voice": "en-US-AndrewMultilingualNeural",
+  "rate": "+8%",
+  "beats": [
+    {
+      "id": "01",
+      "scene": "hook",
+      "slot": 6,
+      "text": "Most money apps show you what already happened: last month's statement. But the decision happened at checkout."
+    },
+    {
+      "id": "02",
+      "scene": "maya",
+      "slot": 6,
+      "text": "Meet Maya. She's saving for a house, a trip to Japan and a rainy day. Then she spots a nineteen ninety-nine MacBook on Amazon."
+    },
+    {
+      "id": "03",
+      "scene": "copilot1",
+      "slot": 6,
+      "text": "Here's where our Copilot steps in. The Chrome extension sends just four things: price, store, item type and page type."
+    },
+    {
+      "id": "04",
+      "scene": "copilot2",
+      "slot": 7,
+      "text": "In about a second, a card appears: this MacBook cuts her odds on the house down payment, and suggests paying off a card first."
+    },
+    {
+      "id": "05",
+      "scene": "pool",
+      "slot": 6,
+      "text": "Why the house? Every goal draws from one pool of money, so one purchase moves them all, across five thousand simulated futures."
+    },
+    {
+      "id": "06",
+      "scene": "advisor",
+      "slot": 6,
+      "text": "Her accounts live in one dashboard, and an AI Advisor answers from her own data. Code does the math; the AI only writes the words."
+    },
+    {
+      "id": "16",
+      "scene": "tour",
+      "slot": 7.5,
+      "text": "And it's all in one place: accounts, transactions, spending, goals, life events, investments and credit."
+    },
+    {
+      "id": "07",
+      "scene": "competition",
+      "slot": 10,
+      "text": "So who else does this? Monarch and Rocket Money track what you already spent. Projection Lab and Boldin plan ahead, if you go to them. None checks a purchase at checkout."
+    },
+    {
+      "id": "08",
+      "scene": "ours",
+      "slot": 5,
+      "text": "We do. FinVantage shows what one purchase does to every goal at once, and code checks every number, so the AI can't make one up."
+    },
+    {
+      "id": "09",
+      "scene": "gtm",
+      "slot": 6,
+      "text": "We start with UTA students, then young professionals through the Chrome Web Store and creators, and later, banks and credit unions.",
+      "say": "We start with U.T.A. students, then young professionals through the Chrome Web Store and creators, and later, banks and credit unions."
+    },
+    {
+      "id": "10",
+      "scene": "model",
+      "slot": 6,
+      "text": "It's free with one linked account. Link multiple accounts and get the Copilot and the Advisor for ninety-nine dollars a year, after a free trial."
+    },
+    {
+      "id": "11",
+      "scene": "funnel",
+      "slot": 10,
+      "text": "Here's the math. If a hundred fifty to four hundred fifty thousand people try it, and about one in ten keep paying, that's sixteen to forty-eight thousand members: one point six to four point eight million dollars a year."
+    },
+    {
+      "id": "12",
+      "scene": "margin",
+      "slot": 5,
+      "text": "After costs, each member brings in about seventy-two dollars a year."
+    },
+    {
+      "id": "13",
+      "scene": "ask",
+      "slot": 6,
+      "text": "Our ask: up to fifteen thousand dollars. Four thousand for security, three for legal, eight for the pilot."
+    },
+    {
+      "id": "14",
+      "scene": "milestone",
+      "slot": 6,
+      "text": "By December third: ten UTA testers. Our target: six use it weekly, three say they'd pay.",
+      "say": "By December third: ten U.T.A. testers. Our target: six use it weekly, three say they'd pay."
+    },
+    {
+      "id": "15",
+      "scene": "close",
+      "slot": 6,
+      "text": "Security review first, then real banks. So Maya knows what a purchase does to her goals, before she buys."
+    }
+  ]
+}

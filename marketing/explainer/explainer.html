@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>FinVantage Explainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800;900&family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #f3ead8; --card: #fffaf0; --ink: #1f1d1a; --ink2: #4b463e; --muted: #8a8173;
+    --teal: #2a9d8f; --slate: #5c677d; --coral: #e76f51; --mustard: #e9b44c; --amber: #f4a261;
+    --red: #d1453b; --green: #2f9e5b; --purple: #544af7; --line: #d8cbb2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #000; }
+  body { font-family: Inter, system-ui, sans-serif; color: var(--ink); }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--paper); }
+  #paper { position: absolute; inset: 0; }
+  .scene { position: absolute; inset: 0; opacity: 0; transform-origin: 50% 50%; }
+  .abs { position: absolute; }
+  .h1 { font-family: Archivo, sans-serif; font-weight: 900; font-size: 84px; letter-spacing: -2px; line-height: 1.02; }
+  .h2 { font-family: Archivo, sans-serif; font-weight: 800; font-size: 52px; letter-spacing: -1px; line-height: 1.08; }
+  .h3 { font-family: Archivo, sans-serif; font-weight: 800; font-size: 34px; line-height: 1.15; }
+  .body { font-size: 27px; line-height: 1.4; color: var(--ink2); }
+  .small { font-size: 21px; color: var(--muted); line-height: 1.35; }
+  .hand { font-family: Caveat, cursive; font-weight: 700; color: var(--red); }
+  .card { background: var(--card); border-radius: 12px; box-shadow: 0 2px 0 rgba(0,0,0,.05), 0 14px 34px rgba(70,50,20,.16); }
+  .tag { position: absolute; left: 80px; bottom: 50px; font-size: 18px; color: var(--muted); background: rgba(255,250,240,.9); padding: 6px 14px; border-radius: 6px; border: 1px dashed #cdbfa6; max-width: 1500px; }
+  .chapter { position: absolute; left: 80px; top: 48px; font-family: Archivo; font-weight: 800; font-size: 22px; letter-spacing: 5px; text-transform: uppercase; color: var(--ink2); display: flex; align-items: center; gap: 14px; }
+  .chapter i { width: 34px; height: 6px; background: var(--amber); display: block; border-radius: 3px; }
+  .hl { background-image: linear-gradient(transparent 55%, rgba(244,162,97,.7) 55%, rgba(244,162,97,.7) 92%, transparent 92%); background-repeat: no-repeat; background-size: calc(var(--hl, 0) * 100%) 100%; }
+  .stamp { position: absolute; font-family: Archivo; font-weight: 900; font-size: 28px; text-transform: uppercase; letter-spacing: 1px; color: var(--red); border: 5px solid var(--red); border-radius: 10px; padding: 8px 16px; background: rgba(255,250,240,.75); white-space: nowrap; }
+  .chip { display: inline-block; padding: 13px 24px; border-radius: 40px; font-family: Archivo; font-weight: 800; font-size: 28px; color: #fff; box-shadow: 0 8px 20px rgba(70,50,20,.18); }
+  .shot { position: absolute; overflow: hidden; border-radius: 14px; box-shadow: 0 18px 44px rgba(70,50,20,.25); background: #fff; }
+  .shot .bar { height: 40px; background: #e9e2d2; display: flex; align-items: center; gap: 10px; padding: 0 16px; }
+  .shot .bar b { width: 13px; height: 13px; border-radius: 50%; display: block; }
+  .shot .bar span { margin-left: 14px; flex: 1; height: 24px; border-radius: 12px; background: #fff; font-size: 15px; color: #8a8173; display: flex; align-items: center; padding: 0 12px; }
+  .shot .view { position: absolute; left: 0; right: 0; top: 40px; bottom: 0; overflow: hidden; }
+  .shot img { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .ann { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+  .cp { position: absolute; width: 560px; background: #fff; border-radius: 18px; padding: 24px 26px; box-shadow: 0 0 0 3px #544af7, 0 26px 60px rgba(84,74,247,.35); color: #16192c; }
+  .cp .top { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 20px; }
+  .cp .mark { width: 38px; height: 38px; border-radius: 11px; background: #544af7; display: flex; align-items: center; justify-content: center; }
+  .cp .pill { margin-left: auto; padding: 5px 13px; border-radius: 14px; background: #fde8e6; color: #b42318; font-size: 16px; font-weight: 700; }
+  .cp .lead { margin-top: 16px; font-size: 18px; color: #4a4f68; font-weight: 600; }
+  .cp .lead b { display: block; font-size: 30px; color: #b42318; font-weight: 800; margin-top: 2px; }
+  .cp .impact { margin-top: 12px; font-size: 20px; line-height: 1.4; }
+  .cp .fig { margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: #f3f2ff; font-size: 18px; color: #4a4f68; }
+  .cp .fig b { display: block; font-size: 30px; color: #16192c; margin-top: 2px; }
+  .cp .move { margin-top: 12px; font-size: 18px; line-height: 1.4; color: #4a4f68; }
+  .cp .move strong { color: #544af7; }
+  .row { display: flex; justify-content: space-between; padding: 14px 0; border-top: 1px dashed var(--line); font-size: 25px; }
+  .row:first-of-type { border-top: 0; }
+  .step { position: absolute; width: 470px; }
+  .step .dot { width: 54px; height: 54px; border-radius: 50%; color: #fff; font-family: Archivo; font-weight: 900; font-size: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 14px rgba(70,50,20,.2); }
+  .step b { display: block; font-family: Archivo; font-size: 30px; margin-top: 16px; }
+  .step span { display: block; font-size: 21px; color: var(--ink2); margin-top: 6px; line-height: 1.35; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="paper" width="1920" height="1080"></canvas>
+
+  <!-- 01 Hook -->
+  <div id="wipe" style="position:absolute;top:0;left:0;width:2100px;height:1080px;background:#efe4cf;box-shadow:-30px 0 60px rgba(70,50,20,.25), 30px 0 60px rgba(70,50,20,.25);transform:translateX(2200px);z-index:20"><canvas id="wipePaper" width="2100" height="1080" style="position:absolute;inset:0;opacity:.6"></canvas></div>
+  <div class="scene" id="hook">
+    <div class="card abs" id="stmt" style="left:170px;top:170px;width:700px;padding:34px 40px;transform:rotate(-2deg)">
+      <div class="small" style="letter-spacing:3px;font-weight:700">DEMO BANK · STATEMENT</div>
+      <div class="h3" style="margin:6px 0 18px">October</div>
+      <div class="row"><span>Apple MacBook Pro 14"</span><span style="color:var(--red);font-weight:700">−$1,999.00</span></div>
+      <div class="row"><span>Green Grocer</span><span>−$147.78</span></div>
+      <div class="row"><span>City Power &amp; Light</span><span>−$85.02</span></div>
+      <div class="row"><span>The Noodle Bar</span><span>−$41.20</span></div>
+      <div class="row"><span>Fuel Stop</span><span>−$38.75</span></div>
+    </div>
+    <div class="abs hand" id="tooLate" style="left:600px;top:640px;font-size:64px;transform:rotate(-6deg)">A Month Too Late</div>
+    <div class="abs" style="left:1040px;top:200px;width:760px">
+      <div class="h2" id="hookA">Money Apps Show You <span class="hl" id="hookHl">What Already Happened.</span></div>
+    </div>
+    <div class="card abs" id="checkout" style="left:1100px;top:480px;width:600px;padding:30px 34px">
+      <div class="small" style="letter-spacing:3px;font-weight:700">CHECKOUT</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><span class="h3">MacBook Pro 14"</span><span class="h3">$1,999</span></div>
+      <div id="placeBtn" style="margin-top:22px;height:74px;border-radius:37px;background:#16192c;color:#fff;font-family:Archivo;font-weight:800;font-size:28px;display:flex;align-items:center;justify-content:center">Place Order</div>
+    </div>
+    <div class="abs hand" id="decision" style="left:1150px;top:790px;font-size:58px;color:var(--teal)">The Decision Happens Here</div>
+    <svg class="ann" id="hookAnn" width="1920" height="1080"></svg>
+  </div>
+
+  <!-- 02 Maya -->
+  <div class="scene" id="maya">
+    <div class="abs" id="polaroid" style="left:150px;top:170px;width:470px;padding:22px 22px 80px;background:#fffdf8;box-shadow:0 3px 0 rgba(0,0,0,.05),0 22px 44px rgba(70,50,20,.25);transform:rotate(-3deg)">
+      <svg id="mayaPortrait" width="426" height="460" viewBox="0 0 426 460" style="display:block;border-radius:2px"></svg>
+      <div class="hand" style="position:absolute;left:0;right:0;bottom:16px;text-align:center;font-size:54px;color:var(--ink)">Maya, 24</div>
+    </div>
+    <div class="abs small" id="mayaSaving" style="left:760px;top:130px;letter-spacing:3px;font-weight:700">SAVING FOR</div>
+    <div class="abs" id="mayaGoals" style="left:760px;top:180px;width:520px"></div>
+    <div class="card abs" id="laptopTag" style="left:1360px;top:380px;width:440px;padding:22px 26px;transform:rotate(3deg)">
+      <img src="out/captures/macbook.jpg" style="width:388px;display:block" />
+      <div class="h2" style="margin-top:10px">$1,999</div>
+      <div class="small">Apple MacBook Pro 14", on Amazon</div>
+    </div>
+  </div>
+
+  <!-- 03 Copilot, 1 of 2: the real Amazon page -->
+  <div class="scene" id="copilot1">
+    <div class="chapter"><i></i>The Copilot</div>
+    <div class="shot" id="store" style="left:110px;top:140px;width:1040px;height:690px">
+      <div class="bar"><b style="background:#ff5f57"></b><b style="background:#febc2e"></b><b style="background:#28c840"></b><span>amazon.com/dp/B0HPGSTXXX</span>
+        <svg id="extIcon" width="30" height="30" viewBox="0 0 24 24" style="margin-left:6px"><rect x="1" y="1" width="22" height="22" rx="6" fill="#544af7"/><path d="M12 4C9.4 7 7.5 9.6 7.5 12.6a4.5 4.5 0 0 0 9 0C16.5 9.6 14.6 7 12 4z" fill="#fff"/><circle cx="12" cy="13.3" r="1.9" fill="#544af7"/></svg>
+      </div>
+      <div class="view"><img id="amzPage" src="out/captures/amazon-page.png" /></div>
+    </div>
+    <div class="abs h3" id="c1head" style="left:1230px;top:150px;width:600px">What Leaves the Page:</div>
+    <div class="abs" id="chips" style="left:1230px;top:230px;width:600px">
+      <div class="chip" style="background:var(--teal)">Price · $1,999</div><div style="height:22px"></div>
+      <div class="chip" style="background:var(--mustard)">Store · Amazon</div><div style="height:22px"></div>
+      <div class="chip" style="background:var(--coral)">Item Type · Purchase</div><div style="height:22px"></div>
+      <div class="chip" style="background:var(--slate)">Page Type · Checkout</div>
+    </div>
+    <div class="card abs" id="only4" style="left:1230px;top:690px;width:580px;padding:20px 26px">
+      <div class="h3" style="font-size:30px">That's All. Her Balances Stay Private.</div>
+    </div>
+    <div class="tag">Real Amazon page, Nov 2026</div>
+  </div>
+
+  <!-- 04 Copilot, 2 of 2: the real card on that page -->
+  <div class="scene" id="copilot2">
+    <div class="chapter"><i></i>The Copilot</div>
+    <div class="shot" id="cardShot" style="left:110px;top:140px;width:1060px;height:770px">
+      <div class="bar"><b style="background:#ff5f57"></b><b style="background:#febc2e"></b><b style="background:#28c840"></b><span>amazon.com/dp/B0HPGSTXXX</span></div>
+      <div class="view"><img id="amzCard" src="out/captures/amazon-card.png" /></div>
+    </div>
+    <svg class="ann" id="cpAnn" width="1920" height="1080"></svg>
+    <div class="card abs" id="oddsCard" style="left:1250px;top:330px;width:560px;padding:20px 24px"><div class="small" style="letter-spacing:2px;font-weight:700">HOUSE DOWN PAYMENT</div><div class="h2" style="margin-top:4px"><span style="color:var(--teal)">55–83%</span> → <span style="color:var(--red)">34–71%</span></div></div>
+    <div class="stamp" id="stampAdvice" style="left:1250px;top:500px">Projections, Not Advice</div>
+    <div class="card abs" id="worksToday" style="left:1250px;top:610px;width:560px;padding:16px 22px;font-size:22px">Live on Amazon Today · Sandbox Data</div>
+    <div class="tag">Real Copilot card, demo profile</div>
+  </div>
+
+  <!-- 05 Shared pool: where Maya's money goes -->
+  <div class="scene" id="pool">
+    <div class="chapter"><i></i>Why It Knows</div>
+    <svg class="abs" id="poolSvg" width="1920" height="1080" style="left:0;top:0"></svg>
+    <div class="card abs" id="payslip" style="left:110px;top:130px;width:380px;padding:20px 24px;transform:rotate(-2deg)">
+      <div class="small" style="letter-spacing:3px;font-weight:700">NOVEMBER PAYCHECK</div>
+      <div class="h2" style="color:var(--green)">+$3,577</div>
+      <div class="small"><b style="color:var(--ink)">$1,532 Left to Save</b></div>
+    </div>
+    <div class="card abs" id="futuresCard" style="left:110px;top:310px;width:380px;padding:16px 22px"><span class="h3" id="futures" style="color:var(--purple);font-variant-numeric:tabular-nums;display:inline-block;min-width:96px">0</span> <span class="body" style="font-size:22px">Simulated Futures</span></div>
+    <div class="tag">Demo profile, live app figures</div>
+  </div>
+
+  <!-- 06 Dashboard + Advisor -->
+  <div class="scene" id="advisor">
+    <div class="chapter"><i></i>One Place, One Advisor</div>
+    <div class="shot" id="spendShot" style="left:80px;top:120px;width:640px;height:440px">
+      <div class="bar"><b style="background:#ff5f57"></b><b style="background:#febc2e"></b><b style="background:#28c840"></b><span>FinVantage · Spending</span></div>
+      <div class="view"><img id="spendImg" src="out/captures/tour-spending.png" /></div>
+    </div>
+    <div class="shot" id="investShot" style="left:740px;top:120px;width:640px;height:440px">
+      <div class="bar"><b style="background:#ff5f57"></b><b style="background:#febc2e"></b><b style="background:#28c840"></b><span>FinVantage · Investments</span></div>
+      <div class="view"><img id="investImg" src="out/captures/tour-portfolio.png" /></div>
+    </div>
+    <div class="shot" id="advShot" style="left:260px;top:590px;width:940px;height:400px">
+      <div class="bar"><b style="background:#ff5f57"></b><b style="background:#febc2e"></b><b style="background:#28c840"></b><span>FinVantage · Advisor</span></div>
+      <div class="view"><img id="advImg" src="out/captures/advisor.png" /></div>
+    </div>
+    <div class="card abs" id="advSplit" style="left:1420px;top:200px;width:420px;padding:24px 28px">
+      <div class="h3">Code: <span style="color:var(--teal)">Every Number</span></div>
+      <div class="h3" style="margin-top:8px">AI: <span style="color:var(--purple)">Only the Words</span></div>
+    </div>
+    <div class="card abs" id="advStat" style="left:1420px;top:480px;width:420px;padding:24px 28px">
+      <div class="h1" style="font-size:66px;color:var(--teal)">55%</div>
+      <div class="body" style="font-size:22px">of adults use AI for money questions.</div>
+      <div class="h1" style="font-size:66px;color:var(--red);margin-top:10px">18%</div>
+      <div class="body" style="font-size:22px">trust it to decide alone.</div>
+    </div>
+    <div class="tag">TD survey · live app, demo profile</div>
+  </div>
+
+  <!-- 16 Dashboard tour -->
+  <div class="scene" id="tour">
+    <div class="chapter"><i></i>Everything in One Place</div>
+    <div class="shot" id="tourShot" style="left:260px;top:110px;width:1400px;height:915px">
+      <div class="bar"><b style="background:#ff5f57"></b><b style="background:#febc2e"></b><b style="background:#28c840"></b><span id="tourUrl">finvantage-web-ten.vercel.app/app</span></div>
+      <div class="view" id="tourView"></div>
+    </div>
+    <div class="chip abs" id="tourLabel" style="left:1480px;top:60px;background:var(--purple)">Overview</div>
+  </div>
+
+  <!-- 07 Competition, with graphs -->
+  <div class="scene" id="competition">
+    <div class="chapter"><i></i>Competition</div>
+    <div class="abs h3" style="left:110px;top:120px">People Already Pay for Money Apps</div>
+    <svg class="abs" id="revChart" width="820" height="420" style="left:110px;top:190px"></svg>
+    <div class="abs h3" style="left:1010px;top:120px">But They All Look the Same Way</div>
+    <svg class="abs" id="matrix" width="820" height="700" style="left:1010px;top:180px"></svg>
+    <div class="abs h2" id="noneCap" style="left:110px;top:760px;width:820px"><span class="hl" id="noneHl">None Checks a Purchase at Checkout.</span></div>
+    <div class="tag">Revenue: Sacra estimates · positions: public product pages, Nov 2026</div>
+  </div>
+
+  <!-- 08 Ours -->
+  <div class="scene" id="ours">
+    <div class="chapter"><i></i>Competition</div>
+    <svg class="abs" id="matrix2" width="820" height="700" style="left:110px;top:180px"></svg>
+    <div class="abs" style="left:1040px;top:200px;width:780px">
+      <div class="h2">FinVantage Checks a Purchase Against <span class="hl" id="oursHl">All Your Goals</span>, at Checkout.</div>
+      <div class="card" id="ob1" style="margin-top:40px;padding:22px 26px;border-left:12px solid var(--teal)"><div class="h3">One Purchase, Every Goal</div><div class="small">See what a purchase does to all your goals at once</div></div>
+      <div class="card" id="ob2" style="margin-top:20px;padding:22px 26px;border-left:12px solid var(--slate)"><div class="h3">Numbers You Can Trust</div><div class="small">Code does the math; the AI can't invent a figure</div></div>
+    </div>
+    <div class="stamp" id="testsBadge" style="left:1400px;top:800px;color:var(--green);border-color:var(--green)">315 Tests Passing (Nov 8)</div>
+  </div>
+
+  <!-- 09 Go to market -->
+  <div class="scene" id="gtm">
+    <div class="chapter"><i></i>Go to Market</div>
+    <svg class="abs" id="road" width="1920" height="1080" style="left:0;top:0"></svg>
+    <div class="step" id="gs1" style="left:150px;top:400px"><div class="dot" style="background:var(--teal)">1</div><b>UTA Students</b><span>42,787 Students · Campus Pilot</span></div>
+    <div class="step" id="gs2" style="left:720px;top:400px"><div class="dot" style="background:var(--mustard)">2</div><b>Young Professionals, 25–34</b><span>Chrome Web Store + creators · 34% already budget with apps</span></div>
+    <div class="step" id="gs3" style="left:1290px;top:400px"><div class="dot" style="background:var(--coral)">3</div><b>Later: Banks and Credit Unions</b><span>Partnerships</span></div>
+    <div class="card abs" id="reach" style="left:150px;top:760px;width:1610px;padding:18px 26px;font-size:22px;color:var(--ink2)">Reachable: About <b>16M Users, $1.6B a Year</b> (Our Estimate)</div>
+    <div class="tag">UTA enrolment, fall 2026 · YouGov, Feb 2026</div>
+  </div>
+
+  <!-- 10 Pricing: two tiers -->
+  <div class="scene" id="model">
+    <div class="chapter"><i></i>Pricing</div>
+    <div class="card abs" id="tierFree" style="left:110px;top:200px;width:520px;padding:34px 36px">
+      <div class="small" style="letter-spacing:3px;font-weight:700">FREE</div>
+      <div class="h1" style="font-size:92px;margin-top:6px">$0</div>
+      <div class="h3" style="margin-top:22px">✓ 1 Linked Account</div>
+      <div class="h3" style="margin-top:12px;color:var(--ink2)">✓ Dashboard, Budgets and Goals</div>
+    </div>
+    <div class="card abs" id="tierPaid" style="left:680px;top:160px;width:600px;padding:38px 40px;box-shadow:0 0 0 6px var(--purple),0 26px 60px rgba(84,74,247,.3)">
+      <div class="small" style="letter-spacing:3px;font-weight:700;color:var(--purple)">PAID · FREE TRIAL FIRST</div>
+      <div class="h1" id="tierPrice" style="font-size:92px;margin-top:6px;color:var(--purple)">$99<span style="font-size:40px">/yr</span></div>
+      <div class="small" style="margin-top:2px">Or $9.99 a Month</div>
+      <div class="h3" style="margin-top:22px">✓ <b>Multiple</b> Linked Accounts</div>
+      <div class="h3" style="margin-top:12px">✓ Copilot at Checkout</div>
+      <div class="h3" style="margin-top:12px">✓ AI Advisor</div>
+    </div>
+    <div class="abs h3" id="mktHead" style="left:1360px;top:200px;font-size:28px">Priced with the Market</div>
+    <svg class="abs" id="priceChart" width="780" height="620" style="left:1360px;top:250px;transform:scale(.6);transform-origin:0 0"></svg>
+  </div>
+
+  <!-- 11 Revenue math -->
+  <div class="scene" id="funnel">
+    <div class="chapter"><i></i>The Math</div>
+    <svg class="abs" id="funnelSvg" width="1920" height="1080" style="left:0;top:0"></svg>
+    <div class="abs" id="fnStep1" style="left:120px;top:560px;width:500px;text-align:center"><div class="h2">150k–450k</div><div class="body">People Try It</div></div>
+    <div class="abs" id="fnStep2" style="left:710px;top:560px;width:500px;text-align:center"><div class="h2" style="color:var(--purple)">About 1 in 10</div><div class="body">Keep Paying</div></div>
+    <div class="abs" id="fnStep3" style="left:1300px;top:560px;width:500px;text-align:center"><div class="h2">16k–48k</div><div class="body">Members</div></div>
+    <div class="abs" id="fnRev" style="left:0;right:0;top:760px;text-align:center"><div class="h1" style="color:var(--purple)">= $1.6M–$4.8M a Year</div><div class="small" style="margin-top:6px">Our 3-Year Estimate</div></div>
+    <div class="tag">1 in 10: the industry median (10.7%) for apps with a free trial, RevenueCat 2026</div>
+  </div>
+
+  <!-- 12 Per member, per year -->
+  <div class="scene" id="margin">
+    <div class="chapter"><i></i>The Math</div>
+    <div class="abs h3" style="left:260px;top:250px">Each Member, per Year</div>
+    <div class="abs" id="mBarAll" style="left:260px;top:320px;width:0;height:150px;border-radius:14px;background:var(--green);overflow:hidden">
+      <div id="mBarCost" style="position:absolute;left:0;top:0;bottom:0;width:0;background:var(--red)"></div>
+    </div>
+    <div class="abs h3" id="mCostL" style="left:290px;top:370px;color:#fff">$27 Costs</div>
+    <div class="abs h1" id="mKeepL" style="left:880px;top:345px;color:#fff;font-size:76px">$72 Kept</div>
+    <div class="abs h2" id="m99" style="left:260px;top:500px">$99 a Year</div>
+    <div class="tag">Costs: our estimate</div>
+  </div>
+
+  <!-- 13 The ask, donut -->
+  <div class="scene" id="ask">
+    <div class="chapter"><i></i>The Ask</div>
+    <svg class="abs" id="donut" width="700" height="700" style="left:1120px;top:180px"></svg>
+    <div class="abs" style="left:110px;top:200px;width:960px">
+      <div class="h3" style="color:var(--ink2)">Phase I</div>
+      <div class="h1" id="askTotal" style="font-size:112px">Up to $15,000</div>
+      <div class="h3" id="ask1" style="margin-top:50px"><span style="color:var(--teal)">$4,000</span> Security and Compliance Review</div>
+      <div class="h3" id="ask2" style="margin-top:22px"><span style="color:#c9941f">$3,000</span> Legal and Company Setup</div>
+      <div class="h3" id="ask3" style="margin-top:22px"><span style="color:var(--coral)">$8,000</span> Pilot Marketing and Chrome Web Store Listing</div>
+    </div>
+  </div>
+
+  <!-- 14 Milestone timeline -->
+  <div class="scene" id="milestone">
+    <div class="chapter"><i></i>What's Next</div>
+    <svg class="abs" id="timeline" width="1920" height="1080" style="left:0;top:0"></svg>
+    <div class="abs small" id="msFoot" style="left:150px;top:850px;width:1600px">Targets, not results · sandbox data · real bank access after the security review</div>
+  </div>
+
+  <!-- 15 Close -->
+  <div class="scene" id="close">
+    <div class="abs h2" id="closeLead" style="left:0;right:0;top:470px;text-align:center">Security Review First, <span style="color:var(--teal)">Then Real Banks.</span></div>
+    <div class="card abs" id="qrCard" style="left:1380px;top:250px;width:420px;padding:26px;text-align:center">
+      <img src="out/captures/qr.png" style="width:368px;display:block" />
+      <div class="h3" style="margin-top:14px;font-size:28px">Try It Now</div>
+      <div class="small">finvantage-web-ten.vercel.app</div>
+    </div>
+    <div class="abs" id="endCard" style="left:120px;top:330px;width:1200px">
+      <div style="display:inline-flex;align-items:center;gap:22px">
+        <div style="width:110px;height:110px;border-radius:30px;background:#544af7;display:flex;align-items:center;justify-content:center"><svg width="64" height="64" viewBox="0 0 24 24"><path d="M12 2C8.5 6 6 9.5 6 13.5a6 6 0 0 0 12 0c0-4-2.5-7.5-6-11.5z" fill="#fff"/><circle cx="12" cy="14" r="2.5" fill="#544af7"/></svg></div>
+        <div class="h1" style="font-size:110px">FinVantage</div>
+      </div>
+      <div class="h2" style="margin-top:34px">Know What a Purchase Does to Your Goals, <span class="hl" id="closeHl">Before You Buy.</span></div>
+      <div class="body" id="founders" style="margin-top:40px">Ashzaeen · Aram · Yao</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------- timeline (render.mjs injects the real one) ----------
+  const ORDER = ["hook","maya","copilot1","copilot2","pool","advisor","tour","competition","ours","gtm","model","funnel","margin","ask","milestone","close"];
+  let T = (() => { let t = 0; const beats = ORDER.map((scene, i) => { const len = scene === "competition" ? 12 : 8; const b = { id: String(i + 1).padStart(2, "0"), scene, text: "", start: t, length: len, voiceStart: t + 0.25, voiceLength: len - 0.7 }; t += len; return b; }); return { total: t, fps: 30, beats }; })();
+  window.setTimeline = (tl) => { T = tl; };
+
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const lerp = (a, b, p) => a + (b - a) * p;
+  const seg = (t, a, b) => clamp((t - a) / (b - a));
+  const out3 = (p) => 1 - Math.pow(1 - p, 3);
+  const inOut = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+  const soft = (p) => { const c = 0.6; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); }; // a gentle overshoot
+  // Keep any rotation set in the markup while animating.
+  document.querySelectorAll("[style*='rotate(']").forEach((e) => { const m = e.getAttribute("style").match(/rotate\((-?[\d.]+)deg\)/); if (m) e.dataset.rot = m[1]; });
+  function style(el, { o = 1, x = 0, y = 0, s = 1 } = {}) {
+    el.style.opacity = String(clamp(o));
+    el.style.transform = `translate(${x}px, ${y}px) rotate(${el.dataset.rot ?? 0}deg) scale(${s})`;
+  }
+  // When collecting (cues.mjs), note the first moment each element appears, for sound effects.
+  let clock = 0;
+  const seen = new WeakSet();
+  window.__events = [];
+  const note = (key, kind, on) => { if (window.__collect && on && !seen.has(key)) { seen.add(key); window.__events.push({ t: +clock.toFixed(3), kind }); } };
+  const pop = (el, u, a, { dy = 30, dur = 0.5 } = {}) => { const p = seg(u, a, a + dur); note(el, "pop", p > 0); style(el, { o: seg(u, a, a + 0.2), y: lerp(dy, 0, soft(p)) }); };
+  const slam = (el, u, a) => { const p = seg(u, a, a + 0.22); note(el, "slam", p > 0); style(el, { o: p > 0 ? 1 : 0, s: p > 0 ? lerp(1.35, 1, out3(p)) : 1 }); };
+  const hl = (el, u, a, dur = 0.6) => el.style.setProperty("--hl", String(out3(seg(u, a, a + dur))));
+  const show = (node, p) => node.setAttribute("opacity", String(clamp(p)));
+
+  // ---------- paper background (seeded, drawn once) ----------
+  function mulberry(seed) { return () => { seed = (seed + 0x6d2b79f5) | 0; let r = Math.imul(seed ^ (seed >>> 15), 1 | seed); r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r; return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
+  const rand = mulberry(77);
+  {
+    const ctx = $("paper").getContext("2d");
+    ctx.fillStyle = "#f3ead8"; ctx.fillRect(0, 0, 1920, 1080);
+    const img = ctx.getImageData(0, 0, 1920, 1080);
+    for (let i = 0; i < img.data.length; i += 4) { const n = (rand() - 0.5) * 14; img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n * 0.8; }
+    ctx.putImageData(img, 0, 0);
+    ctx.strokeStyle = "rgba(120,95,60,0.06)";
+    for (let k = 0; k < 900; k++) { const x = rand() * 1920, y = rand() * 1080, a = rand() * Math.PI, l = 6 + rand() * 18; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); ctx.stroke(); }
+    const v = ctx.createRadialGradient(960, 540, 400, 960, 540, 1150); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(90,60,20,0.18)"); ctx.fillStyle = v; ctx.fillRect(0, 0, 1920, 1080);
+  }
+
+  // ---------- SVG helpers: hand-drawn strokes that draw themselves on ----------
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+  const txt = (parent, x, y, s, { size = 24, weight = 700, fill = "#1f1d1a", anchor = "start", family = "Inter" } = {}) => { const t = el("text", { x, y, "font-size": size, "font-weight": weight, fill, "text-anchor": anchor, "font-family": family }, parent); t.textContent = s; return t; };
+  function drawable(path) { const len = path.getTotalLength(); path.style.strokeDasharray = `${len} ${len}`; path.dataset.len = len; path.style.strokeDashoffset = String(len); path.style.visibility = "hidden"; return path; }
+  const draw = (path, p) => { if (Number(path.dataset.len) > 300 && !path.dataset.quiet) note(path, "ink", p > 0 && p < 1); path.style.strokeDashoffset = String(Number(path.dataset.len) * (1 - clamp(p))); path.style.visibility = p > 0 ? "visible" : "hidden"; };
+  function handCircle(svg, cx, cy, rx, ry, color = "#d1453b", seed = 1) {
+    const r = mulberry(seed); let d = "";
+    for (let k = 0; k <= 64; k++) { const a = (k / 56) * Math.PI * 2 - 0.4; const w = 1 + (r() - 0.5) * 0.06; d += `${k ? "L" : "M"}${(cx + Math.cos(a) * rx * w).toFixed(1)} ${(cy + Math.sin(a) * ry * w).toFixed(1)}`; }
+    return drawable(el("path", { d, stroke: color, "stroke-width": 6, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" }, svg));
+  }
+  function handArrow(svg, x1, y1, x2, y2, color = "#d1453b", bend = 60) {
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - bend;
+    const line = drawable(el("path", { d: `M${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`, stroke: color, "stroke-width": 6, fill: "none", "stroke-linecap": "round" }, svg));
+    const a = Math.atan2(y2 - my, x2 - mx);
+    const head = drawable(el("path", { d: `M${x2 - 26 * Math.cos(a - 0.5)} ${y2 - 26 * Math.sin(a - 0.5)} L${x2} ${y2} L${x2 - 26 * Math.cos(a + 0.5)} ${y2 - 26 * Math.sin(a + 0.5)}`, stroke: color, "stroke-width": 6, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" }, svg));
+    return { line, head };
+  }
+  const drawArrow = (arr, p) => { draw(arr.line, p / 0.8); draw(arr.head, (p - 0.8) / 0.2); };
+
+  // ---------- scene builds ----------
+  const hookCircle = handCircle($("hookAnn"), 395, 330, 210, 40, "#d1453b", 3);
+  const hookArrow = handArrow($("hookAnn"), 890, 420, 1085, 560, "#2a9d8f", 40);
+
+  // Maya's portrait for the Polaroid: a warm, softly shaded illustration.
+  {
+    const m = $("mayaPortrait");
+    const defs = el("defs", {}, m);
+    const grad = (id, stops, x2 = "0", y2 = "1") => { const g = el("linearGradient", { id, x1: "0", y1: "0", x2, y2 }, defs); stops.forEach(([o, c]) => el("stop", { offset: o, "stop-color": c }, g)); };
+    grad("bgG", [["0", "#bfd8d2"], ["1", "#e9dcc4"]]);
+    grad("skinG", [["0", "#d9a07a"], ["1", "#b97c58"]], "1", "1");
+    grad("hairG", [["0", "#4a3127"], ["1", "#2a1a14"]]);
+    grad("topG", [["0", "#2f9e8f"], ["1", "#237a6f"]]);
+    el("rect", { x: 0, y: 0, width: 426, height: 460, fill: "url(#bgG)" }, m);
+    el("circle", { cx: 340, cy: 90, r: 70, fill: "rgba(255,255,255,.35)" }, m);
+    el("path", { d: "M96 250 Q100 120 213 112 Q330 118 332 250 L340 380 Q213 400 88 380 Z", fill: "url(#hairG)" }, m); // hair behind
+    el("path", { d: "M40 460 Q48 360 140 338 L286 338 Q378 360 386 460 Z", fill: "url(#topG)" }, m); // sweater
+    el("path", { d: "M170 338 Q213 372 256 338 L246 322 Q213 344 180 322 Z", fill: "#1f6b61" }, m); // collar
+    el("rect", { x: 184, y: 268, width: 58, height: 76, rx: 26, fill: "#b77a57" }, m); // neck
+    el("ellipse", { cx: 213, cy: 210, rx: 86, ry: 102, fill: "url(#skinG)" }, m); // face
+    el("ellipse", { cx: 128, cy: 218, rx: 14, ry: 22, fill: "#c88a63" }, m); el("ellipse", { cx: 298, cy: 218, rx: 14, ry: 22, fill: "#c88a63" }, m); // ears
+    el("circle", { cx: 128, cy: 248, r: 6, fill: "#e9b44c" }, m); el("circle", { cx: 298, cy: 248, r: 6, fill: "#e9b44c" }, m); // earrings
+    el("path", { d: "M124 196 Q128 104 213 100 Q300 104 304 200 Q286 150 236 140 Q190 160 148 150 Q130 168 124 196 Z", fill: "url(#hairG)" }, m); // fringe
+    el("path", { d: "M160 196 Q178 186 196 194", stroke: "#3b2a22", "stroke-width": 6, fill: "none", "stroke-linecap": "round" }, m); // brows
+    el("path", { d: "M230 194 Q248 186 266 196", stroke: "#3b2a22", "stroke-width": 6, fill: "none", "stroke-linecap": "round" }, m);
+    for (const x of [178, 248]) { el("ellipse", { cx: x, cy: 218, rx: 11, ry: 9, fill: "#fffdf8" }, m); el("circle", { cx: x + 1, cy: 219, r: 7, fill: "#2b1d16" }, m); el("circle", { cx: x + 3, cy: 216, r: 2.4, fill: "#fff" }, m); }
+    el("path", { d: "M213 226 Q206 252 214 258", stroke: "#a86c4b", "stroke-width": 4, fill: "none", "stroke-linecap": "round" }, m); // nose
+    el("path", { d: "M184 274 Q213 298 242 274 Q213 286 184 274 Z", fill: "#8e3b36" }, m); // smile
+    el("path", { d: "M190 276 Q213 284 236 276", stroke: "#fff", "stroke-width": 3, fill: "none", opacity: 0.8 }, m);
+    el("ellipse", { cx: 164, cy: 252, rx: 18, ry: 10, fill: "#e07a6a", opacity: 0.35 }, m); el("ellipse", { cx: 262, cy: 252, rx: 18, ry: 10, fill: "#e07a6a", opacity: 0.35 }, m); // cheeks
+  }
+  const GOALS = [["House Down Payment", "#2a9d8f"], ["Japan Trip", "#e9b44c"], ["Emergency Fund", "#e76f51"], ["Next Car", "#5c677d"]];
+  const goalEls = GOALS.map(([name, c], i) => { const d = document.createElement("div"); d.className = "card"; Object.assign(d.style, { position: "absolute", left: "0px", top: `${i * 125}px`, width: "500px", padding: "22px 28px", borderLeft: `14px solid ${c}`, fontFamily: "Archivo", fontWeight: 800, fontSize: "34px" }); d.textContent = name; $("mayaGoals").appendChild(d); return d; });
+
+  const cpCircle = handCircle($("cpAnn"), 1090, 669, 100, 30, "#d1453b", 5);
+
+  const pool = $("poolSvg");
+  // Maya's money: a pile of paper bills (checking), four goal jars filled to their real balances.
+  const bill = (g, x, y, w = 120, h = 54) => { el("rect", { x, y, width: w, height: h, rx: 6, fill: "#7fb77e", stroke: "#4f8a4e", "stroke-width": 3 }, g); el("circle", { cx: x + w / 2, cy: y + h / 2, r: h * 0.3, fill: "none", stroke: "#4f8a4e", "stroke-width": 3 }, g); txt(g, x + w / 2, y + h / 2 + 8, "$", { size: 24, weight: 900, anchor: "middle", fill: "#2f5f2e", family: "Archivo" }); };
+  txt(pool, 960, 128, "Maya's Checking", { size: 30, weight: 800, anchor: "middle", family: "Archivo" });
+  const pile = el("g", {}, pool);
+  const PILE = 14;
+  const pileBills = Array.from({ length: PILE }, (_, k) => { const g = el("g", {}, pile); bill(g, 880 + ((k * 37) % 3 - 1) * 22, 400 - k * 14, 160, 60); return g; });
+  const pileLabel = txt(pool, 960, 520, "$3,400 Available", { size: 34, weight: 900, anchor: "middle", family: "Archivo" });
+  const payArrow = handArrow(pool, 500, 230, 840, 330, "#2f9e5b", 30);
+  const GOALJARS = [["House Down Payment", 4300, 40000, "55–83%", "#2a9d8f"], ["Japan Trip", 1850, 5000, "98%", "#e9b44c"], ["Emergency Fund", 9000, 18000, "97–98%", "#e76f51"], ["Next Car", 1100, 8000, "99%", "#5c677d"]];
+  const jars = GOALJARS.map(([name, have, need, odds, c], i) => {
+    const cx = 330 + i * 420, top = 640;
+    const g = el("g", {}, pool);
+    const flow = el("path", { d: `M960 540 C 960 590, ${cx} 570, ${cx} ${top - 10}`, stroke: c, "stroke-width": 10, fill: "none", "stroke-linecap": "round", "stroke-dasharray": "16 14" }, g);
+    el("path", { d: `M${cx - 110} ${top} L${cx - 110} ${top + 190} Q${cx - 110} ${top + 220} ${cx - 80} ${top + 220} L${cx + 80} ${top + 220} Q${cx + 110} ${top + 220} ${cx + 110} ${top + 190} L${cx + 110} ${top} Z`, fill: "rgba(255,250,240,.75)", stroke: "#8a8173", "stroke-width": 5 }, g);
+    const fill = el("rect", { x: cx - 104, y: top + 214, width: 208, height: 0, rx: 18, fill: c, opacity: 0.85 }, g);
+    txt(g, cx, top + 262, name, { size: 24, weight: 800, anchor: "middle", family: "Archivo" });
+    txt(g, cx, top + 292, `$${have.toLocaleString("en-US")} of $${need.toLocaleString("en-US")}`, { size: 22, weight: 600, anchor: "middle", fill: "#4b463e" });
+    const chip = el("g", {}, g);
+    el("rect", { x: cx - 78, y: top - 64, width: 156, height: 42, rx: 21, fill: "#fffaf0", stroke: c, "stroke-width": 3 }, chip);
+    const chipText = txt(chip, cx, top - 34, odds, { size: 24, weight: 900, anchor: "middle", family: "Archivo", fill: c });
+    return { g, flow, fill, chipText, level: have / need, cx, top };
+  });
+  // The purchase: a bundle of bills lifted out of checking.
+  const bundle = el("g", { opacity: 0 }, pool);
+  for (let k = 0; k < 4; k++) bill(bundle, 1500 + k * 6, 300 - k * 12, 170, 64);
+  txt(bundle, 1590, 420, "−$1,999 MacBook", { size: 32, weight: 900, anchor: "middle", fill: "#d1453b", family: "Archivo" });
+  const houseCircle = handCircle(pool, 330, 600, 120, 40, "#d1453b", 7);
+  const houseNote = txt(pool, 440, 470, "The House Takes the Hit", { size: 48, fill: "#d1453b", family: "Caveat" }); houseNote.setAttribute("opacity", 0);
+  // 5,000 futures: a fan of faint paths behind the House goal.
+  const fan = el("g", {}, pool);
+  const fr = mulberry(21);
+  const fanPaths = Array.from({ length: 60 }, () => { let d = "M130 510", y = 510; for (let x = 150; x <= 490; x += 20) { y += (fr() - 0.62) * 22; d += ` L${x} ${y.toFixed(1)}`; } const fp = drawable(el("path", { d, stroke: "#544af7", "stroke-width": 2, fill: "none", opacity: 0.25 }, fan)); fp.dataset.quiet = "1"; return fp; });
+
+  // Competition: revenue bars and a positioning map.
+  const rev = $("revChart");
+  el("line", { x1: 0, y1: 360, x2: 800, y2: 360, stroke: "#8a8173", "stroke-width": 3 }, rev);
+  const REV = [["Cleo", 400, "#5c677d", "~$400M a Year"], ["Monarch", 100, "#2a9d8f", "~$100M a Year"]];
+  const revBars = REV.map(([name, v, c, label], i) => {
+    const x = 60 + i * 330;
+    const bar = el("rect", { x, y: 360, width: 220, height: 0, rx: 8, fill: c }, rev);
+    const value = txt(rev, x + 110, 0, label, { size: 28, weight: 900, anchor: "middle", family: "Archivo" });
+    txt(rev, x + 110, 398, name, { size: 26, weight: 700, anchor: "middle" });
+    return { bar, value, h: (v / 400) * 290 };
+  });
+  function buildMatrix(svg) {
+    el("rect", { x: 60, y: 20, width: 720, height: 560, rx: 14, fill: "rgba(255,250,240,.75)", stroke: "#d8cbb2", "stroke-width": 2 }, svg);
+    el("line", { x1: 420, y1: 30, x2: 420, y2: 570, stroke: "#cdbfa6", "stroke-width": 2, "stroke-dasharray": "8 8" }, svg);
+    el("line", { x1: 70, y1: 300, x2: 770, y2: 300, stroke: "#cdbfa6", "stroke-width": 2, "stroke-dasharray": "8 8" }, svg);
+    txt(svg, 70, 615, "← Looks Back", { size: 22, fill: "#4b463e" }); txt(svg, 780, 615, "Looks Ahead →", { size: 22, fill: "#4b463e", anchor: "end" });
+    const yl = txt(svg, 30, 300, "You Go to It  ·  It Comes to You →", { size: 22, fill: "#4b463e", anchor: "middle" }); yl.setAttribute("transform", "rotate(-90 30 300)");
+    const dots = {};
+    [["Monarch", 150, 410, "#2a9d8f"], ["Rocket Money", 230, 490, "#e76f51"], ["Cleo", 180, 350, "#5c677d"], ["Copilot Money", 110, 540, "#e9b44c"], ["Projection Lab · Boldin", 470, 450, "#8a8173"]].forEach(([n, x, y, c]) => {
+      const g = el("g", { opacity: 0 }, svg); el("circle", { cx: x, cy: y, r: 16, fill: c }, g); txt(g, x + 24, y + 8, n, { size: 22, weight: 700 }); dots[n] = g;
+    });
+    const empty = handCircle(svg, 600, 160, 150, 95, "#d1453b", 11);
+    const q = txt(svg, 600, 178, "Empty", { size: 54, fill: "#d1453b", anchor: "middle", family: "Caveat" }); q.setAttribute("opacity", 0);
+    return { dots, empty, q };
+  }
+  const mx1 = buildMatrix($("matrix"));
+  const mx2 = buildMatrix($("matrix2"));
+  const fvDot = el("g", { opacity: 0 }, $("matrix2"));
+  el("circle", { cx: 600, cy: 160, r: 24, fill: "#544af7" }, fvDot);
+  txt(fvDot, 600, 112, "FinVantage", { size: 32, weight: 900, anchor: "middle", family: "Archivo", fill: "#544af7" });
+
+  const road = $("road");
+  const roadPath = drawable(el("path", { d: "M180 330 C 500 300, 640 360, 950 330 S 1450 300, 1760 330", stroke: "#8a8173", "stroke-width": 8, fill: "none", "stroke-linecap": "round" }, road));
+
+  // The tour: one image per page, slid along as each page is named.
+  const TOUR = [["app", "Overview", null], ["accounts", "Accounts", "accounts"], ["transactions", "Transactions", "transactions"], ["spending", "Spending", "spending"], ["goals", "Goals", "goals"], ["life-events", "Life Events", "life events"], ["portfolio", "Investments", "investments"], ["credit", "Credit", "credit"]];
+  const tourImgs = TOUR.map(([pg]) => { const im = document.createElement("img"); im.src = `out/captures/tour-${pg}.png`; im.style.width = "1400px"; im.style.position = "absolute"; im.style.left = "0"; im.style.top = "0"; $("tourView").appendChild(im); return im; });
+
+  const pc = $("priceChart");
+  el("line", { x1: 40, y1: 520, x2: 760, y2: 520, stroke: "#8a8173", "stroke-width": 3 }, pc);
+  const PRICES = [["Copilot Money", 95], ["FinVantage", 99], ["YNAB", 109], ["Projection Lab", 129], ["Boldin", 144]];
+  const priceBars = PRICES.map(([n, v], i) => {
+    const x = 70 + i * 140, us = n === "FinVantage";
+    const bar = el("rect", { x, y: 520, width: 100, height: 0, rx: 8, fill: us ? "#544af7" : "#cbbfa8" }, pc);
+    const val = txt(pc, x + 50, 0, `$${v}`, { size: 28, weight: 900, anchor: "middle", family: "Archivo", fill: us ? "#544af7" : "#1f1d1a" }); val.setAttribute("opacity", 0);
+    const parts = n.split(" ");
+    txt(pc, x + 50, 556, parts[0], { size: 19, weight: us ? 800 : 600, anchor: "middle", fill: us ? "#544af7" : "#4b463e" });
+    if (parts.length > 1) txt(pc, x + 50, 580, parts.slice(1).join(" "), { size: 19, weight: 600, anchor: "middle", fill: "#4b463e" });
+    return { bar, val, h: (v / 150) * 420 };
+  });
+
+  const fs = $("funnelSvg");
+  // Little paper people: ten per group. The middle group highlights the one in ten who pays.
+  const person = (g, x, y, c) => { el("circle", { cx: x, cy: y, r: 16, fill: c }, g); el("path", { d: `M${x - 24} ${y + 64} Q${x - 24} ${y + 22} ${x} ${y + 22} Q${x + 24} ${y + 22} ${x + 24} ${y + 64} Z`, fill: c }, g); };
+  const groups = [0, 1, 2].map((k) => {
+    const g = el("g", { opacity: 0 }, fs);
+    const cx = 370 + k * 590;
+    for (let i = 0; i < 10; i++) {
+      const x = cx - 200 + (i % 5) * 100, y = 250 + Math.floor(i / 5) * 130;
+      const c = k === 0 ? "#cbbfa8" : k === 1 ? (i === 0 ? "#544af7" : "#e2d6bf") : (i === 0 ? "#544af7" : "rgba(0,0,0,0)");
+      person(g, x, y, c);
+    }
+    return g;
+  });
+  // Members: one figure, repeated, to read as "many members".
+  const crowd = el("g", { opacity: 0 }, fs);
+  for (let i = 0; i < 10; i++) person(crowd, 1350 + (i % 5) * 100, 250 + Math.floor(i / 5) * 130, "#544af7");
+  const arrows = [handArrow(fs, 620, 330, 740, 330, "#8a8173", 20), handArrow(fs, 1210, 330, 1330, 330, "#8a8173", 20)];
+
+  // Per member: one bar, $99 split into $27 of costs and $72 kept.
+  const mbar = { all: $("mBarAll"), cost: $("mBarCost") };
+
+  const dn = $("donut");
+  el("circle", { cx: 350, cy: 330, r: 230, fill: "none", stroke: "#e2d6bf", "stroke-width": 90 }, dn);
+  const SPLIT = [[4000, "#2a9d8f"], [3000, "#e9b44c"], [8000, "#e76f51"]];
+  const C = 2 * Math.PI * 230; let acc = 0;
+  const arcs = SPLIT.map(([v, c]) => { const a = el("circle", { cx: 350, cy: 330, r: 230, fill: "none", stroke: c, "stroke-width": 90, "stroke-dasharray": `0 ${C}`, transform: `rotate(${-90 + (acc / 15000) * 360} 350 330)` }, dn); const len = (v / 15000) * C; acc += v; return { a, len }; });
+  txt(dn, 350, 330, "$15k", { size: 84, weight: 900, anchor: "middle", family: "Archivo" });
+  txt(dn, 350, 380, "Phase I", { size: 28, weight: 700, anchor: "middle", fill: "#4b463e" });
+
+  const tl = $("timeline");
+  const tlLine = drawable(el("path", { d: "M200 300 L1720 300", stroke: "#8a8173", "stroke-width": 8, fill: "none", "stroke-linecap": "round" }, tl));
+  const stops = [[200, "Today", "Working Prototype, Sandbox Data", "start"], [900, "Dec 3, 2026", "10 UTA Testers", "middle"], [1720, "Spring 2027", "100 Testers", "end"]].map(([x, d, s, anchor], i) => {
+    const g = el("g", { opacity: 0 }, tl); el("circle", { cx: x, cy: 300, r: 22, fill: ["#5c677d", "#2a9d8f", "#544af7"][i] }, g);
+    txt(g, x, 250, d, { size: 32, weight: 900, anchor, family: "Archivo" }); txt(g, x, 360, s, { size: 24, weight: 600, anchor, fill: "#4b463e" }); return g;
+  });
+  const testers = Array.from({ length: 10 }, (_, i) => { const g = el("g", { opacity: 0 }, tl); const r = el("rect", { x: 560 + i * 72, y: 480, width: 56, height: 110, rx: 8, fill: "#cbbfa8" }, g); return { g, r }; });
+  const pays = [0, 1, 2].map((i) => { const t = txt(tl, 588 + i * 72, 465, "$99", { size: 26, weight: 900, anchor: "middle", family: "Archivo", fill: "#544af7" }); t.setAttribute("opacity", 0); return t; });
+  const msText = txt(tl, 960, 680, "", { size: 36, weight: 800, anchor: "middle", family: "Archivo" });
+
+  // ---------- word timing: when a word starts, from its place in the line ----------
+  // When a phrase is spoken, in seconds from the scene's start. Uses the aligned word times from
+  // align.py (cue a hair early, so the motion lands with the word); falls back to an estimate.
+  const toks = (s) => s.toLowerCase().replace(/-/g, " ").replace(/[^a-z0-9' ]+/g, " ").split(/\s+/).filter(Boolean);
+  // Whisper writes numbers as digits ("10.7%", "$99", "5,000"), so spelled cues match their digits.
+  const SPOKEN = [["nineteen ninety-nine", "1999"], ["ten point seven", "10"], ["one point six", "1"], ["four point eight", "4"], ["fifteen thousand", "15"], ["five thousand", "5"], ["four thousand", "4"], ["seventy-two", "72"], ["ninety-nine", "99"], ["sixteen", "16"], ["three for", "3"], ["eight for", "8"], ["six use", "6 use"], ["three say", "3 say"], ["ten uta", "10 uta"]];
+  const digits = (p) => SPOKEN.reduce((q, [w, d]) => q.replace(w, d), p.toLowerCase());
+  function wordAt(beat, phrase, nth = 0) {
+    const ws = beat.words || [];
+    // Whisper writes some numbers as digits and others as words, so try both spellings.
+    for (const want of [toks(digits(phrase)), toks(phrase)]) if (ws.length && want.length) {
+      // Skip pieces that are only punctuation ("%", ".7" splits), and match numbers exactly; words
+      // may differ in an ending ("goal" / "goals").
+      const kept = ws.map((w) => ({ w, t: toks(w.w).join(" ") })).filter((x) => x.t);
+      const same = (h, t) => h === t || (!/\d/.test(h + t) && Math.min(h.length, t.length) >= 4 && (h.startsWith(t) || t.startsWith(h)));
+      let seen = 0;
+      for (let i = 0; i < kept.length; i++) {
+        const ok = want.every((t, k) => kept[i + k] && same(kept[i + k].t, t));
+        if (ok && seen++ === nth) return beat.voiceStart - beat.start + kept[i].w.s - 0.08;
+      }
+    }
+    const text = (beat.text || "").toLowerCase(); let idx = -1;
+    for (let k = 0; k <= nth; k++) idx = text.indexOf(phrase.toLowerCase(), idx + 1);
+    const frac = idx < 0 ? 0.3 : idx / Math.max(1, text.length);
+    return beat.voiceStart - beat.start + frac * beat.voiceLength;
+  }
+  const imgFit = (img, scale, x, y) => { img.style.transform = `translate(${-x * scale}px, ${-y * scale}px) scale(${scale})`; };
+
+  // ---------- scenes: draw(u = seconds into the beat, b = the beat) ----------
+  const SCENES = {
+    hook(u, b) {
+      pop($("stmt"), u, 0.05, { dy: 40 });
+      draw(hookCircle, seg(u, wordAt(b, "statement") - 0.2, wordAt(b, "statement") + 0.5));
+      pop($("tooLate"), u, wordAt(b, "statement") + 0.4);
+      pop($("hookA"), u, 0.3); hl($("hookHl"), u, wordAt(b, "already"));
+      pop($("checkout"), u, wordAt(b, "but the decision") - 0.1);
+      drawArrow(hookArrow, seg(u, wordAt(b, "decision"), wordAt(b, "decision") + 0.6));
+      pop($("decision"), u, wordAt(b, "decision") + 0.2);
+      $("placeBtn").style.transform = `scale(${1 - 0.05 * Math.sin(seg(u, wordAt(b, "checkout"), wordAt(b, "checkout") + 0.4) * Math.PI)})`;
+    },
+    maya(u, b) {
+      pop($("polaroid"), u, 0.05, { dy: 50 }); pop($("mayaSaving"), u, wordAt(b, "saving") - 0.2);
+      const at = [wordAt(b, "house"), wordAt(b, "japan"), wordAt(b, "rainy"), wordAt(b, "rainy") + 0.3];
+      goalEls.forEach((g, i) => pop(g, u, at[i] - 0.1, { dy: -24 }));
+      pop($("laptopTag"), u, wordAt(b, "spots") - 0.1, { dy: 60 });
+    },
+    copilot1(u, b) {
+      // The real page, easing in toward the price.
+      const z = out3(seg(u, 0, b.length));
+      imgFit($("amzPage"), lerp(0.65, 0.78, z), lerp(0, 180, z), lerp(60, 140, z));
+      $("extIcon").style.transform = `scale(${1 + 0.3 * Math.max(0, Math.sin(u * 8)) * seg(u, 0.2, 0.5) * (1 - seg(u, 2.0, 2.4))})`;
+      pop($("c1head"), u, 0.2);
+      const chips = [...$("chips").querySelectorAll(".chip")];
+      ["price", "store", "item type", "page type"].forEach((w, i) => { const a = wordAt(b, w) - 0.15; style(chips[i], { o: seg(u, a, a + 0.2), x: lerp(-120, 0, out3(seg(u, a, a + 0.5))) }); });
+      pop($("only4"), u, Math.min(wordAt(b, "page type") + 0.7, b.length - 1));
+    },
+    copilot2(u, b) {
+      // From the whole page into the real card.
+      const z = inOut(seg(u, 0.2, 1.4));
+      imgFit($("amzCard"), lerp(0.66, 1.0, z), lerp(0, 517, z), lerp(0, 262, z));
+      const odds = wordAt(b, "cuts her odds");
+      draw(cpCircle, seg(u, odds - 0.1, odds + 0.6));
+      pop($("oddsCard"), u, odds);
+      slam($("stampAdvice"), u, wordAt(b, "paying off") - 0.3);
+      pop($("worksToday"), u, Math.min(wordAt(b, "paying off") + 0.9, b.length - 1));
+    },
+    pool(u, b) {
+      pop($("payslip"), u, 0.1);
+      drawArrow(payArrow, seg(u, 0.4, 1.1));
+      pileBills.forEach((g, k) => show(g, seg(u, 0.5 + k * 0.05, 0.6 + k * 0.05)));
+      const every = wordAt(b, "draws") - 0.3, at = wordAt(b, "one purchase"), five = wordAt(b, "five thousand");
+      jars.forEach((j, i) => {
+        j.flow.setAttribute("stroke-dashoffset", String(-u * 60));
+        const grow = out3(seg(u, every + i * 0.12, every + i * 0.12 + 0.7));
+        const h = 200 * j.level * grow;
+        j.fill.setAttribute("height", String(h)); j.fill.setAttribute("y", String(j.top + 214 - h));
+        show(j.g, seg(u, every - 0.3 + i * 0.1, every + i * 0.1));
+      });
+      // The purchase lifts a bundle out of checking; the flows into the goals thin out.
+      const lift = inOut(seg(u, at - 0.1, at + 0.8));
+      show(bundle, seg(u, at - 0.1, at + 0.1));
+      bundle.setAttribute("transform", `translate(${lerp(-560, 0, lift)}, ${lerp(80, 0, lift)})`);
+      pileBills.forEach((g, k) => { if (k >= PILE - 8) show(g, 1 - seg(u, at + (PILE - 1 - k) * 0.04, at + 0.2 + (PILE - 1 - k) * 0.04)); });
+      pileLabel.textContent = u > at + 0.5 ? "$1,401 Left" : "$3,400 Available";
+      pileLabel.setAttribute("fill", u > at + 0.5 ? "#d1453b" : "#1f1d1a");
+      jars.forEach((j, i) => j.flow.setAttribute("stroke-width", String(lerp(10, i === 0 ? 4 : 7, seg(u, at + 0.4, at + 1.0)))));
+      jars[0].chipText.textContent = u > at + 0.8 ? "34–71%" : "55–83%";
+      jars[0].chipText.setAttribute("fill", u > at + 0.8 ? "#d1453b" : "#2a9d8f");
+      draw(houseCircle, seg(u, at + 0.8, at + 1.4));
+      show(houseNote, seg(u, at + 1.1, at + 1.4));
+      pop($("futuresCard"), u, five - 0.1);
+      $("futures").textContent = (Math.round(10 * out3(seg(u, five - 0.1, five + 0.9))) * 500).toLocaleString("en-US");
+      fanPaths.forEach((pth, k) => draw(pth, seg(u, five + k * 0.012, five + 0.6 + k * 0.012)));
+    },
+    advisor(u, b) {
+      // Whole pages: the 2400x1500 captures scaled to fit each 640x400 view.
+      pop($("spendShot"), u, 0.05); imgFit($("spendImg"), 640 / 2400, 0, 0);
+      pop($("investShot"), u, Math.min(wordAt(b, "dashboard"), 1.2)); imgFit($("investImg"), 640 / 2400, 0, 0);
+      pop($("advShot"), u, wordAt(b, "ai advisor") - 0.1, { dy: 60 });
+      imgFit($("advImg"), 0.58, 830, 10);
+      pop($("advSplit"), u, wordAt(b, "code does") - 0.1);
+      pop($("advStat"), u, Math.min(wordAt(b, "only writes"), b.length - 1.2));
+    },
+    tour(u, b) {
+      // Position along the carousel: eases from page to page as each one is named.
+      let pos = 0;
+      const at = TOUR.map(([, , word]) => (word ? wordAt(b, word) : null));
+      at.forEach((a, i) => {
+        if (a === null) return;
+        const next = at.slice(i + 1).find((x) => x !== null) ?? a + 1;
+        const dur = Math.max(0.18, Math.min(0.35, (next - a) * 0.5));
+        pos += inOut(seg(u, a - dur * 0.6, a + dur * 0.4));
+      });
+      // A short slide with a cross-fade (not a full-width swipe), so motion blur can't double the page.
+      tourImgs.forEach((im, i) => { const d = i - pos; im.style.opacity = String(clamp(1 - Math.abs(d))); im.style.transform = `translateX(${d * 120}px)`; });
+      const cur = TOUR[Math.min(TOUR.length - 1, Math.round(pos))];
+      $("tourLabel").textContent = cur[1];
+      $("tourUrl").textContent = `finvantage-web-ten.vercel.app/${cur[0]}`;
+      pop($("tourShot"), u, 0.05, { dy: 40 }); pop($("tourLabel"), u, 0.3);
+    },
+    competition(u, b) {
+      revBars.forEach((r, i) => { const p = out3(seg(u, 0.3 + i * 0.4, 1.3 + i * 0.4)); r.bar.setAttribute("height", String(r.h * p)); r.bar.setAttribute("y", String(360 - r.h * p)); r.value.setAttribute("y", String(360 - r.h * p - 16)); show(r.value, seg(u, 1.0 + i * 0.4, 1.3 + i * 0.4)); });
+      [["Monarch", "monarch", 0], ["Rocket Money", "rocket money", 0], ["Cleo", "rocket money", 0.4], ["Copilot Money", "rocket money", 0.6], ["Projection Lab · Boldin", "projection lab", 0]].forEach(([n, w, d]) => { const a = wordAt(b, w) + d; show(mx1.dots[n], seg(u, a, a + 0.3)); mx1.dots[n].setAttribute("transform", `translate(0, ${lerp(-20, 0, out3(seg(u, a, a + 0.4)))})`); });
+      const none = wordAt(b, "none");
+      draw(mx1.empty, seg(u, none - 0.1, none + 0.6)); show(mx1.q, seg(u, none + 0.4, none + 0.6));
+      pop($("noneCap"), u, none); hl($("noneHl"), u, none + 0.3, 0.8);
+    },
+    ours(u, b) {
+      Object.values(mx2.dots).forEach((d) => show(d, 0.45));
+      draw(mx2.empty, 1); show(mx2.q, 1 - seg(u, 0.2, 0.45));
+      const land = seg(u, 0.25, 0.75);
+      fvDot.setAttribute("transform", `translate(0, ${lerp(-140, 0, soft(land))})`); show(fvDot, seg(u, 0.25, 0.4));
+      hl($("oursHl"), u, wordAt(b, "every goal"), 0.7);
+      pop($("ob1"), u, wordAt(b, "one purchase") - 0.1);
+      pop($("ob2"), u, wordAt(b, "code checks") - 0.1);
+      slam($("testsBadge"), u, Math.min(wordAt(b, "make one up"), b.length - 0.8));
+    },
+    gtm(u, b) {
+      draw(roadPath, seg(u, 0, Math.min(3.5, b.length - 1)));
+      pop($("gs1"), u, wordAt(b, "uta") - 0.2);
+      pop($("gs2"), u, wordAt(b, "young") - 0.2);
+      pop($("gs3"), u, wordAt(b, "banks") - 0.1);
+      pop($("reach"), u, Math.min(wordAt(b, "banks") + 0.8, b.length - 0.8));
+    },
+    model(u, b) {
+      pop($("tierFree"), u, 0.1);
+      pop($("tierPaid"), u, wordAt(b, "multiple") - 0.2, { dy: 50 });
+      slam($("tierPrice"), u, wordAt(b, "ninety-nine") - 0.05);
+      pop($("mktHead"), u, wordAt(b, "ninety-nine") + 0.3);
+      priceBars.forEach((r, i) => { const a = wordAt(b, "ninety-nine") + 0.3 + i * 0.12; const p = out3(seg(u, a, a + 0.6)); r.bar.setAttribute("height", String(r.h * p)); r.bar.setAttribute("y", String(520 - r.h * p)); r.val.setAttribute("y", String(520 - r.h * p - 14)); show(r.val, seg(u, a + 0.4, a + 0.6)); });
+    },
+    funnel(u, b) {
+      // Cue each step on its first spoken number: "150,000 to 450,000", "about one in ten", "that's 16,000".
+      const tryAt = wordAt(b, "150"), payAt = wordAt(b, "about"), memAt = wordAt(b, "that's") + 0.15;
+      show(groups[0], seg(u, tryAt - 0.2, tryAt + 0.2)); pop($("fnStep1"), u, tryAt);
+      drawArrow(arrows[0], seg(u, payAt - 0.3, payAt + 0.2));
+      show(groups[1], seg(u, payAt, payAt + 0.3)); pop($("fnStep2"), u, payAt);
+      drawArrow(arrows[1], seg(u, memAt - 0.3, memAt + 0.2));
+      // The one who pays becomes a crowd of members.
+      show(crowd, seg(u, memAt, memAt + 0.4)); pop($("fnStep3"), u, memAt);
+      pop($("fnRev"), u, wordAt(b, "1", 1)); // the second "1": "1.6 to 4.8 million"
+
+    },
+    margin(u, b) {
+      const W = 1400, p = out3(seg(u, 0.1, 0.8)), cut = out3(seg(u, wordAt(b, "costs") - 0.1, wordAt(b, "costs") + 0.5));
+      mbar.all.style.width = `${W * p}px`; mbar.cost.style.width = `${W * (27 / 99) * cut}px`;
+      pop($("m99"), u, 0.5);
+      style($("mCostL"), { o: seg(u, wordAt(b, "costs") + 0.3, wordAt(b, "costs") + 0.5) });
+      slam($("mKeepL"), u, wordAt(b, "seventy-two") - 0.1);
+    },
+    ask(u, b) {
+      slam($("askTotal"), u, 0.2);
+      const at = [wordAt(b, "four thousand"), wordAt(b, "three for"), wordAt(b, "eight for")];
+      arcs.forEach((a, i) => { const p = out3(seg(u, at[i], at[i] + 0.6)); a.a.setAttribute("stroke-dasharray", `${a.len * p} ${C}`); });
+      ["ask1", "ask2", "ask3"].forEach((id, i) => pop($(id), u, at[i] - 0.1));
+    },
+    milestone(u, b) {
+      draw(tlLine, seg(u, 0, 1.2));
+      stops.forEach((g, i) => show(g, seg(u, i * 0.4, i * 0.4 + 0.3)));
+      const six = wordAt(b, "six use"), three = wordAt(b, "three say"), ten = wordAt(b, "ten uta");
+      testers.forEach((t, i) => { const a = ten + i * 0.06; show(t.g, seg(u, a, a + 0.2)); t.g.setAttribute("transform", `translate(0, ${lerp(-40, 0, out3(seg(u, a, a + 0.4)))})`); t.r.setAttribute("fill", i < 6 && u > six + i * 0.06 ? "#2a9d8f" : "#cbbfa8"); });
+      pays.forEach((p, i) => show(p, seg(u, three + i * 0.12, three + i * 0.12 + 0.2)));
+      msText.textContent = u > six ? (u > three ? "Target: 6 Use It Weekly · 3 Would Pay $99/yr" : "Target: 6 Use It Weekly") : "";
+      pop($("msFoot"), u, Math.min(three + 0.8, b.length - 1));
+    },
+    close(u, b) {
+      const so = wordAt(b, "so maya");
+      style($("closeLead"), { o: seg(u, 0.1, 0.4) * (1 - seg(u, so - 0.4, so - 0.1)), y: lerp(20, 0, out3(seg(u, 0.1, 0.6))) });
+      style($("endCard"), { o: seg(u, so - 0.15, so + 0.25), y: lerp(20, 0, out3(seg(u, so - 0.15, so + 0.45))) });
+      hl($("closeHl"), u, wordAt(b, "before she buys"), 0.6);
+      pop($("qrCard"), u, so + 0.4, { dy: 40 });
+    },
+  };
+
+  // How we cut INTO each scene. Pans move the camera across the paper; wipes slide a sheet across
+  // at the three chapter changes; carries fly one object from the last scene into the next.
+  const TRANS = {
+    maya: { kind: "pan", dur: 0.6 },
+    copilot1: { kind: "carryLaptop", dur: 0.8 },
+    copilot2: { kind: "zoom", dur: 0.5 },
+    pool: { kind: "carryOdds", dur: 0.8 },
+    advisor: { kind: "panUp", dur: 0.6 },
+    tour: { kind: "zoom", dur: 0.6 },
+    competition: { kind: "wipe", dur: 0.9 },
+    ours: { kind: "slideMap", dur: 0.8 },
+    gtm: { kind: "wipe", dur: 0.9 },
+    model: { kind: "pan", dur: 0.6 },
+    funnel: { kind: "panUp", dur: 0.6 },
+    margin: { kind: "pan", dur: 0.6 },
+    ask: { kind: "panUp", dur: 0.6 },
+    milestone: { kind: "pan", dur: 0.6 },
+    close: { kind: "wipe", dur: 0.9 },
+  };
+  window.TRANSITIONS = TRANS;
+  {
+    // The wipe sheet gets the same paper grain.
+    const ctx = $("wipePaper").getContext("2d"); const img = ctx.createImageData(2100, 1080); const r = mulberry(5);
+    for (let i = 0; i < img.data.length; i += 4) { const n = 200 + (r() - 0.5) * 30; img.data[i] = n; img.data[i + 1] = n - 8; img.data[i + 2] = n - 24; img.data[i + 3] = 40; }
+    ctx.putImageData(img, 0, 0);
+  }
+  // Elements a carry has moved or faded; reset every frame so out-of-order renders stay correct.
+  const touched = new Set();
+  const fadeKids = (scene, keep, o) => [...$(scene).children].forEach((c) => { if (c !== keep) { touched.add(c); c.style.opacity = String(o); } });
+  const place = (el, x, y, s = 1, o = 1) => { touched.add(el); el.style.transform = `translate(${x}px, ${y}px) rotate(${el.dataset.rot ?? 0}deg) scale(${s})`; el.style.opacity = String(o); };
+
+  function renderAt(t) {
+    clock = t;
+    const beats = T.beats;
+    for (const el of touched) { el.style.opacity = ""; el.style.transform = el.dataset.rot ? `rotate(${el.dataset.rot}deg)` : ""; el.style.zIndex = ""; }
+    touched.clear();
+    for (const b of beats) { $(b.scene).style.opacity = "0"; $(b.scene).style.zIndex = "1"; }
+    $("wipe").style.transform = "translateX(2200px)";
+    // Every scene drifts in slowly, so nothing on screen is ever perfectly still.
+    const paint = (b, alpha, dx = 0, dy = 0, extraScale = 1) => {
+      const sc = $(b.scene); const u = t - b.start;
+      sc.style.opacity = String(clamp(alpha));
+      sc.style.transform = `translate(${dx}px, ${dy}px) scale(${(1 + 0.025 * clamp(u / b.length)) * extraScale})`;
+      SCENES[b.scene](u, b);
+    };
+    // Which boundary (if any) are we inside? Transitions straddle the cut.
+    let k = beats.findIndex((b) => t < b.start + b.length);
+    if (k < 0) k = beats.length - 1;
+    const cur = beats[k];
+    let from = null, to = null, f = 0, tr = null;
+    const next = beats[k + 1], prev = beats[k - 1];
+    if (next && TRANS[next.scene] && next.start - t < TRANS[next.scene].dur / 2) { from = cur; to = next; tr = TRANS[next.scene]; }
+    else if (prev && TRANS[cur.scene] && t - cur.start < TRANS[cur.scene].dur / 2) { from = prev; to = cur; tr = TRANS[cur.scene]; }
+    if (!tr) {
+      paint(cur, k === 0 ? clamp((t - cur.start) / 0.5) : 1);
+    } else {
+      const boundary = to.start;
+      f = inOut(clamp((t - (boundary - tr.dur / 2)) / tr.dur));
+      const W = 260;
+      if (tr.kind === "pan") { paint(from, 1 - f, -W * f); paint(to, f, W * (1 - f)); }
+      else if (tr.kind === "panUp") { paint(from, 1 - f, 0, -W * 0.7 * f); paint(to, f, 0, W * 0.7 * (1 - f)); }
+      else if (tr.kind === "zoom") { paint(from, 1 - f, 0, 0, 1 + 0.06 * f); paint(to, f, 0, 0, 0.97 + 0.03 * f); }
+      else if (tr.kind === "wipe") {
+        // The sheet covers the screen at the midpoint; the scene changes underneath it.
+        if (f < 0.5) paint(from, 1); else paint(to, 1);
+        $("wipe").style.transform = `translateX(${lerp(2000, -2300, f)}px)`;
+      } else if (tr.kind === "carryLaptop") {
+        paint(from, 1 - f); paint(to, f);
+        // Maya's price tag flies to the price on the Amazon page.
+        const tag = $("laptopTag"); tag.style.zIndex = 5; $("maya").style.opacity = "1";
+        fadeKids("maya", tag, 1 - f);
+        place(tag, lerp(0, -1060, f), lerp(0, 40, f), lerp(1, 0.55, f), 1 - seg(f, 0.85, 1));
+      } else if (tr.kind === "carryOdds") {
+        paint(from, 1 - f); paint(to, f);
+        // The card's odds drop onto the House jar.
+        const odds = $("oddsCard"); $("copilot2").style.opacity = "1"; $("copilot2").style.zIndex = "5";
+        fadeKids("copilot2", odds, 1 - f);
+        place(odds, lerp(0, -1000, f), lerp(0, 230, f), lerp(1, 0.45, f), 1 - seg(f, 0.8, 1));
+      } else if (tr.kind === "slideMap") {
+        // The positioning map slides left into the next scene; everything else trades places.
+        paint(from, 1); paint(to, f);
+        $("competition").style.zIndex = "2";
+        fadeKids("competition", $("matrix"), 1 - f);
+        place($("matrix"), lerp(0, -900, f), 0, 1, 1 - seg(f, 0.9, 1));
+        touched.add($("matrix2")); $("matrix2").style.opacity = String(seg(f, 0.85, 1));
+      } else { paint(from, 1 - f); paint(to, f); }
+    }
+    $("stage").style.filter = `brightness(${1 - seg(t, T.total - 0.7, T.total)})`;
+  }
+
+  window.renderAt = renderAt;
+  window.wordAt = wordAt; // for checking cues against the aligned words
+  window.getTimeline = () => T;
+  window.explainerReady = Promise.all([document.fonts.ready, ...[...document.images].map((im) => (im.complete ? 0 : new Promise((r) => { im.onload = r; im.onerror = r; })))]).then(() => renderAt(0));
+  if (!new URLSearchParams(location.search).has("render")) {
+    window.explainerReady.then(() => { const s = performance.now(); const tick = () => { renderAt(((performance.now() - s) / 1000) % T.total); requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
+  }
+})();
+</script>
+</body>
+</html>

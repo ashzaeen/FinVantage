@@ -17,3 +17,17 @@ apps/api/advisor-eval.json
 
 # Local brainstorming mockups.
 .superpowers/
+
+# Marketing video renders and scratch. The footage, app captures, word timings and cached
+# Gemini voice takes are committed, so anyone can rebuild the videos without the paid API or a GPU.
+marketing/trailer/out/
+marketing/explainer/__pycache__/
+marketing/explainer/out/*
+!marketing/explainer/out/captures/
+!marketing/explainer/out/words.json
+!marketing/explainer/out/new trailer/
+!marketing/explainer/out/Our part/
+marketing/explainer/out/Our part/desktop.ini
+# The 4K original is replaced in git by its 1080p copy; the alternate Yao take is unused.
+marketing/explainer/out/Our part/PXL_20261120_001527545~3.mp4
+marketing/explainer/out/Our part/WIN_20261119_23_42_30_Pro.mp4

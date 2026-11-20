@@ -1,0 +1,18 @@
+{
+  "name": "finvantage-explainer",
+  "private": true,
+  "type": "module",
+  "description": "The 2-minute MavPitch explainer, rendered from explainer.html to an MP4.",
+  "scripts": {
+    "voice": "node voice.mjs",
+    "timeline": "node timeline.mjs",
+    "capture": "node capture.mjs",
+    "audio": "node audio.mjs",
+    "render": "node voice.mjs && python align.py && node timeline.mjs && node cues.mjs && node audio.mjs && node render.mjs",
+    "all": "node voice.mjs && python align.py && node timeline.mjs && node capture.mjs && node cues.mjs && node audio.mjs && node render.mjs"
+  },
+  "devDependencies": {
+    "ffmpeg-static": "5.2.0",
+    "playwright": "1.49.1"
+  }
+}

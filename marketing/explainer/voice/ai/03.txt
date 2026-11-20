@@ -1,0 +1,1 @@
+gemini|gemini-2.5-pro-preview-tts|Charon|Narrate this like a warm, curious Vox explainer host: conversational and clear, a brisk, energetic pace with natural pauses, a slight smile, never salesy. Read exactly these words:|Here's where our Copilot steps in. The Chrome extension sends just four things: price, store, item type and page type.
