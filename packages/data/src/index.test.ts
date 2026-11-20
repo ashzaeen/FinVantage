@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createStores, MemoryDocumentStore } from "./index";
+import { createStores, MemoryDocumentStore, MemorySubscriptionStore } from "./index";
 
 test("an invalid MongoDB URI falls back to memory during development", () => {
   const originalWarn = console.warn;
@@ -89,4 +89,24 @@ test("each user gets their own copy of the demo profile, and reloading one leave
   await ledger.loadDemoProfile("user_abc");
   assert.equal((await ledger.listGoals(DEMO_USER_ID)).length, goals.length + 1);
   assert.equal((await ledger.listAccounts("user_abc")).length, demoAccounts.length);
+});
+
+test("subscription choices use MongoDB only when it is configured, and memory otherwise", () => {
+  const memory = createStores({ NODE_ENV: "development", LEDGER_BACKEND: "memory" });
+  assert.ok(memory.subscriptions instanceof MemorySubscriptionStore);
+  // Building the store does not connect, so a well-formed URI is enough to pick it.
+  const mongo = createStores({
+    NODE_ENV: "development",
+    LEDGER_BACKEND: "memory",
+    DOCUMENT_BACKEND: "mongodb",
+    MONGODB_URI: "mongodb://localhost:27017",
+  });
+  assert.ok(!(mongo.subscriptions instanceof MemorySubscriptionStore));
+});
+
+test("a bad MongoDB URI fails closed in production for subscription choices too", () => {
+  assert.throws(
+    () => createStores({ NODE_ENV: "production", LEDGER_BACKEND: "memory", DOCUMENT_BACKEND: "mongodb", MONGODB_URI: "nope" }),
+    /MongoDB configuration is invalid/,
+  );
 });

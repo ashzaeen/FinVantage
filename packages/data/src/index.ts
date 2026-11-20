@@ -2,6 +2,7 @@ import { MemoryDocumentStore, MemoryLedgerStore } from "./memory";
 import { preferLinkedBanks } from "./linked-banks";
 import { createMongoDocumentStore } from "./mongo";
 import { createMongoSpendingStore } from "./mongo/spending";
+import { createMongoSubscriptionStore } from "./mongo/subscriptions";
 import { MemorySpendingStore, type SpendingStore } from "./spending";
 import { MemorySubscriptionStore, type SubscriptionStore } from "./subscriptions";
 import type { DocumentStore, LedgerStore } from "./stores";
@@ -37,6 +38,15 @@ function createSpendingStore(env: NodeJS.ProcessEnv, backend: string): SpendingS
     return new MemorySpendingStore();
   }
   return createMongoSpendingStore(uri, env.MONGODB_DB?.trim() || "finvantage");
+}
+
+function createSubscriptionStore(env: NodeJS.ProcessEnv, backend: string): SubscriptionStore {
+  const uri = env.MONGODB_URI?.trim() ?? "";
+  if (backend !== "mongodb" || !/^mongodb(?:\+srv)?:\/\//.test(uri) || /<[^>]+>/.test(uri)) {
+    if (backend === "mongodb" && env.NODE_ENV === "production") throw new Error(MONGODB_CONFIGURATION_ERROR);
+    return new MemorySubscriptionStore();
+  }
+  return createMongoSubscriptionStore(uri, env.MONGODB_DB?.trim() || "finvantage");
 }
 
 function createDocumentStore(env: NodeJS.ProcessEnv, backend: string): DocumentStore {
@@ -79,8 +89,8 @@ export function createStores(env: NodeJS.ProcessEnv = process.env): {
     bankTokens: spacetime ? spacetimeTokenStore(env, spacetime) : new MemoryBankTokenStore(),
     // Spending settings are per-user documents, so they live with the other documents.
     spending: createSpendingStore(env, env.DOCUMENT_BACKEND ?? "memory"),
-    // Memory only for now: choices last until the API restarts. See subscriptions.ts.
-    subscriptions: new MemorySubscriptionStore(),
+    // The user's subscription choices are per-user documents too: MongoDB in production, else memory.
+    subscriptions: createSubscriptionStore(env, env.DOCUMENT_BACKEND ?? "memory"),
   };
 }
 

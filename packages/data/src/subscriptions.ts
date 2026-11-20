@@ -24,9 +24,8 @@ export const SubscriptionState = z.object({
 export type SubscriptionState = z.infer<typeof SubscriptionState>;
 
 /**
- * Per-user subscription choices. Memory for now, so they last until the API restarts; the
- * MongoDB version is the last step of docs/workstreams/subscriptions.md and needs the platform
- * owner's agreement, because it changes the store set.
+ * Per-user subscription choices. Memory by default; MongoDB when DOCUMENT_BACKEND=mongodb
+ * (`mongo/subscriptions.ts`).
  */
 export interface SubscriptionStore {
   list(userId: string): Promise<SubscriptionState[]>;
