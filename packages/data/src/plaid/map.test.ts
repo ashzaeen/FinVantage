@@ -77,7 +77,7 @@ test("rates, minimum payments, and due dates come from user details, then liabil
   // Credit card: purchase APR, minimum payment, due date, limit, and available credit from Plaid.
   assert.equal(byId.acc_card!.annualRate, 0.2299);
   assert.equal(byId.acc_card!.minimumPaymentCents, 3500);
-  assert.equal(byId.acc_card!.nextPaymentDueOn, "2026-11-25");
+  assert.equal(byId.acc_card!.nextPaymentDueOn, "2026-12-25");
   assert.equal(byId.acc_card!.creditLimitCents, 800000);
   // A promotional ("special") APR wins over the purchase APR when the user entered its end date.
   assert.equal(byId.acc_promo!.annualRate, 0);

@@ -46,7 +46,7 @@ test("linking a bank replaces the demo copy's accounts, and a re-sync doesn't du
   assert.equal(accounts.length, DEMO_BANK_ACCOUNTS);
   assert.ok(accounts.every((a) => a.id.startsWith(`${item.itemId}__`)));
   const linked = accounts.filter((a) => a.id.startsWith(`${item.itemId}__`));
-  assert.ok(linked.some((a) => a.type === "credit_card" && a.annualRate === 0.2299 && a.nextPaymentDueOn === "2026-11-25"));
+  assert.ok(linked.some((a) => a.type === "credit_card" && a.annualRate === 0.2299 && a.nextPaymentDueOn === "2026-12-25"));
   const transactions = await client.listTransactions({ query: { limit: 500 } });
   assert.ok(transactions.length > 0);
   assert.ok(transactions.every((t) => t.accountId.startsWith(`${item.itemId}__`)));

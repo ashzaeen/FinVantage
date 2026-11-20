@@ -4,7 +4,7 @@
  * always give the same file.
  *
  *   npm run generate:demo -w @finvantage/data                      ends today
- *   npm run generate:demo -w @finvantage/data -- --as-of 2026-11-08
+ *   npm run generate:demo -w @finvantage/data -- --as-of 2026-12-03
  *
  * The persona: Jordan Rivera, a product designer who owns a condo. Take-home pay of about $5,700
  * a month on the 1st and 15th, a little freelance work, about $4,100 of monthly spending with
