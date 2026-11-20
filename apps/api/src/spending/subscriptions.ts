@@ -107,15 +107,15 @@ export function buildSubscriptions(input: SubscriptionInput): SubscriptionDetail
     if (status === "cancelled") {
       // Only one thing matters once it is cancelled: did the charges stop?
       const again = cancelledOn ? stillCharging(cancelledOn, charge.cadence, history) : null;
-      if (again) flags.push({ type: "still_charging", previousCents: null, changedOn: again.date, group: null });
+      if (again) flags.push({ type: "still_charging", previousCents: null, currentCents: null, changedOn: again.date, group: null });
       else if (cancelledOn) saved = savedSoFarCents(amountCents, charge.cadence, latest?.date ?? cancelledOn, today);
     } else if (status !== "keep") {
       const change = priceChange(history, today);
-      if (change) flags.push({ type: "price_up", previousCents: change.previousCents, changedOn: change.changedOn, group: null });
+      if (change) flags.push({ type: "price_up", previousCents: change.previousCents, currentCents: change.currentCents, changedOn: change.changedOn, group: null });
       const group = duplicates.get(id);
-      if (group) flags.push({ type: "possible_duplicate", previousCents: null, changedOn: null, group });
-      if (startedRecently(history, ledgerStart, today)) flags.push({ type: "started_recently", previousCents: null, changedOn: null, group: null });
-      if (annualComing(charge.cadence, charge.nextDate, today)) flags.push({ type: "annual_coming", previousCents: null, changedOn: null, group: null });
+      if (group) flags.push({ type: "possible_duplicate", previousCents: null, currentCents: null, changedOn: null, group });
+      if (startedRecently(history, ledgerStart, today)) flags.push({ type: "started_recently", previousCents: null, currentCents: null, changedOn: null, group: null });
+      if (annualComing(charge.cadence, charge.nextDate, today)) flags.push({ type: "annual_coming", previousCents: null, currentCents: null, changedOn: null, group: null });
     }
     return {
       ...charge,

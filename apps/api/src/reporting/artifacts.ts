@@ -328,6 +328,26 @@ function suggestionStyle(category: ReportVisuals["suggestions"][number]["categor
   return { label: "EXPLORE", color: COLORS.coral, tint: "#FFF0F1" };
 }
 
+/**
+ * The Subscriptions lines for the PDF, from the figures the report already holds. Empty when the
+ * report has no subscriptions block, so the card is left out rather than shown blank.
+ */
+export function subscriptionSummaryLines(subs: QuarterlyReport["visuals"]["subscriptions"]): string[] {
+  if (!subs) return [];
+  const noun = subs.chargedCount === 1 ? "subscription" : "subscriptions";
+  const lines = [`Charged ${formatUsd(subs.spendCents)} across ${subs.chargedCount} ${noun}.`];
+  if (subs.changeCents === null) lines.push("Not enough history to compare with last quarter.");
+  else if (subs.changeCents === 0) lines.push("The same as last quarter.");
+  else lines.push(`${formatUsd(Math.abs(subs.changeCents))} ${subs.changeCents > 0 ? "more" : "less"} than last quarter.`);
+  for (const item of subs.cancelled.slice(0, 3)) {
+    lines.push(
+      `Marked ${item.merchant} cancelled on ${item.cancelledOn}` +
+        (item.monthlyCents === null ? "." : `, ${formatUsd(item.monthlyCents)} a month.`),
+    );
+  }
+  return lines;
+}
+
 function footer(document: PDFKit.PDFDocument) {
   const range = document.bufferedPageRange();
   for (let index = range.start; index < range.start + range.count; index += 1) {
@@ -564,10 +584,19 @@ class LocalPdfStore implements PdfStore {
       document.fillColor(COLORS.purple).font("Poppins-Bold").fontSize(22).text(String(count), x, 444, { width: 154, align: "center" });
       document.fillColor(COLORS.muted).font("Poppins-Medium").fontSize(7.5).text(label.toUpperCase(), x, 478, { width: 154, align: "center" });
     });
+    const subscriptionLines = subscriptionSummaryLines(report.visuals.subscriptions);
+    if (subscriptionLines.length > 0) {
+      card(document, 36, 568, 540, 104, "Subscriptions this quarter", COLORS.green);
+      document.fillColor(COLORS.ink).font("Poppins").fontSize(8.5).text(printable(subscriptionLines.join("\n")), 52, 598, {
+        width: 508,
+        height: 64,
+        ellipsis: true,
+      });
+    }
     document.fillColor(COLORS.muted).fontSize(7).text(
       "Probability ranges are educational estimates, not guarantees. FinVantage suggests options and does not move money.",
       52,
-      590,
+      subscriptionLines.length > 0 ? 688 : 590,
       { width: 508, align: "center" },
     );
 

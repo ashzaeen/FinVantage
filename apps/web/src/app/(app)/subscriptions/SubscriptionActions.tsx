@@ -1,16 +1,18 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { CancellationGuide, Subscription, SubscriptionDraft, SubscriptionDraftAction, UpdateSubscription } from "@finvantage/contracts";
+import { formatPercent, formatUsd, type CancellationGuide, type Goal, type GoalImpact, type LifeEvent, type LifeEventDraft, type Subscription, SubscriptionDraft, SubscriptionDraftAction, UpdateSubscription } from "@finvantage/contracts";
 import { api } from "@/lib/api";
+import { ProbabilityRange } from "@/components/finance/ProbabilityRange";
 import { shortDate } from "@/lib/subscriptions";
 
 type Step =
   | { kind: "menu" }
   | { kind: "confirm"; status: "cancelling" | "cancelled" }
   | { kind: "guide" }
-  | { kind: "draft"; action: SubscriptionDraftAction };
+  | { kind: "draft"; action: SubscriptionDraftAction }
+  | { kind: "goal" };
 
 /** Today in UTC, which is the day the server counts, so a date picked here is never in its future. */
 const todayUtc = () => new Date().toISOString().slice(0, 10);
@@ -46,6 +48,22 @@ export function SubscriptionActions({ item }: { item: Subscription }) {
   const draftBox = useRef<HTMLTextAreaElement>(null);
   /** The latest request, so an answer that arrives after the person moved on is ignored. */
   const request = useRef(0);
+  const panelId = useId();
+  const panel = useRef<HTMLDivElement>(null);
+  const manageButton = useRef<HTMLButtonElement>(null);
+  const [goals, setGoals] = useState<Goal[] | null>(null);
+  const [goalId, setGoalId] = useState("");
+  const [preview, setPreview] = useState<GoalImpact | null>(null);
+  const [applied, setApplied] = useState(false);
+  /** Savings already in the plan that look like this one, so it is not added twice and can be removed. */
+  const [existing, setExisting] = useState<LifeEvent[]>([]);
+  const [removed, setRemoved] = useState(false);
+
+  // Each step replaces the button that was pressed, which would drop keyboard focus to the page.
+  // Moving it to the panel keeps a keyboard or screen reader user where they were.
+  useEffect(() => {
+    if (open) panel.current?.focus();
+  }, [open, step.kind]);
 
   const goTo = (next: Step) => {
     request.current += 1;
@@ -53,6 +71,9 @@ export function SubscriptionActions({ item }: { item: Subscription }) {
     setError(null);
     setLoading(false);
     setCopied(null);
+    setPreview(null);
+    setApplied(false);
+    setRemoved(false);
   };
 
   const close = () => {
@@ -60,6 +81,7 @@ export function SubscriptionActions({ item }: { item: Subscription }) {
     setGuide(null);
     setDraft(null);
     goTo({ kind: "menu" });
+    manageButton.current?.focus();
   };
 
   const save = async (body: UpdateSubscription) => {
@@ -100,6 +122,78 @@ export function SubscriptionActions({ item }: { item: Subscription }) {
       if (request.current === mine) setError(message(e, "Could not write the message. Try again."));
     } finally {
       if (request.current === mine) setLoading(false);
+    }
+  };
+
+  /** The saving as a recurring life event. Nothing is saved until the person confirms. */
+  const savingEvent = (id: string): LifeEventDraft => ({
+    type: "custom",
+    date: todayUtc(),
+    recurrence: "recurring",
+    dollarImpactCents: item.monthlyCents ?? 0,
+    durationMonths: null,
+    linkedGoalId: id,
+    source: "form",
+  });
+
+  /** A saving this panel would have added: a recurring, open-ended, positive change of the same monthly amount. */
+  const isThisSaving = (e: LifeEvent) =>
+    e.type === "custom" && e.recurrence === "recurring" && e.durationMonths === null && e.dollarImpactCents === item.monthlyCents;
+
+  const showGoalStep = async () => {
+    goTo({ kind: "goal" });
+    const mine = request.current;
+    setLoading(true);
+    try {
+      const [list, events] = await Promise.all([goals ?? api.listGoals(), api.listLifeEvents()]);
+      if (request.current !== mine) return;
+      setExisting(events.filter(isThisSaving));
+      setGoals(list);
+      setGoalId((current) => (list.some((g) => g.id === current) ? current : (list[0]?.id ?? "")));
+    } catch (e) {
+      if (request.current === mine) setError(message(e, "Could not load your goals. Try again."));
+    } finally {
+      if (request.current === mine) setLoading(false);
+    }
+  };
+
+  const previewSaving = async () => {
+    setError(null);
+    setPreview(null);
+    const mine = request.current;
+    setLoading(true);
+    try {
+      const result = await api.previewLifeEvent({ body: { event: savingEvent(goalId) } });
+      if (request.current === mine) setPreview(result.goalChanges.find((c) => c.goalId === goalId) ?? null);
+    } catch (e) {
+      if (request.current === mine) setError(message(e, "Could not work that out. Try again."));
+    } finally {
+      if (request.current === mine) setLoading(false);
+    }
+  };
+
+  const confirmSaving = async () => {
+    setError(null);
+    try {
+      const created = await api.createLifeEvent({ body: savingEvent(goalId) });
+      setExisting((list) => [...list, created.event]);
+      setApplied(true);
+      startTransition(() => router.refresh());
+    } catch (e) {
+      setError(message(e, "Could not save that. Try again."));
+    }
+  };
+
+  const removeSaving = async (id: string) => {
+    setError(null);
+    try {
+      await api.deleteLifeEvent({ params: { id } });
+      setExisting((list) => list.filter((e) => e.id !== id));
+      setApplied(false);
+      setRemoved(true);
+      startTransition(() => router.refresh());
+    } catch (e) {
+      setError(message(e, "Could not remove that. Try again."));
     }
   };
 
@@ -157,6 +251,9 @@ export function SubscriptionActions({ item }: { item: Subscription }) {
             ]
           : [
               ...(chargedAgain ? [{ label: DRAFT_LABEL.dispute, run: () => void showDraft("dispute") }, { label: "How to Cancel", run: () => void showGuide() }] : []),
+              ...(!chargedAgain && item.monthlyCents !== null && item.monthlyCents > 0
+                ? [{ label: "Put This Toward a Goal", run: () => void showGoalStep() }]
+                : []),
               { label: "Back to Active", run: () => void save({ status: "active" }) },
             ];
 
@@ -170,7 +267,9 @@ export function SubscriptionActions({ item }: { item: Subscription }) {
     <div className="mt-2 pl-[3.25rem]">
       <button
         type="button"
+        ref={manageButton}
         aria-expanded={open}
+        aria-controls={panelId}
         onClick={() => (open ? close() : setOpen(true))}
         className="text-xs font-medium underline-offset-2 hover:underline"
         style={{ color: "var(--accent)" }}
@@ -179,7 +278,21 @@ export function SubscriptionActions({ item }: { item: Subscription }) {
       </button>
 
       {open && (
-        <div className="mt-2 rounded-xl p-3" style={{ background: "var(--surface-raised)", border: "1px solid var(--border)" }} role="group" aria-label={`Manage ${item.merchant}`}>
+        <div
+          id={panelId}
+          ref={panel}
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation();
+              close();
+            }
+          }}
+          className="mt-2 rounded-xl p-3 outline-none focus-visible:ring-2"
+          style={{ background: "var(--surface-raised)", border: "1px solid var(--border)" }}
+          role="group"
+          aria-label={`Manage ${item.merchant}`}
+        >
           {step.kind === "menu" && (
             <div className="flex flex-wrap gap-2">
               {choices.map((choice) => (
@@ -231,7 +344,7 @@ export function SubscriptionActions({ item }: { item: Subscription }) {
 
           {step.kind === "guide" && (
             <div className="space-y-3">
-              {loading && <p className="text-xs" style={{ color: "var(--ink-muted)" }}>Loading the steps…</p>}
+              {loading && <p role="status" className="text-xs" style={{ color: "var(--ink-muted)" }}>Loading the steps…</p>}
               {guide && (
                 <>
                   <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>{guide.title}</p>
@@ -266,7 +379,7 @@ export function SubscriptionActions({ item }: { item: Subscription }) {
           {step.kind === "draft" && (
             <div className="space-y-3">
               <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>{DRAFT_LABEL[step.action]}</p>
-              {loading && <p className="text-xs" style={{ color: "var(--ink-muted)" }}>Writing your message…</p>}
+              {loading && <p role="status" className="text-xs" style={{ color: "var(--ink-muted)" }}>Writing your message…</p>}
               {draft && (
                 <>
                   <textarea
@@ -290,6 +403,75 @@ export function SubscriptionActions({ item }: { item: Subscription }) {
                     </button>
                     {copied === "yes" && <span role="status" className="text-xs" style={{ color: "var(--gain)" }}>Copied.</span>}
                     {copied === "manual" && <span role="status" className="text-xs" style={{ color: "var(--ink-muted)" }}>Select the text and copy it.</span>}
+                  </div>
+                </>
+              )}
+              <div className="flex flex-wrap gap-2">{back}</div>
+            </div>
+          )}
+
+          {step.kind === "goal" && (
+            <div className="space-y-3">
+              <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>Put This Toward a Goal</p>
+              {loading && !goals && <p role="status" className="text-xs" style={{ color: "var(--ink-muted)" }}>Loading your goals…</p>}
+              {goals && goals.length === 0 && <p className="text-xs" style={{ color: "var(--ink-muted)" }}>You have no goals yet. Add one on the Goals page first.</p>}
+              {existing.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs" style={{ color: "var(--ink-secondary)" }}>
+                    {applied ? "Added to your plan." : "A saving of this size is already in your plan."} It adds {formatUsd(item.monthlyCents ?? 0)} a month from {shortDate(existing[0]!.date)}.
+                  </p>
+                  {existing.map((e) => (
+                    <button key={e.id} type="button" disabled={pending} onClick={() => void removeSaving(e.id)} className="rounded-full px-3 py-1.5 text-xs font-medium disabled:opacity-60" style={buttonStyle}>
+                      Remove It From My Plan
+                    </button>
+                  ))}
+                </div>
+              )}
+              {removed && existing.length === 0 && (
+                <p role="status" className="text-xs" style={{ color: "var(--ink-muted)" }}>Removed from your plan.</p>
+              )}
+              {goals && goals.length > 0 && existing.length === 0 && !applied && (
+                <>
+                  <p className="text-xs" style={{ color: "var(--ink-secondary)" }}>
+                    This adds {formatUsd(item.monthlyCents ?? 0)} a month to your plan as extra savings from today. Preview it first. Nothing is saved until you confirm.
+                  </p>
+                  <label className="flex flex-wrap items-center gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
+                    Which goal?
+                    <select
+                      value={goalId}
+                      onChange={(e) => {
+                        setGoalId(e.target.value);
+                        setPreview(null);
+                      }}
+                      className="rounded-lg border px-2 py-1 text-xs"
+                      style={{ borderColor: "var(--border)", background: "var(--surface-raised)", color: "var(--ink)" }}
+                    >
+                      {goals.map((g) => (
+                        <option key={g.id} value={g.id}>{g.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  {preview && (
+                    <div className="rounded-lg p-2" style={{ background: "var(--surface-inset)" }}>
+                      <p className="text-xs" style={{ color: "var(--ink-muted)" }}>{preview.goalName} would be</p>
+                      <ProbabilityRange low={preview.probabilityLowAfter} high={preview.probabilityHighAfter} />
+                      <p className="mt-1 text-xs" style={{ color: "var(--ink-muted)" }}>
+                        {formatPercent(preview.probabilityLowDelta) === "0%" && formatPercent(preview.probabilityHighDelta) === "0%"
+                          ? "This does not visibly change the range, so it may matter more for a goal that is further from its target."
+                          : `Compared with today, the low end changes by ${formatPercent(preview.probabilityLowDelta)} and the high end by ${formatPercent(preview.probabilityHighDelta)}.`}
+                      </p>
+                    </div>
+                  )}
+                  <p className="text-xs" style={{ color: "var(--ink-muted)" }}>
+                    Only use this if your cancelled charge has stopped and your account balances have not already grown from it. You can remove it here later.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" disabled={loading || !goalId} onClick={() => void previewSaving()} className="rounded-full px-3 py-1.5 text-xs font-medium disabled:opacity-60" style={buttonStyle}>
+                      Preview
+                    </button>
+                    <button type="button" disabled={loading || pending || !preview} onClick={() => void confirmSaving()} className="rounded-full px-3 py-1.5 text-xs font-medium disabled:opacity-60" style={primaryStyle}>
+                      Confirm
+                    </button>
                   </div>
                 </>
               )}

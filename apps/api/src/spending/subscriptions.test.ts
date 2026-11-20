@@ -91,7 +91,7 @@ test("a rise in price is flagged with what it was and when it changed", () => {
     transactions: [EARLY, tx("StreamFlix", "2026-09-04", 1099), tx("StreamFlix", "2026-10-04", 1099), tx("StreamFlix", "2026-11-04", 1549)],
   });
   const flag = netflix!.flags.find((f) => f.type === "price_up");
-  assert.deepEqual(flag, { type: "price_up", previousCents: 1099, changedOn: "2026-11-04", group: null });
+  assert.deepEqual(flag, { type: "price_up", previousCents: 1099, currentCents: 1549, changedOn: "2026-11-04", group: null });
 });
 
 test("a subscription costs its latest charge, and a bill keeps the bank's usual amount", () => {
@@ -128,7 +128,7 @@ test("two services in one group are each flagged, and a lone one is not", () => 
     charges: [charge("Netflix", 1549), charge("Hulu", 1099), charge("Tunewave", 1099, { category: "entertainment.music" })],
   });
   const byName = Object.fromEntries(built.map((s) => [s.merchant, s.flags.filter((f) => f.type === "possible_duplicate")]));
-  assert.deepEqual(byName.Netflix, [{ type: "possible_duplicate", previousCents: null, changedOn: null, group: "Video Streaming" }]);
+  assert.deepEqual(byName.Netflix, [{ type: "possible_duplicate", previousCents: null, currentCents: null, changedOn: null, group: "Video Streaming" }]);
   assert.deepEqual(byName.Hulu, byName.Netflix);
   assert.deepEqual(byName.Tunewave, []);
 });
@@ -265,7 +265,7 @@ test("a cancelled subscription that charges again is flagged with the date, and 
     states: [stateFor(stream, { status: "cancelled", cancelledOn: "2026-09-10" })],
   });
   // 3 October is inside the month's grace, 3 November is not.
-  assert.deepEqual(built[0]!.flags, [{ type: "still_charging", previousCents: null, changedOn: "2026-11-03", group: null }]);
+  assert.deepEqual(built[0]!.flags, [{ type: "still_charging", previousCents: null, currentCents: null, changedOn: "2026-11-03", group: null }]);
   assert.equal(built[0]!.savedSoFarCents, null);
   const overview = overviewOf(built, null);
   assert.equal(overview.savedSoFarCents, 0);

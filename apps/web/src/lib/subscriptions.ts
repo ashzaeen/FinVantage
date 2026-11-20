@@ -47,7 +47,7 @@ export function flagDetail(flag: SubscriptionFlag, subscription: Pick<Subscripti
   switch (flag.type) {
     case "price_up":
       return flag.previousCents !== null && flag.changedOn
-        ? `Was ${formatUsd(flag.previousCents)}, now ${cost} since ${shortDate(flag.changedOn)}.`
+        ? `Was ${formatUsd(flag.previousCents)}, now ${flag.currentCents !== null ? formatUsd(flag.currentCents) : cost} since ${shortDate(flag.changedOn)}.`
         : `The price went up to ${cost}.`;
     case "possible_duplicate":
       return flag.group ? `You pay for more than one ${flag.group} service.` : "You may pay for the same thing twice.";

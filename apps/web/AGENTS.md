@@ -24,7 +24,7 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
 | `src/spacetime/` | Generated SpacetimeDB client bindings. Do not edit: run `npm run generate -w @finvantage/spacetime` |
 | `src/lib/nav.ts` | Navigation items |
 | `src/lib/subscriptions.ts` | Words and ordering for the Subscriptions page: cadence and flag labels, one sentence per flag from the API's figures, sorting, and the 30-day upcoming window. Tested in `subscriptions.test.ts`. It computes no financial figures |
-| `src/app/(app)/subscriptions` | The Subscriptions page (Intelligence): headline tiles, Needs a Look, the subscription and bill lists with a filter and sort, and Upcoming Charges. Plan: `docs/workstreams/subscriptions.md` |
+| `src/app/(app)/subscriptions` | The Subscriptions page (Intelligence): headline tiles, Needs a Look, the subscription and bill lists with a filter and sort, Upcoming Charges and a Cancelled card. Each row has a Manage panel (`SubscriptionActions.tsx`): keep, cancelling, cancelled, the cancellation guide, drafted messages to copy, and, for a cancelled one, Put This Toward a Goal, which previews and then saves a recurring life event only on Confirm. Plan: `docs/workstreams/subscriptions.md` |
 | `src/app/globals.css` | Design tokens for light and dark |
 
 ## Rules

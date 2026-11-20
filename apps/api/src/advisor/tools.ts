@@ -255,7 +255,7 @@ export function advisorTools(ctx: AdvisorToolContext): AdvisorTool[] {
           status: s.status,
           cancelledOn: s.cancelledOn,
           savedSoFarCents: s.savedSoFarCents,
-          flags: s.flags.map((f) => ({ type: f.type, previousCents: f.previousCents, changedOn: f.changedOn, group: f.group })),
+          flags: s.flags.map((f) => ({ type: f.type, previousCents: f.previousCents, currentCents: f.currentCents, changedOn: f.changedOn, group: f.group })),
         });
         return {
           data: forModel({

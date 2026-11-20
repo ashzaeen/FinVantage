@@ -95,6 +95,9 @@ export function SubscriptionsClient({
             </button>
           ))}
         </div>
+        <p role="status" className="sr-only">
+          Showing {shown.length} {shown.length === 1 ? "subscription" : "subscriptions"}.
+        </p>
         <List items={shown} labels={labels} empty={EMPTY[filter].subscriptions} />
       </Card>
 

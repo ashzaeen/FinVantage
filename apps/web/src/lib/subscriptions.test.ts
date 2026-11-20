@@ -5,6 +5,7 @@ import { flagDetail, needsLook, shortDate, sortSubscriptions, upcomingWithin } f
 
 const flag = (overrides: Partial<SubscriptionFlag> & Pick<SubscriptionFlag, "type">): SubscriptionFlag => ({
   previousCents: null,
+  currentCents: null,
   changedOn: null,
   group: null,
   ...overrides,
@@ -31,6 +32,11 @@ test("each flag is explained with the figures the API sent", () => {
 test("a flag missing its figures still reads as a sentence", () => {
   const sub = { amountCents: -1549, nextDate: "2026-12-03" };
   assert.equal(flagDetail(flag({ type: "price_up" }), sub), "The price went up to $15.49.");
+  // A bill shows its usual amount, so the sentence must use the latest charge the flag carries.
+  assert.equal(
+    flagDetail(flag({ type: "price_up", previousCents: 8285, currentCents: 8732, changedOn: "2026-11-18" }), { ...sub, amountCents: -10131 }),
+    "Was $82.85, now $87.32 since Nov 18.",
+  );
   assert.equal(flagDetail(flag({ type: "possible_duplicate" }), sub), "You may pay for the same thing twice.");
   assert.equal(flagDetail(flag({ type: "still_charging" }), sub), "Charged again after you cancelled.");
 });

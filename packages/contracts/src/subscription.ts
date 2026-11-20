@@ -24,6 +24,8 @@ export const SubscriptionFlag = z.object({
   type: SubscriptionFlagType,
   /** price_up: what each charge used to be, as a positive amount. */
   previousCents: Cents.nullable().default(null),
+  /** price_up: the latest charge, as a positive amount. A bill's displayed amount is its usual one, so this is what it last cost. Null on older data. */
+  currentCents: Cents.nullable().default(null),
   /** price_up: the date of the first charge at the new price. still_charging: the charge that should not have posted. */
   changedOn: IsoDate.nullable().default(null),
   /** possible_duplicate: the group it shares with another subscription, such as "Video Streaming". */

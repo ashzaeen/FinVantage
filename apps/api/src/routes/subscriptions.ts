@@ -113,6 +113,8 @@ export function registerSubscriptionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
         throw new HttpError(400, "invalid_request", "There is no price rise on record for this charge.");
       }
       input.previousAmount = formatUsd(rise.previousCents);
+      // A bill's displayed amount is its usual one; the message must name what the latest charge was.
+      if (rise.currentCents !== null) input.amount = formatUsd(rise.currentCents);
       input.changedOn = formatLongDate(rise.changedOn);
     } else {
       const again = found.flags.find((f) => f.type === "still_charging");

@@ -847,9 +847,8 @@ test("a first-quarter report generates without a previous simulation", async () 
   assert.deepEqual(report.visuals.spendingTrend.map((point) => point.quarter), ["2026-Q1"]);
   assert.equal(report.visuals.goalComparisons.length, 0);
   assert.equal(report.visuals.suggestions.length, current.goalOutcomes.length);
-  // The demo ledger starts on 1 January, so it has the whole quarter but nothing before it.
-  assert.equal(report.visuals.subscriptions?.previousSpendCents, null);
-  assert.equal(report.visuals.subscriptions?.changeCents, null);
+  // The demo ledger starts on 1 February, so it does not cover the whole of Q1, and the block is left out rather than understated.
+  assert.equal(report.visuals.subscriptions, null);
   assert.equal(report.pdf.status, "ready");
 });
 
@@ -1106,7 +1105,7 @@ test("a transaction can be moved to any category, or cleared", async () => {
 
 test("recurring charges and bills come from the bank's streams and due dates", async () => {
   const { client, deps } = setup();
-  deps.today = () => "2026-11-20";
+  deps.today = () => "2026-12-20";
   const recurring = await client.listRecurring();
   assert.ok(recurring.length > 0 && recurring.every((r) => r.source === "bank"));
   assert.equal(recurring.find((r) => r.merchant === "StreamFlix")?.category, "entertainment.streaming");
@@ -1150,7 +1149,7 @@ test("subscriptions split the recurring charges into subscriptions and bills, wi
 
 test("the demo's subscriptions fire each flag where they should, and the totals match a hand sum", async () => {
   const { client, deps } = setup();
-  deps.today = () => "2026-11-20";
+  deps.today = () => "2026-12-03";
   const { subscriptions, subscriptionTotals } = await client.listSubscriptions();
   const byName = Object.fromEntries(subscriptions.map((s) => [s.merchant, s]));
   const flags = (name: string) => byName[name]!.flags.map((f) => f.type);
@@ -1158,6 +1157,12 @@ test("the demo's subscriptions fire each flag where they should, and the totals 
   // StreamFlix went from $11.99 to $15.49 on 3 October, and is the one with a rival.
   const rise = byName.StreamFlix!.flags.find((f) => f.type === "price_up");
   assert.deepEqual([rise?.previousCents, rise?.changedOn], [1199, "2026-10-03"]);
+  assert.equal(rise?.currentCents, 1549);
+  // A bill shows the bank's usual amount, so its flag has to carry what the latest charge really was.
+  const power = (await client.listSubscriptions()).bills.find((b) => b.merchant === "City Power & Light")!;
+  const powerRise = power.flags.find((f) => f.type === "price_up");
+  assert.deepEqual([powerRise?.previousCents, powerRise?.currentCents], [8285, 8732]);
+  assert.notEqual(Math.abs(power.amountCents), 8732);
   assert.deepEqual(flags("StreamFlix"), ["price_up", "possible_duplicate"]);
   // Showreel started in October, and shares Video Streaming with StreamFlix.
   assert.deepEqual(flags("Showreel"), ["possible_duplicate", "started_recently"]);
@@ -1221,7 +1226,7 @@ test("a cancelled subscription whose charges kept coming is flagged with the dat
   const id = before.subscriptions.find((s) => s.merchant === "Tunewave")!.id;
   // Cancelled on 1 August, yet Tunewave charged again on 6 September, past the month's grace.
   const detail = await client.updateSubscription({ params: { id }, body: { status: "cancelled", cancelledOn: "2026-08-01" } });
-  assert.deepEqual(detail.flags, [{ type: "still_charging", previousCents: null, changedOn: "2026-09-06", group: null }]);
+  assert.deepEqual(detail.flags, [{ type: "still_charging", previousCents: null, currentCents: null, changedOn: "2026-09-06", group: null }]);
   assert.equal(detail.savedSoFarCents, null);
   const overview = await client.listSubscriptions();
   assert.deepEqual([overview.cancelled.map((s) => s.merchant), overview.savedSoFarCents], [["Tunewave"], 0]);

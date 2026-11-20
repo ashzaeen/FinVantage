@@ -277,7 +277,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
                   ? "That is the same as last quarter."
                   : `That is ${formatUsd(Math.abs(subs.changeCents))} ${subs.changeCents > 0 ? "more" : "less"} than last quarter.`;
             return (
-              <div className="space-y-3 text-sm leading-6">
+              <div className="space-y-3 text-sm leading-6 normal-case">
                 <p>
                   You were charged <span className="font-semibold tabular-nums">{formatUsd(subs.spendCents)}</span> across {subs.chargedCount}{" "}
                   {subs.chargedCount === 1 ? "subscription" : "subscriptions"} this quarter. {compare}
