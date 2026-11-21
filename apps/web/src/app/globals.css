@@ -104,6 +104,12 @@
   --landing-warning-text:   #9A3412;
   --landing-severe-bg:      #FEF2F2;
   --landing-severe-text:    #991B1B;
+  --landing-dark-surface:   #1A2234;
+  --landing-dark-line:      rgba(255, 255, 255, 0.1);
+  --landing-dark-text:      rgba(255, 255, 255, 0.78);
+  --landing-ease:           cubic-bezier(0.16, 1, 0.3, 1);
+  --landing-shadow-card:    0 1px 2px rgba(17, 24, 39, 0.05), 0 12px 28px -14px rgba(55, 48, 163, 0.2);
+  --landing-shadow-float:   0 2px 4px rgba(17, 24, 39, 0.05), 0 28px 56px -20px rgba(34, 31, 92, 0.32);
 }
 
 @theme inline {
@@ -141,6 +147,29 @@
   --color-series-4:     var(--series-4);
   --color-series-5:     var(--series-5);
   --color-series-6:     var(--series-6);
+
+  /* Landing page utilities: bg-lp-tint-50, text-lp-text, shadow-lp-card, font-lp-heading ... */
+  --color-lp-primary:      var(--landing-primary);
+  --color-lp-primary-hover: var(--landing-primary-hover);
+  --color-lp-primary-dark: var(--landing-primary-dark);
+  --color-lp-tint-50:      var(--landing-tint-50);
+  --color-lp-tint-100:     var(--landing-tint-100);
+  --color-lp-tint-200:     var(--landing-tint-200);
+  --color-lp-text:         var(--landing-text);
+  --color-lp-text-2:       var(--landing-text-secondary);
+  --color-lp-muted:        var(--landing-text-muted);
+  --color-lp-line:         var(--landing-border);
+  --color-lp-line-soft:    var(--landing-border-subtle);
+  --color-lp-bg:           var(--landing-section-bg);
+  --color-lp-dark:         var(--landing-dark-bg);
+  --color-lp-dark-surface: var(--landing-dark-surface);
+  --color-lp-dark-line:    var(--landing-dark-line);
+  --color-lp-dark-text:    var(--landing-dark-text);
+  --color-lp-warn-bg:      var(--landing-warning-bg);
+  --color-lp-warn-text:    var(--landing-warning-text);
+  --shadow-lp-card:        var(--landing-shadow-card);
+  --shadow-lp-float:       var(--landing-shadow-float);
+  --font-lp-heading:       var(--font-landing-heading);
 }
 
 /* ─── Base Styles ──────────────────────────────────────────────────────────── */
@@ -477,3 +506,84 @@ a, button, [role="button"], summary, select, input, label {
     gap: 0.5rem;
   }
 }
+
+
+/* ─── Landing page ───────────────────────────────────────────────────────────
+   Everything below is scoped to .lp (the marketing layout wrapper) so it never touches the app. */
+
+/* The global rule above sets Roboto on p, span, button and label. On the landing page those
+   inherit Inter from the wrapper, and headings keep Poppins. */
+.lp :where(p, span, label, input, button, table, td, th, li, a) { font-family: inherit; }
+.lp :where(h1, h2, h3, h4) { font-family: var(--font-landing-heading), system-ui, sans-serif; }
+.lp ::selection { background: var(--landing-tint-200); color: var(--landing-primary-dark); }
+.lp :where(a, button, summary):focus-visible { outline: 2px solid var(--landing-primary); outline-offset: 3px; border-radius: 8px; }
+.lp .lp-dark :where(a, button):focus-visible { outline-color: #fff; }
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.lp) { scroll-behavior: smooth; }
+}
+
+/* Scroll reveal. The default state is fully visible: the Reveal component arms an element only
+   after it has checked that it sits below the fold, then reveals it once. */
+.lp-reveal { transition: opacity 760ms var(--landing-ease), transform 760ms var(--landing-ease); transition-delay: var(--d, 0ms); }
+.lp-reveal[data-armed="true"]:not([data-in="true"]) { opacity: 0; transform: translateY(20px); }
+
+/* Entrance for hero copy on first paint. */
+@keyframes lp-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.lp-rise { animation: lp-rise 800ms var(--landing-ease) both; animation-delay: var(--d, 0ms); }
+
+/* Hero backdrop: two soft washes and a fading grid. Static, no loops. */
+.lp-hero-bg {
+  background:
+    radial-gradient(900px 480px at 82% 18%, rgba(79, 70, 229, 0.13), transparent 70%),
+    radial-gradient(700px 420px at 8% 92%, rgba(15, 118, 110, 0.08), transparent 70%),
+    var(--landing-section-bg);
+}
+.lp-hero-grid {
+  background-image:
+    linear-gradient(to right, rgba(133, 136, 167, 0.14) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(133, 136, 167, 0.14) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 70% 60% at 70% 40%, #000 20%, transparent 75%);
+}
+
+/* Mini-UI building blocks, driven by a stage number set from React (data-stage). */
+.lp-fill { transform-origin: left; transition: transform 1100ms var(--landing-ease); }
+.lp-pop { transition: opacity 520ms var(--landing-ease), transform 520ms var(--landing-ease); }
+.lp-pop[data-on="false"] { opacity: 0; transform: translateY(12px) scale(0.98); }
+.lp-draw { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1600ms var(--landing-ease); }
+.lp-draw[data-on="true"] { stroke-dashoffset: 0; }
+.lp-fade { transition: opacity 900ms ease; }
+.lp-fade[data-on="false"] { opacity: 0; }
+.lp-caret::after { content: ""; display: inline-block; width: 1px; height: 1em; margin-left: 2px; vertical-align: -0.12em; background: currentColor; animation: lp-blink 1s steps(2, start) 4; }
+@keyframes lp-blink { to { visibility: hidden; } }
+
+.lp-lift { transition: transform 220ms var(--landing-ease), box-shadow 220ms var(--landing-ease); }
+.lp-lift:hover { transform: translateY(-2px); box-shadow: var(--landing-shadow-float); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-reveal, .lp-fill, .lp-pop, .lp-draw, .lp-fade, .lp-lift { transition: none; }
+  .lp-reveal[data-armed="true"]:not([data-in="true"]) { opacity: 1; transform: none; }
+  .lp-rise, .lp-caret::after { animation: none; }
+  .lp-lift:hover { transform: none; }
+}
+
+/* Use-case stage: a soft indigo wash, a fading dot grid, and a teal counter-glow. Static. */
+.lp-stage {
+  background:
+    radial-gradient(520px 360px at 88% 8%, rgba(79, 70, 229, 0.16), transparent 70%),
+    radial-gradient(420px 320px at 6% 96%, rgba(15, 118, 110, 0.1), transparent 70%),
+    linear-gradient(160deg, var(--landing-tint-50), var(--landing-section-bg) 60%, #fff);
+}
+.lp-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(79, 70, 229, 0.22) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 10%, transparent 75%);
+  pointer-events: none;
+}
+
+/* Donut segments grow in once; pathLength is 100 so dasharray is a percentage. */
+.lp-seg { transition: stroke-dasharray 1000ms var(--landing-ease); }
+@media (prefers-reduced-motion: reduce) { .lp-seg { transition: none; } }

@@ -355,3 +355,15 @@ Answers to the open questions above. These replace those rows.
 | `capitalize` was removed from the Reports wrapper | It Title Cased body copy. The Title Case rule is for interface labels only |
 | Card names were shortened: Spending Split, Changes From Last Month, Goal Funding Dates, Latest Quarter, Supporting Numbers, What We Checked, Debt-to-Income, Income Stability, Board (was Kanban view) | Clearer for an everyday reader. "Income to Debt Ratio" was also the wrong name for the figure |
 
+
+## Landing page elevation, decided 2026-11-21
+
+| Decision | Why |
+| --- | --- |
+| The landing page is one story: Hero, Use Cases, How It Works, Copilot deep dive, a proof strip, Trust, then a closing call to action. The feature carousel (`FeatureGrid`) and the hero's static `ProductPreview` were removed | The carousel showed one of four features at a time and looped forever, against the "nothing loops" rule in `docs/landing-page-plan.md`. The old page alternated three unrelated section colors with no build |
+| Visuals are hand-built mini-UIs with scripted figures, each labeled "Example". Each plays once when it scrolls into view (`useInView`, `useStages` in `components/landing/motion.tsx`). Reduced motion shows the finished state | Screenshots go stale and cannot animate. Scripted figures must never pass as the visitor's own |
+| Direction is "refine and elevate": same indigo and Poppins/Inter, a bigger type scale, one surface system, one dark section. No eyebrows, no gradient text, no icon-card grids as page structure | Brand continuity with the dashboard. Those patterns made the old page read as templated |
+| Landing colors, shadows and the heading font are Tailwind utilities (`bg-lp-tint-50`, `text-lp-text-2`, `shadow-lp-float`, `font-lp-heading`) over the `--landing-*` tokens. The `.lp` wrapper resets the global Roboto rule on `p`, `span` and `button` | The global rule overrode the landing page's Inter body font, and inline `style` props bypassed the tokens |
+| The demo button is "Try the Demo" with a small asterisk. A note under it says "Judges: please use the demo for a hassle-free experience." It appears in the hero and the closing section | Judges get a clear pointer to the no-signup path, without the old "For judges" tag sitting in the button row |
+| The trust section states only what the code enforces (math before words, the number guardrail, suggest only, ranges, confirm before saving, mocks labeled, sandbox data). Plaid scope and a data-sale policy stay out until confirmed | Root `AGENTS.md` rules 1 to 5, 7, 8 and 10. The TODO in `TrustSection.tsx` stays open |
+| Use cases: Overview, Goals and Simulation, Advisor, Spending and Subscriptions, Copilot. Life Events and Reports are not on the page | Chosen by the dashboard owner. Rows are added in `UseCases.tsx` |
