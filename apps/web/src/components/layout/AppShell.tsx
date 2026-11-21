@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { NAV_GROUPS, NAV_ITEMS, OVERVIEW_ITEM, SETTINGS_ITEM, type NavItem } from "@/lib/nav";
 import { AccountCard } from "./AccountCard";
 
@@ -185,14 +185,15 @@ function getNavIcon(href: string, active: boolean) {
   }
 }
 
-/** One row in the sidebar. Intelligence rows are taller and carry a hint under the label. */
+/** One row in the sidebar. Intelligence rows are taller and carry a hint under the label.
+ *  Below `lg` the same rows live in the phone drawer, so they keep a 44px tap height there. */
 function SidebarLink({ item, pathname, hero = false }: { item: NavItem; pathname: string; hero?: boolean }) {
   const active = item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href);
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`flex items-center gap-3 rounded-2xl px-3.5 font-roboto text-sm transition-all duration-150 ${hero ? "py-2" : "py-2.5"}`}
+      className={`flex items-center gap-3 rounded-2xl px-3.5 font-roboto text-sm transition-all duration-150 max-lg:min-h-11 ${hero ? "py-2" : "py-2.5"}`}
       style={{
         backgroundColor: active ? "#ffffff" : "transparent",
         color: active ? "#544af7" : "rgba(255, 255, 255, 0.72)",
@@ -209,110 +210,235 @@ function SidebarLink({ item, pathname, hero = false }: { item: NavItem; pathname
       <span className="min-w-0">
         <span className="block truncate">{item.label}</span>
         {hero && item.hint && (
-          <span className="block truncate text-[11px] font-normal" style={{ opacity: active ? 0.7 : 0.55 }}>{item.hint}</span>
+          <span className="block truncate text-[11px] font-normal max-lg:text-xs" style={{ opacity: active ? 0.7 : 0.55 }}>{item.hint}</span>
         )}
       </span>
     </Link>
   );
 }
 
+/** Brand, navigation and account card. The desktop sidebar and the phone drawer both render this. */
+function SidebarContent({ pathname }: { pathname: string }) {
+  return (
+    <>
+      <div className="flex flex-col flex-1 overflow-y-auto no-scrollbar pr-0.5">
+        {/* Logo / Brand Header */}
+        <Link href="/app" className="flex min-h-11 items-center gap-3 px-3 mb-6">
+          <span
+            className="flex h-10 w-10 items-center justify-center rounded-2xl shadow-sm shrink-0"
+            style={{ background: "rgba(255, 255, 255, 0.22)" }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M12 2C8.5 6 6 9.5 6 13.5a6 6 0 0 0 12 0c0-4-2.5-7.5-6-11.5z"
+                fill="white"
+              />
+              <circle cx="12" cy="14" r="2.5" fill="#544af7" />
+            </svg>
+          </span>
+          <div className="flex items-baseline">
+            <span className="font-poppins text-2xl font-bold tracking-tight text-white">
+              FinVantage
+            </span>
+          </div>
+        </Link>
+
+        {/* Dashboard navigation: Overview, then Intelligence, then Finances, with Settings last */}
+        <nav aria-label="Main Navigation" className="flex flex-col gap-1">
+          <SidebarLink item={OVERVIEW_ITEM} pathname={pathname} />
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="mt-4 flex flex-col gap-1">
+              <p className="px-3.5 pb-1 font-roboto text-xs font-semibold uppercase tracking-[0.14em] text-white/50 lg:text-[11px]">
+                {group.label}
+              </p>
+              {group.items.map((item) => (
+                <SidebarLink key={item.href} item={item} pathname={pathname} hero={group.label === "Intelligence"} />
+              ))}
+            </div>
+          ))}
+          <div className="mt-4 border-t border-white/10 pt-3">
+            <SidebarLink item={SETTINGS_ITEM} pathname={pathname} />
+          </div>
+        </nav>
+      </div>
+
+      {/* User Profile Card at Bottom: who is signed in, with sign-in and sign-out */}
+      <AccountCard />
+    </>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+      <line x1="4" y1="7" x2="20" y2="7" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <line x1="4" y1="17" x2="20" y2="17" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+      <line x1="6" y1="6" x2="18" y2="18" />
+      <line x1="18" y1="6" x2="6" y2="18" />
+    </svg>
+  );
+}
+
+const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // Opening a page closes the drawer.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  // While the drawer is open: lock page scroll, close on Escape, keep Tab inside it, and put
+  // focus back on the menu button when it closes. Reaching `lg` (a rotated tablet) closes it too.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const button = menuButtonRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !drawerRef.current) return;
+      const items = drawerRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+      if (items.length === 0) return;
+      // Move focus ourselves, wrapping at both ends. Leaving it to the browser let Tab jump from
+      // the drawer straight to the page behind it (found in a Chromium test).
+      const list = Array.from(items);
+      const at = list.indexOf(document.activeElement as HTMLElement);
+      const next = event.shiftKey ? (at <= 0 ? list.length - 1 : at - 1) : (at < 0 || at === list.length - 1 ? 0 : at + 1);
+      event.preventDefault();
+      list[next].focus();
+    }
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    function onDesktop(event: MediaQueryListEvent) {
+      if (event.matches) setMenuOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    desktop.addEventListener("change", onDesktop);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKey);
+      desktop.removeEventListener("change", onDesktop);
+      button?.focus();
+    };
+  }, [menuOpen]);
+
+  const current = NAV_ITEMS.find((item) => (item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href)));
 
   return (
-    <div className="flex min-h-screen bg-[#f8f9fe]">
-      {/* ── Sidebar (Desktop) ────────────────────────────────────────── */}
+    <div className="flex min-h-dvh bg-[#f8f9fe]">
+      {/* ── Sidebar (Desktop, from 1024px) ───────────────────────────── */}
       <aside
-        className="hidden md:flex md:w-[260px] md:flex-col md:shrink-0 justify-between select-none"
+        className="hidden lg:flex lg:w-[260px] lg:flex-col lg:shrink-0 justify-between select-none"
         style={{
           backgroundColor: "#544af7",
           position: "sticky",
           top: 0,
-          height: "100vh",
+          height: "100dvh",
           padding: "24px 14px 20px 14px",
           color: "white",
         }}
       >
-        <div className="flex flex-col flex-1 overflow-y-auto no-scrollbar pr-0.5">
-          {/* Logo / Brand Header */}
-          <Link href="/app" className="flex items-center gap-3 px-3 mb-6">
-            <span
-              className="flex h-10 w-10 items-center justify-center rounded-2xl shadow-sm shrink-0"
-              style={{ background: "rgba(255, 255, 255, 0.22)" }}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M12 2C8.5 6 6 9.5 6 13.5a6 6 0 0 0 12 0c0-4-2.5-7.5-6-11.5z"
-                  fill="white"
-                />
-                <circle cx="12" cy="14" r="2.5" fill="#544af7" />
-              </svg>
-            </span>
-            <div className="flex items-baseline">
-              <span className="font-poppins text-2xl font-bold tracking-tight text-white">
-                FinVantage
-              </span>
-            </div>
-          </Link>
-
-          {/* Dashboard navigation: Overview, then Intelligence, then Finances, with Settings last */}
-          <nav aria-label="Main Navigation" className="flex flex-col gap-1">
-            <SidebarLink item={OVERVIEW_ITEM} pathname={pathname} />
-            {NAV_GROUPS.map((group) => (
-              <div key={group.label} className="mt-4 flex flex-col gap-1">
-                <p className="px-3.5 pb-1 font-roboto text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">
-                  {group.label}
-                </p>
-                {group.items.map((item) => (
-                  <SidebarLink key={item.href} item={item} pathname={pathname} hero={group.label === "Intelligence"} />
-                ))}
-              </div>
-            ))}
-            <div className="mt-4 border-t border-white/10 pt-3">
-              <SidebarLink item={SETTINGS_ITEM} pathname={pathname} />
-            </div>
-          </nav>
-
-        </div>
-
-        {/* User Profile Card at Bottom: who is signed in, with sign-in and sign-out */}
-        <AccountCard />
+        <SidebarContent pathname={pathname} />
       </aside>
 
-      {/* ── Mobile Header ─────────────────────────────────────────────── */}
+      {/* ── Top Bar (phones and tablets): a menu button, the brand, and the current page ── */}
       <div
-        className="md:hidden fixed inset-x-0 top-0 z-50 flex flex-col justify-center px-4"
-        style={{ height: "64px", backgroundColor: "#544af7", color: "white" }}
+        inert={menuOpen}
+        className="lg:hidden fixed inset-x-0 top-0 z-50 flex items-center gap-1 px-2 text-white"
+        style={{
+          backgroundColor: "#544af7",
+          height: "calc(56px + env(safe-area-inset-top))",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingLeft: "max(0.5rem, env(safe-area-inset-left))",
+          paddingRight: "max(0.5rem, env(safe-area-inset-right))",
+        }}
       >
-        <div className="flex items-center justify-between">
-          <Link href="/app" className="font-poppins text-lg font-bold text-white">
-            FinVantage
-          </Link>
-          <nav className="flex gap-1.5 overflow-x-auto max-w-[75vw] py-1 font-roboto no-scrollbar">
-            {NAV_ITEMS.map((item) => {
-              const active = item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="shrink-0 px-2.5 py-1 rounded-xl text-xs font-medium transition-colors"
-                  style={{
-                    backgroundColor: active ? "#ffffff" : "rgba(255, 255, 255, 0.12)",
-                    color: active ? "#544af7" : "#ffffff",
-                  }}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
+        <button
+          ref={menuButtonRef}
+          type="button"
+          onClick={() => setMenuOpen(true)}
+          aria-label="Open Menu"
+          aria-haspopup="dialog"
+          aria-expanded={menuOpen}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors active:bg-white/20"
+        >
+          <MenuIcon />
+        </button>
+        <Link href="/app" className="flex min-h-11 items-center font-poppins text-lg font-bold text-white">
+          FinVantage
+        </Link>
+        {current && (
+          <span className="ml-auto min-w-0 truncate pr-2 font-roboto text-sm font-medium text-white/80" aria-hidden="true">
+            {current.label}
+          </span>
+        )}
       </div>
 
+      {/* ── Navigation Drawer (phones and tablets) ───────────────────── */}
+      {menuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[60]">
+          <div
+            className="nav-backdrop absolute inset-0 bg-[#16192c]/50"
+            onClick={() => setMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Main Menu"
+            className="nav-drawer absolute inset-y-0 left-0 flex w-[min(320px,86vw)] flex-col justify-between overscroll-contain text-white shadow-2xl select-none"
+            style={{
+              backgroundColor: "#544af7",
+              padding:
+                "calc(16px + env(safe-area-inset-top)) 14px calc(16px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left))",
+            }}
+          >
+            <button
+              ref={closeRef}
+              type="button"
+              onClick={() => setMenuOpen(false)}
+              aria-label="Close Menu"
+              className="absolute right-2 flex h-11 w-11 items-center justify-center rounded-xl transition-colors active:bg-white/20"
+              style={{ top: "calc(8px + env(safe-area-inset-top))" }}
+            >
+              <CloseIcon />
+            </button>
+            <SidebarContent pathname={pathname} />
+          </div>
+        </div>
+      )}
+
       {/* ── Main Content Area ────────────────────────────────────────── */}
-      <main className={`flex-1 min-w-0 md:pt-0 pt-16 ${pathname === "/advisor" ? "h-dvh min-h-0 overflow-hidden" : ""}`}>
+      <main
+        inert={menuOpen}
+        className={`flex-1 min-w-0 lg:pt-0 max-lg:pt-[calc(56px+env(safe-area-inset-top))] ${pathname === "/advisor" ? "h-dvh min-h-0 overflow-hidden" : ""}`}
+        style={{
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
+      >
         {/* The Advisor fills the screen with a tight frame, so the chat and its widgets get the room. */}
-        <div className={pathname === "/advisor" ? "flex h-full w-full flex-col px-3 py-3 sm:px-4 md:px-5 md:py-4" : "max-w-[1360px] mx-auto px-6 py-8 md:px-10 md:py-9"}>
+        <div className={pathname === "/advisor" ? "flex h-full w-full flex-col px-3 py-3 sm:px-4 lg:px-5 lg:py-4" : "max-w-[1360px] mx-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-9"}>
           {children}
         </div>
       </main>

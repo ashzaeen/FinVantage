@@ -26,7 +26,7 @@ export const directionClass = (value: number) => (value > 0 ? "text-gain" : valu
 export function Change({ rate, className = "" }: { rate: number; className?: string }) {
   return (
     <span className={`inline-flex items-center gap-1 font-semibold tabular-nums ${directionClass(rate)} ${className}`}>
-      {rate !== 0 && <span aria-hidden="true" className="text-[0.7em]">{rate > 0 ? "▲" : "▼"}</span>}
+      {rate !== 0 && <span aria-hidden="true" className="text-[0.7em] max-lg:text-xs">{rate > 0 ? "▲" : "▼"}</span>}
       {signedPercent(rate)}
     </span>
   );
@@ -69,7 +69,7 @@ export function SortHeader<K extends string>({ label, column, sort, onSort, clas
   const active = sort.key === column;
   return (
     <th aria-sort={active ? (sort.desc ? "descending" : "ascending") : "none"} className={`pb-2 font-medium ${className}`}>
-      <button type="button" onClick={() => onSort(column)} className={`inline-flex items-center gap-1 transition-colors hover:text-ink ${active ? "text-ink-secondary" : ""}`}>
+      <button type="button" onClick={() => onSort(column)} className={`inline-flex items-center gap-1 transition-colors hover:text-ink max-lg:min-h-10 ${active ? "text-ink-secondary" : ""}`}>
         {label}
         <span aria-hidden="true" className={`w-2 text-[9px] ${active ? "" : "opacity-0"}`}>{sort.desc ? "▼" : "▲"}</span>
       </button>
@@ -241,7 +241,7 @@ export function Pills<T extends string>({
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
           className={`relative z-10 whitespace-nowrap rounded-full font-semibold transition-colors duration-200 ${
-            compact ? "px-3 py-1 text-xs" : "px-4 py-1.5 text-sm"
+            compact ? "px-3 py-1 text-xs max-lg:min-h-9" : "px-4 py-1.5 text-sm max-lg:min-h-10"
           } ${option.value === value ? "text-accent" : "text-ink-secondary hover:text-ink"}`}
         >
           {option.label}

@@ -50,7 +50,7 @@ function MockBrowser() {
 export function CopilotSection() {
   return (
     <section id="copilot" className="scroll-mt-20 py-18 text-white md:py-24" style={{ background: "var(--landing-dark-bg)" }}>
-      <div className="mx-auto grid max-w-[1200px] gap-10 px-6 lg:grid-cols-2 lg:items-center lg:gap-16">
+      <div className="mx-auto grid grid-cols-1 max-w-[1200px] gap-10 px-6 lg:grid-cols-2 lg:items-center lg:gap-16">
         <div>
           <span className="inline-flex min-h-8 items-center rounded-full px-3.5 text-xs font-semibold" style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>
             Chrome Extension

@@ -12,7 +12,7 @@ export default function TermsPage() {
       <p className="mt-4 text-base leading-7" style={{ color: "var(--landing-text-secondary)" }}>
         FinVantage is a hackathon build and does not yet have published terms of service or a pricing model. It is offered as-is for demonstration and educational purposes, with no financial advice or guarantee implied.
       </p>
-      <Link href="/" className="mt-6 inline-flex text-sm font-semibold" style={{ color: "var(--landing-primary)" }}>
+      <Link href="/" className="mt-6 inline-flex min-h-11 items-center text-sm font-semibold" style={{ color: "var(--landing-primary)" }}>
         Back to FinVantage
       </Link>
     </main>

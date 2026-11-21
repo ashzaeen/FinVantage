@@ -50,7 +50,7 @@ export function Hero() {
           <circle cx="920" cy="92" r="8" fill="#fff" stroke="#16856d" strokeOpacity=".82" strokeWidth="3" />
         </svg>
       </div>
-      <div className="relative z-10 mx-auto grid max-w-[1200px] gap-10 px-6 py-18 md:py-24 lg:grid-cols-2 lg:items-center lg:gap-16" style={{ minHeight: "calc(100svh - 4rem)" }}>
+      <div className="relative z-10 mx-auto grid grid-cols-1 max-w-[1200px] gap-10 px-6 py-18 md:py-24 lg:grid-cols-2 lg:items-center lg:gap-16" style={{ minHeight: "calc(100svh - 4rem)" }}>
         <div className="lg:py-6">
           <span
             className="inline-flex min-h-8 items-center rounded-full px-3.5 text-xs font-semibold"

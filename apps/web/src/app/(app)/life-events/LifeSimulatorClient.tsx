@@ -379,7 +379,7 @@ export function LifeSimulatorClient() {
 
       {genericError && <p role="alert" className="px-4 py-3 text-sm" style={{ background: "var(--critical-bg)", color: "var(--critical)" }}>{genericError}</p>}
 
-      <div className="grid items-start gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
         <Card title={showSavedChanges ? "Saved Models" : "Model an Event"} className="min-w-0">
           {showSavedChanges
             ? <div>

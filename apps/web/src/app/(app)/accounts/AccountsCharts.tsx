@@ -7,7 +7,7 @@ export function AccountsCharts({ netWorth }: { netWorth: NetWorth }) {
   const trend = netWorth.history.map((point) => ({ ...point, value: point.netWorthCents }));
   const breakdown = netWorth.byCategory.map((item) => ({ ...item, label: ACCOUNT_CATEGORY_LABEL[item.category], value: item.balanceCents }));
 
-  return <div className="grid gap-5 xl:grid-cols-2">
+  return <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
     <section className="rounded-3xl border border-[#edf0f7] bg-white p-6 shadow-[0_2px_12px_rgba(22,25,44,0.03)]">
       <h2 className="font-poppins text-base font-bold text-[#16192c]">Net worth over time</h2>
       <p className="mt-1 text-xs text-[#8d94a8]">Reconstructed from today’s account balances and recorded transactions.</p>

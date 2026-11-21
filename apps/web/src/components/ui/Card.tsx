@@ -20,14 +20,14 @@ export function Card({
 }) {
   return (
     <section
-      className={`rounded-3xl bg-white border border-[#edf0f7] ${noPad ? "" : "p-6"} ${lift ? "card-lift" : ""} ${className}`}
+      className={`min-w-0 rounded-3xl bg-white border border-[#edf0f7] ${noPad ? "" : "p-4 sm:p-6"} ${lift ? "card-lift" : ""} ${className}`}
       style={{
         boxShadow: "0 2px 12px 0 rgba(22, 25, 44, 0.03)",
       }}
     >
       {(title || action) && (
-        <div className={`flex items-center justify-between gap-3 ${noPad ? "px-6 pt-6 pb-4" : "mb-4"}`}>
-          <div>
+        <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 ${noPad ? "px-5 pt-5 pb-4 sm:px-6 sm:pt-6" : "mb-4"}`}>
+          <div className="min-w-0 flex-1 basis-44">
             {title && (
               <h2 className="font-poppins text-base font-bold text-[#16192c]">
                 {title}
@@ -39,7 +39,7 @@ export function Card({
               </p>
             )}
           </div>
-          {action && <div className="shrink-0">{action}</div>}
+          {action && <div className="max-w-full shrink-0">{action}</div>}
         </div>
       )}
       {children}

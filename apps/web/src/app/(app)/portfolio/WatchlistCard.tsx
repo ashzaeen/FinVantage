@@ -57,7 +57,7 @@ function AddSymbol({ options, onAdd }: { options: WatchlistItem[]; onAdd: (symbo
         type="button"
         aria-expanded={open}
         onClick={() => { setOpen((value) => !value); setQuery(""); }}
-        className="rounded-full bg-accent-soft px-3.5 py-1.5 text-xs font-bold text-accent transition-colors hover:bg-accent hover:text-white"
+        className="rounded-full bg-accent-soft px-3.5 py-1.5 text-xs font-bold max-lg:min-h-11 text-accent transition-colors hover:bg-accent hover:text-white"
       >
         + Add Symbol
       </button>
@@ -110,7 +110,7 @@ export function WatchlistCard({ watchlist, dates, live }: { watchlist: Watchlist
         <div className="-mx-1 overflow-x-auto px-1">
           <table className="w-full text-sm tabular-nums">
             <thead>
-              <tr className="text-right text-[11px] text-muted">
+              <tr className="text-right text-xs text-muted">
                 <SortHeader label="Symbol" column="symbol" sort={sort} onSort={toggle} className="pl-2 text-left" />
                 <th className="hidden pb-2 font-medium lg:table-cell">Past Month</th>
                 <SortHeader label="Price" column="price" sort={sort} onSort={toggle} />
@@ -128,7 +128,7 @@ export function WatchlistCard({ watchlist, dates, live }: { watchlist: Watchlist
                   <Fragment key={item.symbol}>
                     <tr onClick={() => flip(item.symbol)} className={`invest-fade cursor-pointer border-t border-line text-right transition-colors hover:bg-inset ${open ? "bg-inset" : ""}`}>
                       <td className="py-2 pl-2 text-left">
-                        <button type="button" aria-expanded={open} onClick={(event) => { event.stopPropagation(); flip(item.symbol); }} className="inline-flex items-center gap-2">
+                        <button type="button" aria-expanded={open} onClick={(event) => { event.stopPropagation(); flip(item.symbol); }} className="inline-flex min-h-8 items-center gap-2 max-lg:min-h-11">
                           <Chevron open={open} />
                           <span className="font-semibold text-ink">{item.symbol}</span>
                         </button>
@@ -145,7 +145,7 @@ export function WatchlistCard({ watchlist, dates, live }: { watchlist: Watchlist
                           type="button"
                           aria-label={`Remove ${item.symbol} From Watchlist`}
                           onClick={(event) => { event.stopPropagation(); watchlist.remove(item.symbol); }}
-                          className="h-8 w-8 rounded-full text-muted transition-colors hover:bg-critical-bg hover:text-loss"
+                          className="h-8 w-8 rounded-full text-muted max-lg:h-11 max-lg:w-11 transition-colors hover:bg-critical-bg hover:text-loss"
                         >
                           <span aria-hidden="true">✕</span>
                         </button>
@@ -154,7 +154,7 @@ export function WatchlistCard({ watchlist, dates, live }: { watchlist: Watchlist
                     <tr>
                       <td colSpan={8} className="p-0">
                         <ExpandPanel open={open}>
-                          <div className="grid gap-5 px-2 pb-4 pt-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+                          <div className="grid grid-cols-1 gap-5 px-2 pb-4 pt-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
                             <MiniChart prices={item.sparklineCents} dates={dates} name={item.name} open={open} />
                             <div className="grid content-center grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
                               <DetailStat label="52-Week Low">{formatUsd(item.week52LowCents)}</DetailStat>

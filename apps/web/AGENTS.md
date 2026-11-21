@@ -13,7 +13,7 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
 | `src/app/(app)/<route>/*Client.tsx` | Interactive parts, with `"use client"` |
 | `src/components/landing` | Landing page pieces: header, the live purchase tryout, Airbnb-style feature cards, footer. Photo sources are in `photos.ts`. Planned feature rows are in `docs/landing-page-plan.md` |
 | `src/app/login/LoginForm.tsx` | Email and password sign-in. The landing hero embeds it with `embedded` |
-| `src/components/layout` | `AppShell`: responsive navigation |
+| `src/components/layout` | `AppShell`: the sidebar from 1024px, and below that a top bar with a menu button and a slide-in drawer. Both render one `SidebarContent` |
 | `src/components/ui` | Generic pieces: `Card`, `Stat`, `PageHeader`, `MockedBadge` |
 | `src/components/spending` | `CategoryIcon`: one Lucide icon per spending category, inherited by custom ones. Use it wherever a category is shown |
 | `src/components/finance` | Domain pieces: `ProbabilityRange`, `GoalCard`, `FanChart` |
@@ -35,7 +35,14 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
 - Show probabilities only through `ProbabilityRange`, as a range with its disclaimer.
 - Put `MockedBadge` beside any mocked value.
 - Use token classes such as `bg-raised` and `text-muted`, not raw colors. Add new tokens to both the light and dark blocks in `globals.css`.
-- Layouts must work down to phone width.
+- Layouts must work down to phone width. Check 320, 390 and 768px.
+  - Give every `grid` a base `grid-cols-1` before its `sm:` and `md:` columns. A bare `grid` sizes its column to its widest child and makes the page scroll sideways.
+  - A row with a title and a button must wrap (`Card` and `PageHeader` do). Put `min-w-0` on a flex or grid child that holds long text.
+  - Lay a component out by its own width with a container query (`@container`, `@sm:`) when the same component sits in cards of different widths, as `CategoryPie` does.
+  - The sidebar shows from 1024px (`lg:`). Use `max-lg:` for phone and tablet rules, not `md:`.
+  - Touch screens get 16px fields and 44px buttons from `globals.css` (see the phones and tablets rules at its end). Give an icon button an explicit `max-lg:h-11 max-lg:w-11`, and a text link `min-h-11`. Never paint a dot or a swatch on a `button` itself: put it in an inner element, or the 44px rule will stretch it.
+  - Pin full-height layouts with `dvh`, not `vh`, and pad fixed bars with `env(safe-area-inset-*)`.
+  - Never rely on hover for anything. Reveal-on-hover must also show on touch.
 - **Interaction and motion, the same on every tab:**
   - Cards lift on hover like the Accounts tiles. `Card` does it by default; pass `lift={false}` for forms and controls. Anything else that reads as a card gets the `card-lift` class.
   - Small tiles and rows inside a card (stat tiles, list rows, holdings) get `tile-lift`, a lighter version.

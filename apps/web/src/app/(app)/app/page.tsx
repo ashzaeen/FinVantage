@@ -79,9 +79,10 @@ export default async function OverviewPage() {
       </div>
 
       {/* ── Financial Summary ────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
         <StatCard
           label="Net Worth"
+          className="col-span-2 xl:col-span-1"
           value={formatUsd(netWorth.netWorthCents)}
           icon={<Wallet size={22} strokeWidth={2} aria-hidden="true" />}
           iconBg="#fff5e6"
@@ -212,7 +213,7 @@ export default async function OverviewPage() {
             </h2>
 
             <div className="flex items-center gap-3">
-              <a href="/transactions" className="rounded-xl border border-[#edf0f7] bg-white px-3 py-2 font-roboto text-xs font-medium text-[#544af7] hover:border-[#544af7]">View all transactions</a>
+              <a href="/transactions" className="flex min-h-11 items-center rounded-xl border border-[#edf0f7] bg-white px-3 py-2 font-roboto text-xs font-medium text-[#544af7] hover:border-[#544af7]">View all transactions</a>
             </div>
           </div>
 

@@ -185,7 +185,7 @@ export function CategoryPie({
       {arcs.length === 0 ? (
         <p className="py-12 text-center text-sm" style={{ color: "var(--ink-muted)" }}>{emptyText}</p>
       ) : (
-        <div className="grid items-center gap-4 sm:grid-cols-[minmax(170px,0.9fr)_1.1fr]">
+        <div className="@container"><div className="grid grid-cols-1 items-center gap-4 @sm:grid-cols-[minmax(170px,0.9fr)_minmax(0,1.1fr)]">
           <div className="relative mx-auto aspect-square w-full max-w-[230px]">
             <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-full w-full overflow-visible" role="img" aria-label={title}>
               {/* The coloured slices lift on hover but ignore the mouse. They sweep in clockwise from the top. */}
@@ -254,6 +254,7 @@ export function CategoryPie({
               </li>
             ))}
           </ul>
+        </div>
         </div>
       )}
     </Card>

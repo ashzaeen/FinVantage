@@ -65,7 +65,7 @@ export function OverviewCharts({ netWorth, spending, categories, investments }: 
   }));
   const portfolioTone = investmentView.performance["3M"].changeRate >= 0 ? "#0b8f69" : "#ff4d6d";
 
-  return <div className="grid min-w-0 gap-4 xl:grid-cols-2">
+  return <div className="grid grid-cols-1 min-w-0 gap-4 xl:grid-cols-2">
     <ChartPanel title="Net Worth Trend" detail="Recorded balance snapshots over time.">
       {netWorthTrend.length > 1 ? <div className="h-64 min-w-0" role="img" aria-label="Net worth over time">
         <ResponsiveContainer width="100%" height="100%"><LineChart data={netWorthTrend} margin={{ top: 10, right: 12, bottom: 0, left: 2 }}>
@@ -103,7 +103,7 @@ export function OverviewCharts({ netWorth, spending, categories, investments }: 
 
     <ChartPanel title="Investment Performance" detail={`Sample portfolio vs. S&P 500 · ${investments.pricesAsOf}`} className="xl:col-span-2">
       <div className="mb-3 flex items-center justify-between gap-3"><div className="flex flex-wrap gap-4 text-xs text-[#626981]"><span><i className="mr-2 inline-block h-0.5 w-4 align-middle" style={{ background: portfolioTone }} />Portfolio <strong className="ml-1 tabular-nums text-[#16192c]">{(investmentView.performance["3M"].changeRate * 100).toFixed(1)}%</strong></span><span><i className="mr-2 inline-block h-0.5 w-4 align-middle border-t border-dashed border-[#8d94a8]" />S&amp;P 500 <strong className="ml-1 tabular-nums text-[#16192c]">{(investmentView.performance["3M"].benchmarkChangeRate * 100).toFixed(1)}%</strong></span></div><MockedBadge /></div>
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(260px,1fr)]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(260px,1fr)]">
         <div className="h-64 min-w-0" role="img" aria-label="Three-month investment return and benchmark comparison">
           <ResponsiveContainer width="100%" height="100%"><LineChart data={investmentTrend} margin={{ top: 8, right: 12, bottom: 0, left: 2 }}>
             <CartesianGrid stroke="#edf0f7" strokeDasharray="3 5" vertical={false} />

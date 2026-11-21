@@ -14,7 +14,7 @@ export function Header() {
   return (
     <header
       className="sticky top-0 z-40 border-b backdrop-blur"
-      style={{ borderColor: "var(--landing-border)", background: "rgba(255, 255, 255, 0.85)" }}
+      style={{ borderColor: "var(--landing-border)", background: "rgba(255, 255, 255, 0.95)", paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between gap-4 px-6">
         <Link href="/" className="flex min-h-11 items-center gap-2.5">

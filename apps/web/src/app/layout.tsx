@@ -1,6 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+
+/** `viewportFit: "cover"` lets pages draw under the iPhone notch and home bar; the shell pads
+ *  itself with `env(safe-area-inset-*)`. Zoom stays enabled on purpose, for accessibility. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  // Android Chrome: shrink the layout when the on-screen keyboard opens, so the Advisor's message
+  // box stays above it. iOS Safari ignores this and scrolls the page instead.
+  interactiveWidget: "resizes-content",
+};
 
 export const metadata: Metadata = {
   title: { default: "FinVantage", template: "%s | FinVantage" },

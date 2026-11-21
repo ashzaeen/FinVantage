@@ -197,7 +197,7 @@ export function FeatureGrid() {
         <div className="mt-8 overflow-hidden" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
           <div className="flex" onTransitionEnd={(e) => e.target === e.currentTarget && wrapAround()} style={{ transform: `translateX(-${index * 100}%)`, transition: animate ? `transform ${MOVE}` : "none" }}>
             {[...FEATURES, FEATURES[0]].map((feature, slideIndex) => (
-              <ul key={slideIndex} aria-hidden={slideIndex !== index} aria-label={feature.name} className="grid w-full shrink-0 gap-5 md:grid-cols-2">
+              <ul key={slideIndex} aria-hidden={slideIndex !== index} aria-label={feature.name} className="grid grid-cols-1 w-full shrink-0 gap-5 md:grid-cols-2">
                 <li className="rounded-[24px] border-t-[3px] bg-white p-5 sm:p-6" style={{ borderTopColor: feature.accent, borderLeft: "1px solid var(--landing-border)", borderRight: "1px solid var(--landing-border)", borderBottom: "1px solid var(--landing-border)" }}>
                   <feature.preview />
                   <h3 className="mt-5 text-base font-semibold" style={{ fontFamily: "var(--font-landing-heading)", color: "var(--landing-text)" }}>{feature.title}</h3>
@@ -219,9 +219,9 @@ export function FeatureGrid() {
             ))}
           </div>
         </div>
-        <div className="mt-5 flex items-center justify-between gap-4">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <span className="sr-only" aria-live="polite">Showing {FEATURES[active].name}</span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             {FEATURES.map((feature, i) => (
               <button
                 key={feature.name}
@@ -229,9 +229,14 @@ export function FeatureGrid() {
                 onClick={() => goTo(i)}
                 aria-label={`Show ${feature.name}`}
                 aria-current={i === active}
-                className="h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]"
-                style={{ width: i === active ? 28 : 8, background: i === active ? feature.accent : "var(--landing-border)" }}
-              />
+                className="group flex h-11 min-w-11 items-center justify-center rounded-full px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]"
+              >
+                <span
+                  aria-hidden="true"
+                  className="block h-2 rounded-full transition-all duration-300"
+                  style={{ width: i === active ? 28 : 8, background: i === active ? feature.accent : "var(--landing-border)" }}
+                />
+              </button>
             ))}
           </div>
           <div className="flex items-center gap-2">

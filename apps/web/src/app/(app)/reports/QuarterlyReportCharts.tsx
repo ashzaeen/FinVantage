@@ -111,7 +111,7 @@ export function QuarterlyReportCharts({
   })) ?? [];
 
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
       <div className="order-1 min-w-0">
         <ChartPanel title={hasMonthlyData ? "Income and spending by month" : "Quarter financial snapshot"}>
         <p className="mb-3 text-sm text-muted">
@@ -206,7 +206,7 @@ export function QuarterlyReportCharts({
                 <p className="text-xs text-muted">Current portfolio and trailing three-month performance, as of {investments.pricesAsOf}.</p>
                 <MockedBadge />
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {[
                   { label: "Portfolio value", value: formatUsd(investmentView.totalValueCents), detail: `Across ${investmentView.accountCount} accounts`, tone: "text-ink" },
                   { label: "Total return", value: formatUsd(investmentView.totalReturnCents), detail: `${(investmentView.totalReturnRate * 100).toFixed(1)}% overall`, tone: investmentView.totalReturnCents >= 0 ? "text-good" : "text-critical" },
@@ -220,7 +220,7 @@ export function QuarterlyReportCharts({
                   </div>
                 ))}
               </div>
-              <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
+              <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
                 <section className="min-w-0 rounded-2xl border border-line p-4">
                   <h3 className="font-semibold text-ink">Portfolio vs. benchmark</h3>
                   <p className="mt-1 text-xs text-muted">Cumulative return over the last three months.</p>

@@ -334,7 +334,7 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
         </div>
       )}
     </section>
-    {editing && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setEditing(null); setIsCreating(false); } }} className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#16192c]/45 p-3 text-[#16192c] backdrop-blur-[2px] sm:p-6">
+    {editing && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setEditing(null); setIsCreating(false); } }} className="fixed inset-0 z-[100] flex justify-center overflow-y-auto bg-[#16192c]/45 [&>*]:my-auto p-3 text-[#16192c] backdrop-blur-[2px] sm:p-6">
       <div role="dialog" aria-modal="true" aria-labelledby="transaction-edit-title" className="max-h-[94dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-[#f8f9fe] shadow-2xl sm:max-h-[90dvh]">
         <header className="sticky top-0 z-10 flex h-[70px] items-center justify-between border-b border-[#edf0f7] bg-white px-6 shadow-sm sm:px-8"><h2 id="transaction-edit-title" className="font-poppins text-xl font-semibold">{isCreating ? "Add Transaction" : "Edit Transaction"}</h2><button type="button" onClick={() => { setEditing(null); setIsCreating(false); }} aria-label="Close transaction editor" className="rounded-xl p-2 text-3xl leading-none text-[#8d94a8] hover:bg-[#f1f2f8] hover:text-[#16192c]">×</button></header>
         <form onSubmit={saveTransaction}>

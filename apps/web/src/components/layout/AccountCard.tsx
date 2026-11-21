@@ -9,7 +9,7 @@ import { readClaims, readCookie, TOKEN_COOKIE, usableToken } from "@/lib/token";
 type Viewer = { kind: "loading" } | { kind: "demo" } | { kind: "user"; name: string; detail: string };
 
 const buttonCls =
-  "shrink-0 rounded-xl px-2.5 py-1.5 font-roboto text-xs font-medium text-white transition-colors hover:bg-white/20";
+  "flex shrink-0 items-center rounded-xl px-2.5 py-1.5 font-roboto text-xs font-medium text-white transition-colors hover:bg-white/20 max-lg:min-h-11 max-lg:px-3.5 max-lg:text-sm";
 const buttonStyle = { background: "rgba(255, 255, 255, 0.16)" };
 
 /** The sidebar's profile card: who is signed in, with sign-in and sign-out. */

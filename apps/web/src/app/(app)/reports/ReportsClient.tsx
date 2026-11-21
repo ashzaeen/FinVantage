@@ -178,7 +178,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
         {latest.visuals.outlookAsOf && ` Goal outlook as of ${latest.visuals.outlookAsOf}.`}
       </p>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           formatUsd(latest.visuals.summary.netWorthCents),
           formatUsd(latest.visuals.summary.monthlyIncomeCents),
@@ -203,7 +203,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
         <QuarterlyReportCharts reports={[latest]} loading={chartsLoading} error={chartsError} investments={investments} investmentsError={investmentsError} currentSpending={currentSpending} />
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <ReportSection title="What went well" eyebrow="Positive movement">
           <ul className="space-y-3 text-sm">
             {latest.wentWell.map((item) => <li key={item} className="flex gap-3"><span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-good" />{item}</li>)}
@@ -234,7 +234,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
       </ReportSection>
 
       <ReportSection title="Quarter evidence" eyebrow="Traceable figures">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {latest.evidence.map((item) => (
             <div key={`${item.quarter}-${item.sourceId}`}>
               <p className="text-sm font-medium">{item.quarter}</p>
@@ -250,7 +250,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
       </ReportSection>
 
       <ReportSection title="Quarterly agent coverage" eyebrow="Sources reviewed">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="rounded-xl bg-inset p-4">
             <p className="text-right font-poppins text-2xl font-bold tabular-nums">{latest.sourceIds.simulationRunIds.length}</p>
             <p className="text-xs text-muted">Simulation runs reviewed</p>
@@ -302,7 +302,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
       )}
 
       <ReportSection title="Goal outlook" eyebrow="Forward estimates">
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {latest.visuals.goalPathways.map((goal) => (
             <div key={goal.goalId} className="rounded-2xl border border-line bg-inset/50 p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -327,7 +327,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
         </div>
       </ReportSection>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <ReportSection title="Look ahead" eyebrow="Next quarter"><p className="text-sm leading-6">{latest.lookAhead}</p></ReportSection>
         <ReportSection title="Next steps" eyebrow="Primary actions">
           <ol className="list-decimal space-y-2 pl-5 text-sm">
@@ -337,7 +337,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
       </div>
 
       <ReportSection title="Suggested focus" eyebrow="Planning prompts">
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {latest.visuals.suggestions.map((suggestion) => (
             <div key={suggestion.goalId} className="rounded-2xl border border-line bg-inset/50 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-accent">{suggestion.category}</p>

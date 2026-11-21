@@ -138,7 +138,7 @@ function NewsReader({ articles, index, live, onNavigate, onClose }: {
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between gap-3 border-b border-line px-6 py-4">
           {live ? <span /> : <MockedBadge />}
-          <button type="button" aria-label="Close Article" onClick={onClose} className="h-9 w-9 rounded-full text-muted transition-colors hover:bg-inset hover:text-ink">
+          <button type="button" aria-label="Close Article" onClick={onClose} className="h-9 w-9 rounded-full text-muted transition-colors max-lg:h-11 max-lg:w-11 hover:bg-inset hover:text-ink">
             <span aria-hidden="true">✕</span>
           </button>
         </div>
@@ -190,7 +190,7 @@ function NewsCard({ news, live }: { news: NewsHeadline[]; live: boolean }) {
 
 export function MarketTiles({ data, watchlist }: { data: InvestmentsOverview; watchlist: Watchlist }) {
   return (
-    <section aria-label="Market Overview" className="grid gap-5 md:grid-cols-3">
+    <section aria-label="Market Overview" className="grid grid-cols-1 gap-5 md:grid-cols-3">
       <MarketsCard data={data} />
       <TopMoversCard data={data} watchlist={watchlist} />
       <NewsCard news={data.news} live={data.priceSource === "live"} />

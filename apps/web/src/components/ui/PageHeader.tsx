@@ -14,14 +14,14 @@ export function PageHeader({
   showSearch?: boolean;
 }) {
   return (
-    <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-      <h1 className="font-poppins text-3xl font-bold tracking-tight text-[#16192c]">
+    <header className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 sm:mb-8">
+      <h1 className="font-poppins text-2xl font-bold tracking-tight text-[#16192c] sm:text-3xl">
         {title}
       </h1>
 
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 max-w-full items-center gap-3">
         {showSearch && (
-          <div className="relative min-w-[260px]">
+          <div className="relative w-full min-w-0 sm:min-w-[260px]">
             <input
               type="search"
               placeholder="Search for anything...."

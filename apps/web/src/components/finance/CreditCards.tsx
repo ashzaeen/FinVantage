@@ -80,7 +80,7 @@ export function CreditCards({ accounts }: { accounts: Account[] }) {
           </div>;
         })}
       </div>
-      {accounts.filter((account) => account.type === "credit_card").length > 2 && <Link href="/accounts" className="mt-3 block text-center text-xs font-semibold text-[#544af7] hover:underline">View all credit cards</Link>}
+      {accounts.filter((account) => account.type === "credit_card").length > 2 && <Link href="/accounts" className="mt-3 flex min-h-11 items-center justify-center text-center text-xs font-semibold text-[#544af7] hover:underline">View all credit cards</Link>}
     </div>
   );
 }

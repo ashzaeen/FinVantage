@@ -207,7 +207,7 @@ export function EventForm({
       })}</div>
     </div>
 
-    <div className="grid content-start gap-x-5 gap-y-4 sm:grid-cols-2">
+    <div className="grid grid-cols-1 content-start gap-x-5 gap-y-4 sm:grid-cols-2">
       <div className="sm:col-span-2"><h3 className="font-poppins text-base font-bold" style={{ color: "var(--ink)" }}>{eventHeading}</h3><p className="mt-1 text-xs" style={{ color: "var(--ink-muted)" }}>Use your best estimate; you can change it later.</p></div>
 
       <label htmlFor="scenario-start-month" className="block text-sm font-medium" style={{ color: "var(--ink-secondary)" }}>

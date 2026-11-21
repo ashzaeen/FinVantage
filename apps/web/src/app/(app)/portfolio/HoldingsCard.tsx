@@ -32,7 +32,7 @@ export function HoldingsCard({ view, dates, watchlist }: { view: InvestmentView;
         <div className="-mx-1 overflow-x-auto px-1">
           <table className="w-full text-sm tabular-nums">
             <thead>
-              <tr className="text-right text-[11px] text-muted">
+              <tr className="text-right text-xs text-muted">
                 <SortHeader label="Symbol" column="symbol" sort={sort} onSort={toggle} className="pl-2 text-left" />
                 <SortHeader label="Price" column="price" sort={sort} onSort={toggle} />
                 <SortHeader label="Today" column="today" sort={sort} onSort={toggle} />
@@ -50,7 +50,7 @@ export function HoldingsCard({ view, dates, watchlist }: { view: InvestmentView;
                   <Fragment key={holding.symbol}>
                     <tr onClick={() => flip(holding.symbol)} className={`invest-fade cursor-pointer border-t border-line text-right transition-colors hover:bg-inset ${open ? "bg-inset" : ""}`}>
                       <td className="py-2.5 pl-2 text-left">
-                        <button type="button" aria-expanded={open} onClick={(event) => { event.stopPropagation(); flip(holding.symbol); }} className="inline-flex items-center gap-2">
+                        <button type="button" aria-expanded={open} onClick={(event) => { event.stopPropagation(); flip(holding.symbol); }} className="inline-flex min-h-8 items-center gap-2 max-lg:min-h-11">
                           <Chevron open={open} />
                           <span className="font-semibold text-ink">{holding.symbol}</span>
                         </button>
@@ -67,7 +67,7 @@ export function HoldingsCard({ view, dates, watchlist }: { view: InvestmentView;
                     <tr>
                       <td colSpan={8} className="p-0">
                         <ExpandPanel open={open}>
-                          <div className="grid gap-5 px-2 pb-4 pt-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+                          <div className="grid grid-cols-1 gap-5 px-2 pb-4 pt-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
                             <MiniChart prices={holding.sparklineCents} dates={dates} name={holding.name} open={open} />
                             <div>
                               <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">

@@ -14,7 +14,7 @@ export function HowItWorks() {
         >
           How It Works
         </h2>
-        <ol className="mt-10 grid gap-5 sm:grid-cols-3">
+        <ol className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-3">
           {STEPS.map((step) => (
             <li key={step.number} className="rounded-[22px] border bg-white p-6" style={{ borderColor: "var(--landing-border)", boxShadow: "0 8px 24px -20px rgba(55,48,163,0.32)" }}>
               <span

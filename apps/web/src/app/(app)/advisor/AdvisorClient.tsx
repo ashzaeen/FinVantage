@@ -213,7 +213,7 @@ export function AdvisorClient({ initialConversationId, situation }: { initialCon
               <button
                 type="button"
                 onClick={() => remove(c.id)}
-                className="mr-1.5 rounded-lg p-1.5 text-subtle opacity-100 hover:bg-critical-bg hover:text-critical md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+                className="mr-1.5 flex items-center justify-center rounded-lg p-1.5 text-subtle max-lg:h-11 max-lg:w-11 opacity-100 hover:bg-critical-bg hover:text-critical md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
                 aria-label={`Delete ${c.title}`}
               >
                 <Trash2 size={14} />
@@ -238,9 +238,9 @@ export function AdvisorClient({ initialConversationId, situation }: { initialCon
           <aside className={`min-h-0 flex-1 overflow-hidden ${panel}`}>{list}</aside>
         </div>
         {showList && (
-          <div className="fixed inset-0 z-40 md:hidden">
+          <div className="fixed inset-x-0 bottom-0 top-[calc(56px+env(safe-area-inset-top))] z-40 md:hidden">
             <button type="button" className="absolute inset-0 bg-black/30" onClick={() => setShowList(false)} aria-label="Close Conversations" />
-            <aside className="absolute inset-y-0 left-0 w-80 max-w-[85%] bg-card shadow-xl">{list}</aside>
+            <aside className="absolute inset-y-0 left-0 w-80 max-w-[85%] bg-card pb-[env(safe-area-inset-bottom)] shadow-xl">{list}</aside>
           </div>
         )}
 
@@ -328,7 +328,7 @@ export function AdvisorClient({ initialConversationId, situation }: { initialCon
                 type="submit"
                 disabled={!draft.trim() || loading}
                 aria-label="Send"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-white transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-white max-lg:h-11 max-lg:w-11 transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ArrowUp size={18} aria-hidden />
               </button>

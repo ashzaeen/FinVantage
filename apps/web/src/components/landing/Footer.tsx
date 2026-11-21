@@ -14,7 +14,7 @@ export function Footer() {
         <p style={{ color: "var(--landing-text-muted)" }}>Educational projections, not financial advice.</p>
         <nav aria-label="Legal" className="flex items-center gap-5">
           <Link href="/privacy" className="flex min-h-11 items-center hover:underline" style={{ color: "var(--landing-text)" }}>Privacy</Link>
-          <Link href="/terms" className="flex min-h-11 items-center hover:underline" style={{ color: "var(--landing-text)" }}>Terms</Link>
+          <Link href="/terms" className="flex min-h-11 min-w-11 items-center hover:underline" style={{ color: "var(--landing-text)" }}>Terms</Link>
           <a href={REPO_URL} className="flex min-h-11 items-center hover:underline" style={{ color: "var(--landing-text)" }}>GitHub</a>
         </nav>
       </div>

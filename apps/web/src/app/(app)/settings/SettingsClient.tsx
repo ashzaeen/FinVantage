@@ -23,7 +23,7 @@ export function SettingsClient({ user: initial }: { user: User }) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <Card lift={false} title="Copilot">
         <label className="flex items-center gap-2 text-sm">
           <input

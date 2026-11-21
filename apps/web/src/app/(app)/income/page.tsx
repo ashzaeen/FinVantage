@@ -198,7 +198,7 @@ export default async function IncomePage() {
   return (
     <>
       <PageHeader title="Income" />
-      <div className="page-cascade grid gap-5 md:grid-cols-2">
+      <div className="page-cascade grid grid-cols-1 gap-5 md:grid-cols-2">
         <ExpectedIncome income={income} />
         <IncomePie income={income} categories={categories} />
         <TrendBars trend={income.trend} />

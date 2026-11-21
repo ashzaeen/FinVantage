@@ -46,7 +46,7 @@ export function TrustSection() {
         >
           Built to Be Trusted
         </h2>
-        <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {POINTS.map(({ icon: Icon, title, body }) => (
             <li key={title} className="rounded-[20px] p-5" style={{ background: "var(--landing-tint-50)" }}>
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white" style={{ color: "var(--landing-primary)" }}>

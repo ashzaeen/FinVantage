@@ -1,9 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
   title: "Dashboard",
+};
+
+/** Tints the phone's status bar and browser chrome to match the dashboard's top bar. */
+export const viewport: Viewport = {
+  themeColor: "#544af7",
 };
 
 // Dashboard pages show live API data, so never prerender them at build time.

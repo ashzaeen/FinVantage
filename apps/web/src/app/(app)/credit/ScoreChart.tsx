@@ -96,14 +96,14 @@ export function ScoreChart({ history }: { history: Array<{ date: string; score: 
           return (
             <g>
               <rect x={tx} y={ty} width={tooltipW} height={tooltipH} rx="6" fill="#16192c" />
-              <text x={tx + tooltipW / 2} y={ty + 13} textAnchor="middle" fontSize="8" fill="#8d94a8" fontFamily="Roboto, sans-serif">{label}</text>
+              <text x={tx + tooltipW / 2} y={ty + 13} textAnchor="middle" fontSize="10" fill="#8d94a8" fontFamily="Roboto, sans-serif">{label}</text>
               <text x={tx + tooltipW / 2} y={ty + 25} textAnchor="middle" fontSize="11" fill="white" fontWeight="bold" fontFamily="Poppins, sans-serif">{c.score}</text>
             </g>
           );
         })()}
         {/* Month labels */}
         {coords.map((c, i) => (
-          <text key={`label-${c.date}`} x={c.x} y={h - 8} textAnchor="middle" fontSize="8" fill={hover === i ? "#544af7" : "#8d94a8"} fontWeight={hover === i ? "bold" : "normal"} fontFamily="Roboto, sans-serif" className="transition-all">
+          <text key={`label-${c.date}`} x={c.x} y={h - 8} textAnchor="middle" fontSize="12" fill={hover === i ? "#544af7" : "#8d94a8"} fontWeight={hover === i ? "bold" : "normal"} fontFamily="Roboto, sans-serif" className="transition-all">
             {new Date(c.date).toLocaleDateString("en-US", { month: "short" })}
           </text>
         ))}

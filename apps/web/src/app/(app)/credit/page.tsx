@@ -99,7 +99,7 @@ export default async function CreditPage() {
       <main className="space-y-6 pb-8">
 
         {/* ── Score gauge + factors ────────────────────── */}
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <Card title="Your Credit Snapshot" subtitle="A clear view of where you stand" action={<MockedBadge />}>
             <ScoreGauge score={credit.score} />
             <ScoreChart history={credit.history} />
@@ -141,7 +141,7 @@ export default async function CreditPage() {
               <p className="py-4 text-center text-sm" style={{ color: "var(--ink-muted)" }}>No credit cards linked yet.</p>
             </Card>
           ) : (
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               {cards.map((card, i) => (
                 <VisualCard key={card.id} account={card} index={i} />
               ))}
@@ -155,7 +155,7 @@ export default async function CreditPage() {
             <h2 className="font-poppins text-xl font-bold text-[#16192c]">Learn How to Build Stronger Credit</h2>
             <p className="mt-1 text-sm text-[#8d94a8]">Guides from trusted credit education sources</p>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <a href="https://www.myfico.com/credit-education/improve-your-credit-score" target="_blank" rel="noreferrer" className="group rounded-3xl border border-[#edf0f7] bg-white p-6 transition hover:-translate-y-0.5 hover:shadow-lg">
               <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#eef1fc] text-[#544af7]"><CreditIcon kind="spark" /></div>
               <p className="text-xs font-bold uppercase tracking-wider text-[#544af7]">myFICO · Credit Education</p>

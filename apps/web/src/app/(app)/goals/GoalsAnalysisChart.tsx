@@ -18,6 +18,6 @@ export function GoalsAnalysisChart({ data }: { data: GoalCount[] }) {
         </Bar>
       </BarChart></ResponsiveContainer>
     </div>
-    <ul className="grid gap-2 sm:grid-cols-3">{data.map((item) => <li key={item.label} className="flex items-center justify-between rounded-xl bg-[#f8f9fe] px-3 py-2 text-sm"><span className="flex items-center gap-2 text-[#626981]"><i aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: item.color }} />{item.label}</span><strong className="tabular-nums text-[#16192c]">{item.count}</strong></li>)}</ul>
+    <ul className="grid grid-cols-1 gap-2 sm:grid-cols-3">{data.map((item) => <li key={item.label} className="flex items-center justify-between rounded-xl bg-[#f8f9fe] px-3 py-2 text-sm"><span className="flex items-center gap-2 text-[#626981]"><i aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: item.color }} />{item.label}</span><strong className="tabular-nums text-[#16192c]">{item.count}</strong></li>)}</ul>
   </section>;
 }

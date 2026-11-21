@@ -13,22 +13,23 @@ import { useWatchlist } from "./useWatchlist";
 import { WatchlistCard } from "./WatchlistCard";
 import { AnimatedNumber, Change, directionClass, Pills, shortDate, signedUsd } from "./parts";
 
-function Tile({ label, value, valueClass = "text-ink", detail, badge, order }: {
+function Tile({ label, value, valueClass = "text-ink", detail, badge, order, className = "" }: {
   label: string;
   value: ReactNode;
   valueClass?: string;
   detail: ReactNode;
   badge?: ReactNode;
   order: number;
+  className?: string;
 }) {
   return (
-    <Card noPad className={`invest-rise invest-rise-${order}`}>
+    <Card noPad className={`invest-rise invest-rise-${order} ${className}`}>
       <div className="px-5 py-4">
         <div className="flex min-h-6 items-center justify-between gap-2">
           <p className="text-xs text-muted">{label}</p>
           {badge}
         </div>
-        <p className={`font-poppins text-[22px] font-bold leading-8 tabular-nums ${valueClass}`}>{value}</p>
+        <p className={`truncate font-poppins text-xl font-bold leading-8 tabular-nums sm:text-[22px] ${valueClass}`}>{value}</p>
         <p className="text-xs text-muted">{detail}</p>
       </div>
     </Card>
@@ -57,9 +58,10 @@ export function InvestmentsClient({ data }: { data: InvestmentsOverview }) {
       </div>
 
       <main className="space-y-4 pb-8">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           <Tile
             order={1}
+            className="col-span-2 xl:col-span-1"
             label="Total Value"
             badge={<MockedBadge />}
             value={<AnimatedNumber value={view.totalValueCents} format={formatUsd} />}
@@ -81,13 +83,14 @@ export function InvestmentsClient({ data }: { data: InvestmentsOverview }) {
           />
           <Tile
             order={4}
+            className="col-span-2 xl:col-span-1"
             label="Cash Available"
             value={<AnimatedNumber value={view.cashCents} format={formatUsd} />}
             detail={`Dividends YTD ${formatUsd(view.dividendsYtdCents)}`}
           />
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
           <PerformanceCard view={view} />
           <AllocationCard view={view} />
         </div>

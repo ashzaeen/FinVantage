@@ -204,7 +204,7 @@ export function GoalsClient({ goals, outcomes, accounts }: { goals: Goal[]; outc
 
     {view === "analysis" ? <GoalsAnalysisChart data={analysisData} /> : view === "board" ? <>
       <p className="mb-3 text-xs text-[#8d94a8]">Drag a goal card anywhere into another column, choose “Move to” for a quick status change, or select Manage to edit all details.</p>
-      <div className="page-cascade grid gap-4 xl:grid-cols-3">
+      <div className="page-cascade grid grid-cols-1 gap-4 xl:grid-cols-3">
       {GOAL_STATUSES.map((column) => {
         const columnGoals = goals.filter((goal) => goalStatus(goal) === column.id);
         const isDragTarget = dragOverColumn === column.id;
@@ -220,7 +220,7 @@ export function GoalsClient({ goals, outcomes, accounts }: { goals: Goal[]; outc
         </section>;
       })}
       </div>
-    </> : <div className="page-cascade grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+    </> : <div className="page-cascade grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
       <button type="button" onClick={() => openCreateGoal()} className="flex min-h-64 flex-col items-center justify-center rounded-3xl border-2 border-dashed border-[#d9ddec] bg-white p-8 text-center transition hover:border-[#544af7] hover:bg-[#fafaff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eef1fc] text-2xl font-semibold text-[#544af7]">+</span>
         <span className="mt-3 font-semibold text-[#16192c]">Add a goal</span>
@@ -229,7 +229,7 @@ export function GoalsClient({ goals, outcomes, accounts }: { goals: Goal[]; outc
       {goals.map((goal) => <GoalCard key={goal.id} goal={goal} outcome={outcomes.find((outcome) => outcome.goalId === goal.id)} onOpen={() => { setError(""); setConfirmDelete(false); setSelectedGoal(goal); }} />)}
     </div>}
 
-    {(showForm || selectedGoal) && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) { setShowForm(false); setSelectedGoal(null); setConfirmDelete(false); } }} className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#16192c]/45 p-3 backdrop-blur-[2px] sm:p-6">
+    {(showForm || selectedGoal) && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) { setShowForm(false); setSelectedGoal(null); setConfirmDelete(false); } }} className="fixed inset-0 z-[100] flex justify-center overflow-y-auto bg-[#16192c]/45 [&>*]:my-auto p-3 backdrop-blur-[2px] sm:p-6">
       <div role="dialog" aria-modal="true" aria-labelledby="goal-form-title" className="w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl">
         <header className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: "var(--border)" }}>
           <div><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--accent)" }}>{selectedGoal ? "Manage goal" : "New goal"}</p><h2 id="goal-form-title" className="mt-1 text-lg font-semibold" style={{ color: "var(--ink)" }}>{selectedGoal?.name ?? "Add a savings goal"}</h2><p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>{selectedGoal ? "Update the details and save your changes." : "Choose what you’re saving for and when you need it."}</p></div>
@@ -245,7 +245,7 @@ export function GoalsClient({ goals, outcomes, accounts }: { goals: Goal[]; outc
           <label className="block text-sm font-medium" style={{ color: "var(--ink)" }}>Goal name *
             <input name="name" required maxLength={80} defaultValue={selectedGoal?.name ?? ""} placeholder="e.g. Emergency fund" className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-4 py-3 outline-none focus:border-[var(--accent)]" style={{ borderColor: "var(--border)" }} />
           </label>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium" style={{ color: "var(--ink)" }}>Target amount *
               <div className="mt-2 flex items-center rounded-xl border bg-[var(--surface-inset)] px-3 focus-within:border-[var(--accent)]" style={{ borderColor: "var(--border)" }}><span className="text-sm" style={{ color: "var(--ink-muted)" }}>$</span><input name="target" type="number" min="0.01" step="0.01" required defaultValue={selectedGoal ? (selectedGoal.targetCents / 100).toFixed(2) : ""} placeholder="10,000" className="w-full bg-transparent px-2 py-3 outline-none" /></div>
             </label>
@@ -253,7 +253,7 @@ export function GoalsClient({ goals, outcomes, accounts }: { goals: Goal[]; outc
               <div className="mt-2 flex items-center rounded-xl border bg-[var(--surface-inset)] px-3 focus-within:border-[var(--accent)]" style={{ borderColor: "var(--border)" }}><span className="text-sm" style={{ color: "var(--ink-muted)" }}>$</span><input name="current" type="number" min="0" step="0.01" defaultValue={selectedGoal ? (selectedGoal.currentCents / 100).toFixed(2) : "0"} className="w-full bg-transparent px-2 py-3 outline-none" /></div>
             </label>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium" style={{ color: "var(--ink)" }}>Target date *
               <input name="targetDate" type="date" required defaultValue={selectedGoal?.targetDate ?? `${new Date().getFullYear() + 1}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`} className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-3 py-3 outline-none focus:border-[var(--accent)]" style={{ borderColor: "var(--border)" }} />
             </label>
@@ -264,7 +264,7 @@ export function GoalsClient({ goals, outcomes, accounts }: { goals: Goal[]; outc
           <label className="block text-sm font-medium" style={{ color: "var(--ink)" }}>Status
             <select name="status" defaultValue={selectedGoal ? goalStatus(selectedGoal) : newGoalStatus} className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-3 py-3 outline-none focus:border-[var(--accent)]" style={{ borderColor: "var(--border)" }}>{GOAL_STATUSES.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}</select>
           </label>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium" style={{ color: "var(--ink)" }}>Flexibility
               <select name="flexibility" defaultValue={selectedGoal?.flexibility ?? "flexible"} className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-3 py-3 outline-none focus:border-[var(--accent)]" style={{ borderColor: "var(--border)" }}><option value="flexible">Flexible</option><option value="non_negotiable">Non-negotiable</option></select>
             </label>

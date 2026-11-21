@@ -57,7 +57,7 @@ function TopExpenses({ expenses, label }: { expenses: Transaction[]; label: (id:
       {expenses.length === 0 ? (
         <p className="text-sm" style={{ color: "var(--ink-muted)" }}>No purchases yet this month.</p>
       ) : (
-        <div className="grid gap-x-8 gap-y-2 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-2 md:grid-cols-2">
           {columns.map((column, c) => (
             <ol key={c} className="space-y-2">
               {column.map((t, i) => (
@@ -100,7 +100,7 @@ export default async function SpendingPage() {
   return (
     <>
       <PageHeader title="Spending" action={<ManageTools categories={categories} rules={rules} transactions={recentSpending} />} />
-      <div className="page-cascade grid gap-5 md:grid-cols-2">
+      <div className="page-cascade grid grid-cols-1 gap-5 md:grid-cols-2">
         <BucketSplit initial={buckets} />
         <SpendingPie month={summary.month} categories={categories} breakdown={breakdown} />
 

@@ -355,3 +355,100 @@ p, span, label, input, button, table, td, th,
 @media (prefers-reduced-motion: reduce) {
   .card-lift:hover, .tile-lift:hover { transform: none; }
 }
+
+/* ─── Phones and tablets ─────────────────────────────────────────────────────
+   The rules that make the app behave on real handsets, not just a narrow desktop window. */
+
+/* Android Chrome and iOS Safari can inflate text in landscape; keep the sizes we set. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* A soft brand-tinted flash on tap instead of the default grey box (Android Chrome, iOS Safari). */
+a, button, [role="button"], summary, label {
+  -webkit-tap-highlight-color: rgba(84, 74, 247, 0.14);
+}
+
+/* Taps respond at once: no 300ms wait for a double-tap zoom on buttons and links. */
+a, button, [role="button"], summary, select, input, label {
+  touch-action: manipulation;
+}
+
+/* iOS Safari zooms the whole page when a field under 16px takes focus, and never zooms back.
+   Fields are 16px on touch screens below the sidebar breakpoint; desktop keeps its own sizes.
+   !important is needed because the sizes are set by utility classes on each field. */
+@media (max-width: 1023px) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Labels set at 9 to 11px stay legible on phones and tablets (below the sidebar breakpoint).
+   Chart tick labels and bar labels are SVG text sized by attribute, so a style rule wins. */
+@media (max-width: 1023px) {
+  .text-\[9px\],
+  .text-\[10px\],
+  .text-\[11px\] {
+    font-size: 12px;
+  }
+  .recharts-wrapper text,
+  .recharts-legend-wrapper {
+    font-size: 12px !important;
+  }
+}
+
+/* Phone navigation drawer. */
+@keyframes nav-drawer-in {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}
+@keyframes nav-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.nav-drawer { animation: nav-drawer-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.nav-backdrop { animation: nav-backdrop-in 200ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .nav-drawer, .nav-backdrop { animation: none; }
+}
+
+/* A hover lift on a touch screen sticks after the tap; keep it for mice and trackpads only. */
+@media (hover: none) {
+  .card-lift:hover, .tile-lift:hover { transform: none; box-shadow: none; }
+}
+
+/* Touch targets: 44px minimum height for buttons, selects and tabs on touch screens below the
+   sidebar breakpoint (Apple's and WCAG AAA's size). :where() keeps this at zero specificity, so
+   a component can still set its own larger size, and `.tap-auto` opts out for rare cases such as
+   a button inside a line of text. Mouse and trackpad layouts are untouched. */
+@media (max-width: 1023px) and (pointer: coarse) {
+  :where(button, select, summary, [role="button"], [role="tab"]):not(.tap-auto) {
+    min-height: 44px;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not(.tap-auto) {
+    min-height: 44px;
+  }
+  /* Width too: a short label such as "All" or "1Y" is otherwise a 38px-wide target. */
+  :where(button, [role="button"], [role="tab"]):not(.tap-auto) {
+    min-width: 44px;
+  }
+}
+
+/* Checkboxes and radios: a larger box in the brand colour, and the whole label is the target. */
+@media (max-width: 1023px) and (pointer: coarse) {
+  input[type="checkbox"], input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    accent-color: var(--accent);
+  }
+  label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
