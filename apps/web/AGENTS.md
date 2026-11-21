@@ -11,7 +11,7 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
 | `src/app/(app)/app/page.tsx` | The dashboard overview, at `/app` |
 | `src/app/(app)/<route>/page.tsx` | One folder per nav item. Server components that fetch data. Route groups do not change URLs |
 | `src/app/(app)/<route>/*Client.tsx` | Interactive parts, with `"use client"` |
-| `src/components/landing` | Landing page pieces: header, the live purchase tryout, Airbnb-style feature cards, footer. Photo sources are in `photos.ts`. Planned feature rows are in `docs/landing-page-plan.md` |
+| `src/components/landing` | Landing page pieces: `Hero` + `HeroSimulation`, `UseCases` + `previews.tsx` (the animated mini-UIs), `HowItWorks`, `CopilotSection` (tabbed deep dive), `ProofStrip`, `TrustSection`, `ClosingCta`, `Header`, `Footer`. `motion.tsx` holds `Reveal`, `useInView`, `useStages`, `useCountTo`; `layout-parts.tsx` holds `Section`, `SectionHeading`, `ExampleTag`. Style with the `lp-*` Tailwind utilities, never inline colors. Every scripted figure carries an Example tag. Plan: `docs/landing-page-plan.md` |
 | `src/app/login/LoginForm.tsx` | Email and password sign-in. The landing hero embeds it with `embedded` |
 | `src/components/layout` | `AppShell`: the sidebar from 1024px, and below that a top bar with a menu button and a slide-in drawer. Both render one `SidebarContent` |
 | `src/components/ui` | Generic pieces: `Card`, `Stat`, `PageHeader`, `MockedBadge` |

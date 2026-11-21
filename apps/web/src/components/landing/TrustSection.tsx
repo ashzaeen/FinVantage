@@ -1,63 +1,59 @@
-import { Lock, ShieldCheck, Eye, Gauge } from "lucide-react";
+import { Section, SectionHeading } from "./layout-parts";
+import { Reveal } from "./motion";
 
 /**
- * Copy here is kept to what the repo actually confirms, per the task's content rules:
- * - "Encrypted Connections" and "Read-Only Access": root AGENTS.md rule #4 ("Suggest only.
- *   Nothing moves money, applies for credit, or clicks anything") and rule #10 (sandbox-only
- *   data) are real, enforced rules. Whether the underlying Plaid connection scope itself is
- *   read-only at the API level is a fact an engineer should confirm before this ships beyond
- *   the hackathon demo.
- *   TODO: confirm the exact Plaid connection scope/permissions with whoever owns that
- *   integration, and update this card's body copy to cite it directly.
- * - "Never Sold": there is no data-sharing or sale policy anywhere in this repo yet.
- *   TODO: write and link an actual policy before claiming this in production; until then the
- *   copy below only states the one thing that is true today (sandbox/synthetic data).
+ * Copy here states only what the product enforces today (root AGENTS.md rules 1 to 5, 7, 8 and 10).
+ * TODO: before this goes beyond the demo, confirm the Plaid connection scope and add a written
+ * data policy; only then can this page say anything about bank-side permissions or data sale.
  */
-const POINTS = [
-  {
-    icon: Lock,
-    title: "Encrypted Connections",
-    body: "Bank connections run through Plaid in sandbox mode, over the same encrypted connection standard real banking apps use.",
-  },
-  {
-    icon: Eye,
-    title: "Read-Only Access",
-    body: "FinVantage never moves money, applies for credit, or takes an action on your accounts. It only suggests, and you decide.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Sandbox Data",
-    body: "This build uses synthetic or sandbox financial data. Production bank connections are not enabled.",
-  },
-  {
-    icon: Gauge,
-    title: "Honest Estimates",
-    body: "Your future is shown as a range, with the disclaimer next to it, never a single number dressed up as a guarantee.",
-  },
-];
+const PIPELINE = [
+  { title: "Calculated in Code", body: "Every figure is computed by deterministic code before any AI writes a word." },
+  { title: "Worded by AI", body: "The model turns those figures into plain sentences. It cannot add or change a number." },
+  { title: "Checked Before You See It", body: "Each number in the text must match an input, or a plain template card is shown instead." },
+] as const;
+
+const LIMITS = [
+  { title: "It never acts for you", body: "Nothing moves money, applies for credit, or clicks anything on a page. You decide." },
+  { title: "It never guesses out loud", body: "Probabilities show as ranges with a note beside them, never one number dressed up as a promise." },
+  { title: "It never saves a misread", body: "Describe a life event in your own words and you confirm it before anything changes." },
+  { title: "It labels what is not real", body: "Portfolio and credit score values are mocked and say so. This build uses sandbox and synthetic data." },
+] as const;
 
 export function TrustSection() {
   return (
-    <section id="trust" className="scroll-mt-20 py-18 md:py-24">
-      <div className="mx-auto max-w-[1200px] px-6">
-        <h2
-          className="text-[28px] font-semibold leading-tight tracking-tight sm:text-[34px]"
-          style={{ fontFamily: "var(--font-landing-heading)", color: "var(--landing-text)" }}
-        >
-          Built to Be Trusted
-        </h2>
-        <ul className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {POINTS.map(({ icon: Icon, title, body }) => (
-            <li key={title} className="rounded-[20px] p-5" style={{ background: "var(--landing-tint-50)" }}>
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white" style={{ color: "var(--landing-primary)" }}>
-                <Icon size={20} strokeWidth={2} aria-hidden="true" />
-              </span>
-              <h3 className="mt-4 text-sm font-semibold" style={{ fontFamily: "var(--font-landing-heading)", color: "var(--landing-text)" }}>{title}</h3>
-              <p className="mt-1.5 text-sm leading-6" style={{ color: "var(--landing-text-secondary)" }}>{body}</p>
-            </li>
+    <Section id="trust" tone="tint">
+      <Reveal>
+        <SectionHeading
+          title="Built to Be Trusted, Honest About Its Limits"
+          body="A finance tool is only useful if you can check its work. Here is how the numbers are made, and what the product will not do."
+        />
+      </Reveal>
+
+      <ol className="mt-14 grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-10">
+        {PIPELINE.map((step, i) => (
+          <li key={step.title}>
+            <Reveal delay={i * 110}>
+              <div className="flex items-center gap-3" aria-hidden="true">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-lp-primary text-sm font-semibold text-white">{i + 1}</span>
+                <span className="h-px flex-1 bg-lp-tint-200" />
+              </div>
+              <h3 className="mt-5 text-lg font-semibold text-lp-text">{step.title}</h3>
+              <p className="mt-2 max-w-[36ch] text-pretty text-[15px] leading-7 text-lp-text-2">{step.body}</p>
+            </Reveal>
+          </li>
+        ))}
+      </ol>
+
+      <Reveal>
+        <dl className="mt-16 grid grid-cols-1 gap-x-12 border-t border-lp-line md:mt-20 md:grid-cols-2">
+          {LIMITS.map((item) => (
+            <div key={item.title} className="border-b border-lp-line py-6">
+              <dt className="text-base font-semibold text-lp-text">{item.title}</dt>
+              <dd className="mt-1.5 max-w-[52ch] text-pretty text-[15px] leading-7 text-lp-text-2">{item.body}</dd>
+            </div>
           ))}
-        </ul>
-      </div>
-    </section>
+        </dl>
+      </Reveal>
+    </Section>
   );
 }

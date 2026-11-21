@@ -1,6 +1,6 @@
 # Landing Page Plan: One Row per Headline Feature
 
-Status: remaining feature rows are planned. The hero purchase tryout was removed; the hero now uses a static, clearly labeled product illustration.
+Status: rebuilt on 2026-11-21 (see `docs/DECISIONS.md`, Landing page elevation). The page now has an animated hero simulation and five use-case rows: Overview, Goals and Simulation, Advisor, Spending and Subscriptions, Copilot. Life Events and Quarterly Report rows are still unbuilt. The rows below are the original plan and stay as the spec for those two.
 
 ## Goal
 

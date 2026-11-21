@@ -19,7 +19,7 @@ const inter = Inter({
 
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
-    <div className={`${poppins.variable} ${inter.variable}`} style={{ fontFamily: "var(--font-landing-body)" }}>
+    <div className={`lp ${poppins.variable} ${inter.variable}`} style={{ fontFamily: "var(--font-landing-body)" }}>
       {children}
     </div>
   );

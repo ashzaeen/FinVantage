@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinVantage Dashboard Wireframes</title>
+<style>
+:root{
+  --surface:#f8f9fe; --card:#fff; --line:#dfe3f1; --ink:#16192c; --ink2:#4a4f68; --muted:#6b7288; --inset:#f4f5fa;
+  --accent:#544af7; --accent-soft:#eef1fc; --in:#2a9d8f; --out:#dd6f2c; --warn:#dd8a1f; --blue:#2d83c9;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--surface:#0f1120;--card:#171a2e;--line:#2c3050;--ink:#eef0fa;--ink2:#b8bdd6;--muted:#8f96b3;--inset:#1d2138;--accent:#8f88ff;--accent-soft:#242850}
+}
+:root[data-theme="dark"]{--surface:#0f1120;--card:#171a2e;--line:#2c3050;--ink:#eef0fa;--ink2:#b8bdd6;--muted:#8f96b3;--inset:#1d2138;--accent:#8f88ff;--accent-soft:#242850}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--ink);font:15px/1.55 Roboto,system-ui,-apple-system,"Segoe UI",sans-serif}
+h1,h2,h3{font-family:Poppins,system-ui,sans-serif;margin:0;line-height:1.25}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 16px 90px}
+h1{font-size:clamp(26px,4vw,34px)}
+.lead{color:var(--ink2);max-width:72ch;margin:8px 0 0}
+.theme{float:right;border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:10px;padding:8px 12px;min-height:40px;font:600 12px Poppins,sans-serif;cursor:pointer}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:16px 0 4px;font-size:13px;color:var(--ink2)}
+.sw{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-1px;margin-right:6px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-top:20px}
+@media(min-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.wf{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.wf header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.wf .id{font:700 12px Poppins,sans-serif;color:var(--accent);background:var(--accent-soft);border-radius:8px;padding:2px 9px}
+.wf h2{font-size:16px}
+.wf .tab{margin-left:auto;font-size:12px;color:var(--muted)}
+.frame{background:var(--inset);border-radius:14px;padding:8px}
+.frame svg{display:block;width:100%;height:auto}
+.wf ul{margin:0;padding-left:18px;color:var(--ink2);font-size:13.5px}
+.wf li{margin:2px 0}
+.mobile{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <button class="theme" id="tb" type="button">Toggle Theme</button>
+  <h1>Dashboard Wireframes</h1>
+  <p class="lead">Low-fidelity layouts for the components that need a new design. Numbers match the design plan. Figures are placeholders, not real data. Grey is structure, the colours are the real palette roles.</p>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--accent)"></span>Magnitude, totals</span>
+    <span><span class="sw" style="background:var(--in)"></span>Money in</span>
+    <span><span class="sw" style="background:var(--out)"></span>Money out</span>
+    <span><span class="sw" style="background:var(--warn)"></span>Needs a look (always with a word)</span>
+    <span><span class="sw" style="background:var(--blue)"></span>Heads up</span>
+  </div>
+  <div class="grid" id="g"></div>
+</div>
+<script>
+const R=(x,y,w,h,f='var(--line)',rx=6,extra='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${f}" ${extra}/>`;
+const T=(x,y,s,sz=11,a='start',w=400,f='var(--ink2)')=>`<text x="${x}" y="${y}" font-size="${sz}" text-anchor="${a}" font-weight="${w}" fill="${f}" font-family="Roboto,system-ui,sans-serif">${s}</text>`;
+const C=(x,y,r,f)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${f}"/>`;
+const L=(x1,y1,x2,y2,s='var(--line)',w=2,d='')=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${s}" stroke-width="${w}" ${d?`stroke-dasharray="${d}"`:''}/>`;
+const P=(pts,s,w=2.5,d='')=>`<polyline points="${pts}" fill="none" stroke="${s}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" ${d?`stroke-dasharray="${d}"`:''}/>`;
+const card=(inner,h=180)=>`<svg viewBox="0 0 360 ${h}" role="img" aria-hidden="true">${R(2,2,356,h-4,'var(--card)',14,'stroke="var(--line)"')}${inner}</svg>`;
+const A='var(--accent)',IN='var(--in)',OUT='var(--out)',W='var(--warn)',B='var(--blue)',M='var(--muted)',I='var(--ink)';
+const bullet=(y,fill,tick,label,val)=>T(18,y+9,label,11)+R(120,y,190,10,'var(--line)',5)+R(120,y,190*fill,10,A,5)+(tick!=null?R(120+190*tick-1.5,y-4,3,18,I,1):'')+T(342,y+9,val,11,'end',600,I);
+
+const WF=[
+['W1','Needs Attention Today','Overview',card(
+ T(18,28,'Needs Attention Today',14,'start',700,I)+R(300,14,42,18,'var(--accent-soft)',9)+T(321,27,'4 items',10,'middle',600,A)+
+ [[W,'Groceries over budget by $62','Spending'],[B,'StreamFlix went up to $15.49','Subscriptions'],[W,'Peak Fitness due in 3 days','Calendar'],[B,'0% Promo Card rate ends in 41 days','Credit']].map((r,i)=>
+  L(18,44+i*30,342,44+i*30)+C(28,60+i*30,6,r[0])+T(42,64+i*30,r[1],11,'start',400,I)+T(262,64+i*30,r[2]+' ›',10,'end',500,A)+T(342,64+i*30,'Dismiss',9,'end',400,M)).join(''),180),
+ ['Ranked by math-core, not by the page','Severity is a mark and a word, never only colour','Empty state: "Nothing needs you today" and the next dated item'],'Rows become full-width tap targets, 44px tall.'],
+['W2','Safe to Spend','Overview',card(
+ T(18,28,'Safe to Spend This Month',14,'start',700,I)+T(18,66,'$1,184',30,'start',700,I)+T(150,66,'Resets on payday, Dec 1',11,'start',400,M)+
+ R(18,82,324,14,'var(--line)',7)+R(18,82,150,14,IN,7)+R(168,82,70,14,OUT,0)+R(238,82,50,14,W,0)+R(288,82,54,14,A,7)+
+ T(18,118,'Income expected $5,700',10)+T(190,118,'Bills still due $1,590',10)+T(18,136,'Budget room used $2,010',10)+T(190,136,'Savings target $1,140',10)+
+ T(18,164,'Each part is checkable. Over budget reads "Over by $X".',10,'start',400,M),180),
+ ['One number, four visible parts','Negative result: amber word and the cause','All figures computed in the API'],'Parts stack as a 2 by 2 list under the bar.'],
+['W3','What Moved Net Worth','Overview / Accounts',card(
+ T(18,28,'What Moved Net Worth',14,'start',700,I)+T(342,28,'Nov 2026',11,'end',400,M)+
+ R(24,56,36,80,A,4)+R(76,56,36,22,IN,4)+R(128,70,36,34,IN,4)+R(180,96,36,18,IN,4)+R(232,86,36,28,OUT,4)+R(290,56,36,50,A,4)+
+ ['Oct','Saved','Market','Debt','Spent','Nov'].map((s,i)=>T(42+i*52.5,150,s,10,'middle')).join('')+
+ T(42,48,'$37.1k',10,'middle',600,I)+T(316,48,'$39.9k',10,'middle',600,I)+T(342,172,'View as Table',10,'end',600,A),180),
+ ['Money in teal, money out orange, totals indigo','Tap a bar for the figure and the accounts behind it','Table view for screen readers'],'Same chart, 220px tall, short labels.'],
+['W4','Money Calendar','Overview',card(
+ T(18,26,'Next 30 Days',14,'start',700,I)+
+ Array.from({length:21},(_,i)=>{const c=i%7,r=Math.floor(i/7);const x=18+c*46,y=38+r*26;const d=[1,4,8,10,15,18].includes(i);return R(x,y,42,22,'var(--card)',6,'stroke="var(--line)"')+(d?C(x+13,y+11,4,[IN,OUT,OUT,W,OUT,IN][[1,4,8,10,15,18].indexOf(i)]):'')}).join('')+
+ P('18,150 60,146 100,152 150,140 200,128 250,134 300,122 342,130',A,2.5)+C(200,128,4,W)+T(342,172,'Lowest: Dec 12, $412',10,'end',600,I)+T(18,172,'Projected balance',10,'start',400,M),185),
+ ['Dots: income teal, bills orange, card due amber outline','Arrow keys move day to day, tap a day for its list','Lowest balance is labelled in words'],'Below 640px the grid becomes a list by week, keeping the balance line.'],
+['W5','Bullet Bars','Overview, Accounts, Goals, Investments, Credit',card(
+ T(18,26,'One component, five uses',14,'start',700,I)+
+ bullet(40,.6,.5,'Cash runway','3.8 mo')+bullet(66,.35,null,'Liquidity: today','$18.2k')+bullet(92,.72,.85,'Kitchen goal','short $32')+
+ R(120,118,190,10,'var(--line)',5)+R(150,118,50,10,'var(--accent-soft)',0)+R(120,118,120,10,A,5)+R(186,114,3,18,I,1)+T(18,127,'US Stocks vs target',11)+T(342,127,'72% / 65%',11,'end',600,I)+
+ T(18,160,'Track, fill, optional target tick, optional drift band. Name says the figures.',10,'start',400,M),175),
+ ['Accessible name always states fill and target','Past the band, one "Consider" line appears','Used by OV5, AC2, GO1, IV1 and CR3'],'Full width bar, label above it, 44px touch row when it opens detail.'],
+['W6','Debt Payoff Race','Accounts / Credit',card(
+ T(18,26,'Debt Payoff Race',14,'start',700,I)+R(220,12,60,20,A,10)+T(250,26,'Avalanche',10,'middle',600,'#fff')+R(284,12,58,20,'var(--line)',10)+T(313,26,'Snowball',10,'middle',500,I)+
+ P('24,50 90,72 160,96 230,116 300,136',A)+P('24,50 90,66 160,86 230,108 300,128',OUT,2.5,'5 4')+C(300,136,5,A)+C(300,128,5,OUT)+
+ T(304,150,'Oct 2027',10,'start',600,I)+T(304,162,'Jan 2028',10,'start',400,M)+T(18,170,'Avalanche saves $214 interest and finishes 3 months sooner.',10,'start',400,M)+
+ R(18,138,86,22,'var(--card)',6,'stroke="var(--line)"')+T(26,153,'Extra: $50 / mo',10),185),
+ ['Copy says "Consider paying the Cash Rewards Card first"','Extra-payment field is 16px on touch','Nothing is paid or scheduled'],'Chart 220px tall, summary above it.'],
+['W7','Utilization What-If','Credit',card(
+ T(18,26,'What If I Pay Down a Card?',14,'start',700,I)+R(290,12,56,18,'var(--accent-soft)',9)+T(318,25,'Mocked data',9,'middle',600,A)+
+ R(18,58,324,8,'var(--line)',4)+R(18,58,170,8,A,4)+C(188,62,10,'var(--card)').replace('fill="var(--card)"','fill="var(--card)" stroke="var(--accent)" stroke-width="3"')+T(18,50,'Pay $0',10,'start',400,M)+T(342,50,'Pay $1,303',10,'end',400,M)+
+ T(18,102,'Utilization',10,'start',400,M)+T(18,122,'30%  →  12%',20,'start',700,I)+T(200,102,'Estimated score range',10,'start',400,M)+T(200,122,'690 to 720',20,'start',700,I)+
+ T(18,160,'Updates on release. Scores vary by bureau and model.',10,'start',400,M),175),
+ ['Range, never a single score','MockedBadge always present','Saves nothing'],'Slider is 44px tall with a large thumb.'],
+['W8','Health Score','Reports / Overview',card(
+ T(18,26,'Financial Health',14,'start',700,I)+
+ '<path d="M30 130 A60 60 0 0 1 150 130" fill="none" stroke="var(--line)" stroke-width="14" stroke-linecap="round"/><path d="M30 130 A60 60 0 0 1 128 84" fill="none" stroke="var(--accent)" stroke-width="14" stroke-linecap="round"/>'+
+ T(90,124,'72',28,'middle',700,I)+T(90,142,'Good',11,'middle',500,M)+
+
+ [['Savings rate','41%',.8,IN],['Debt-to-income','34%',.55,A],['Utilization','12%',.88,IN],['Runway','3.8 mo',.5,B]].map((r,i)=>T(180,50+i*24,r[0],10)+R(180,55+i*24,110,7,'var(--line)',3)+R(180,55+i*24,110*r[2],7,r[3],3)+T(342,62+i*24,r[1],10,'end',600,I)).join('')+
+ T(180,160,'How this is worked out ›',10,'start',600,A),175),
+ ['Total plus four visible parts','Four-quarter sparkline for trend','Formula is one tap away'],'Ring on top, parts as a list under it.'],
+['W9','Life Events: Compare and Stress','Life Events',card(
+ T(18,26,'Compare Two Events',14,'start',700,I)+
+ R(18,38,150,86,'var(--card)',10,'stroke="var(--line)"')+T(28,56,'Buy a Home',11,'start',700,I)+T(28,74,'+$2,140 / mo',10)+T(28,92,'Japan trip +4 mo',10,'start',400,W)+
+ R(192,38,150,86,'var(--card)',10,'stroke="var(--line)"')+T(202,56,'New Baby',11,'start',700,I)+T(202,74,'+$960 / mo',10)+T(202,92,'Japan trip +2 mo',10,'start',400,B)+
+ T(180,114,'vs',10,'middle',600,M)+R(18,134,110,22,'var(--accent-soft)',11)+T(73,149,'Income down 20%',10,'middle',600,A)+R(136,134,100,22,'var(--card)',11,'stroke="var(--line)"')+T(186,149,'Rent up 10%',10,'middle',500,I),170),
+ ['Difference stated in words between the two','Stress chips redraw bands, old bands stay dashed','Same seed gives the same bands'],'Columns stack, difference line between them.'],
+['W10','Spending Pace Line','Spending',card(
+ T(18,26,'Spending Pace',14,'start',700,I)+T(342,26,'Day 21: $410 under last month',10,'end',600,IN)+
+ L(24,140,342,140)+P('24,138 80,120 140,100 200,86 260,70 300,60',A,2.8)+P('24,136 80,112 140,92 200,70 260,54 342,40',M,2,'5 4')+L(24,56,342,56,OUT,1.5,'2 3')+T(24,50,'Budget',9,'start',500,OUT)+
+ T(24,158,'Nov 1',9)+T(342,158,'Nov 30',9,'end'),170),
+ ['This month solid, last month dashed, budget as a line','Label states ahead or behind in words','Table view by day'],'220px tall, two axis labels only.'],
+['W11','Small Multiples and Heat Calendar','Spending / Transactions',card(
+ T(18,26,'By Category, 6 Months',14,'start',700,I)+
+ ['Groceries ▲','Housing','Dining Out'].map((s,i)=>T(18,52+i*24,s,11,'start',400,I)+P(`150,${56+i*24} 180,${50+i*24} 210,${54+i*24} 240,${46+i*24} 270,${50+i*24} 300,${42+i*24}`,A,2)+T(342,52+i*24,['$612','$1,320','$203'][i],11,'end',600,I)).join('')+
+ Array.from({length:42},(_,i)=>{const c=i%14,r=Math.floor(i/14);const v=((i*7)%9)/9;return R(18+c*23,118+r*16,20,13,v<.2?'var(--card)':A,3,v<.2?'stroke="var(--accent)"':`opacity="${.2+v*.7}"`)}).join(''),175),
+ ['No-spend days are outlined and counted','Rising categories get a text arrow','Table view lists the same figures'],'Sparklines 64px wide, heat grid wraps by week.'],
+['W12','Tap a Number to See Its Math','Advisor',card(
+ R(18,14,250,40,'var(--card)',10,'stroke="var(--line)"')+T(28,38,'A $28,000 car at 7.49% costs',11,'start',400,I)+T(190,38,'$563',11,'start',700,A)+L(190,41,222,41,A,1,'2 2')+
+ R(0,70,360,110,'var(--card)',14,'stroke="var(--line)"')+R(160,76,40,4,'var(--line)',2)+T(18,102,'$563 a month',13,'start',700,I)+T(18,120,'Inputs: $25,000 loan, 7.49% APR, 60 months',10)+T(18,136,'Formula: fixed payment, loan amortization',10)+T(18,152,'Data as of Nov 21, 2026',10,'start',400,M)+T(342,102,'Close',10,'end',600,A),185),
+ ['Figure is a dotted-underline button','Bottom sheet on phones, side drawer on desktop','Focus trapped, returns to the figure, Escape closes'],'Sheet covers 60% of the screen height.'],
+['W13','Settings: Alerts, Privacy, Data','Settings',card(
+ T(18,26,'Alerts',14,'start',700,I)+
+ [['Tell me when a bill goes up',1],['Warn me when a budget is over',1],['Remind me before a card is due',0]].map((r,i)=>T(18,52+i*20,r[0],11,'start',400,I)+R(300,42+i*20,38,16,r[1]?A:'var(--line)',8)+C(r[1]?329:309,50+i*20,6,'#fff')).join('')+
+ L(18,112,342,112)+T(18,132,'Privacy Center',14,'start',700,I)+T(18,152,'Sent: page type, item type, price, merchant only.',10)+
+ R(18,160,100,18,'var(--accent-soft)',9)+T(68,172,'Download My Data',9,'middle',600,A)+R(126,160,90,18,'var(--card)',9,'stroke="var(--out)"')+T(171,172,'Delete My Data',9,'middle',600,OUT),190),
+ ['Alerts are in-app only (decision D3)','Delete needs a typed confirmation','Privacy card is tested against CopilotContext'],'Toggles are 44px rows.'],
+['W14','Copilot: Try It and Impact','Copilot',card(
+ T(18,26,'Try It Now',14,'start',700,I)+R(18,36,200,50,'var(--card)',10,'stroke="var(--line)"')+T(28,56,'Noise-Cancelling Headphones',11,'start',500,I)+T(28,74,'$329 at Northwind Store',10)+R(236,44,106,32,A,16)+T(289,64,'Check This',11,'middle',600,'#fff')+
+ T(18,112,'Impact',14,'start',700,I)+
+ [['Checked','14'],['Flagged','5'],['Goal days saved','11']].map((r,i)=>R(18+i*110,120,100,44,'var(--card)',10,'stroke="var(--line)"')+T(68+i*110,141,r[1],16,'middle',700,I)+T(68+i*110,157,r[0],9,'middle',400,M)).join(''),175),
+ ['Result lands in the feed labelled "Example"','Nothing added to what the extension sends','Impact computed in the API'],'Tiles stack three across, then the week chart.'],
+['W15','Transactions Summary and Unusual Flag','Transactions',card(
+ T(18,26,'Groceries, Nov 2026',14,'start',700,I)+T(18,52,'Out $612',12,'start',700,OUT)+T(110,52,'In $0',12,'start',700,IN)+T(190,52,'Net −$612',12,'start',700,I)+
+ [20,26,18,30,24,34].map((h,i)=>R(250+i*16,60-h*.8,10,h*.8,OUT,3)).join('')+
+ L(18,72,342,72)+T(18,92,'Green Grocer',11,'start',500,I)+T(18,106,'Nov 30',10,'start',400,M)+R(110,84,92,16,'var(--card)',8,'stroke="var(--out)"')+T(156,96,'2.4x usual here',9,'middle',600,OUT)+T(342,98,'−$142.78',11,'end',600,I)+
+ L(18,114,342,114)+T(18,134,'Green Grocer',11,'start',500,I)+T(342,140,'−$128.01',11,'end',600,I),160),
+ ['Summary follows the current filter','Unusual chip shows the usual amount on tap','Orange outline, never red'],'Summary sits above the list, bar strip hidden below 640px.'],
+['W16','Goals: Rebalance Suggestion','Goals',card(
+ T(18,26,'Suggested Plan',14,'start',700,I)+T(18,42,'Consider moving $60 a month from Kitchen to House.',10,'start',400,M)+
+ T(18,66,'House',11,'start',500,I)+R(80,58,120,10,'var(--line)',5)+R(80,58,50,10,M,5)+R(210,58,70,10,'var(--line)',5)+R(210,58,40,10,A,5)+T(342,67,'+5 mo earlier',10,'end',600,IN)+
+ T(18,92,'Kitchen',11,'start',500,I)+R(80,84,120,10,'var(--line)',5)+R(80,84,60,10,M,5)+R(210,84,70,10,'var(--line)',5)+R(210,84,34,10,A,5)+T(342,93,'+2 mo later',10,'end',600,W)+
+ R(18,118,120,26,A,13)+T(78,135,'Apply This Plan',11,'middle',600,'#fff')+R(146,118,70,26,'var(--card)',13,'stroke="var(--line)"')+T(181,135,'Not Now',11,'middle',500,I)+T(342,135,'Before | After',10,'end',400,M),160),
+ ['Before and after side by side','Apply previews, then saves only on Confirm','Educational estimate line under it'],'Before above after, buttons full width.'],
+];
+document.getElementById('g').innerHTML=WF.map(w=>`<article class="wf"><header><span class="id">${w[0]}</span><h2>${w[1]}</h2><span class="tab">${w[2]}</span></header><div class="frame">${w[3]}</div><ul>${w[4].map(x=>`<li>${x}</li>`).join('')}</ul><div class="mobile"><b>On a phone:</b> ${w[5]}</div></article>`).join('');
+document.getElementById('tb').addEventListener('click',()=>{const r=document.documentElement;const d=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=d?'light':'dark'});
+</script>
+</body>
+</html>
