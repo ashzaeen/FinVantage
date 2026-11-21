@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { NAV_GROUPS, NAV_ITEMS, OVERVIEW_ITEM, SETTINGS_ITEM, type NavItem } from "@/lib/nav";
+import { BrandMark } from "@/components/ui/BrandMark";
 import { AccountCard } from "./AccountCard";
 
 /* ─── Navigation SVG Icons (Clean, Consistent 20x20 Stroke) ─────────────────── */
@@ -224,18 +225,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
       <div className="flex flex-col flex-1 overflow-y-auto no-scrollbar pr-0.5">
         {/* Logo / Brand Header */}
         <Link href="/app" className="flex min-h-11 items-center gap-3 px-3 mb-6">
-          <span
-            className="flex h-10 w-10 items-center justify-center rounded-2xl shadow-sm shrink-0"
-            style={{ background: "rgba(255, 255, 255, 0.22)" }}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="M12 2C8.5 6 6 9.5 6 13.5a6 6 0 0 0 12 0c0-4-2.5-7.5-6-11.5z"
-                fill="white"
-              />
-              <circle cx="12" cy="14" r="2.5" fill="var(--accent)" />
-            </svg>
-          </span>
+          <BrandMark size={40} tone="onBrand" />
           <div className="flex items-baseline">
             <span className="font-poppins text-2xl font-bold tracking-tight text-white">
               FinVantage
@@ -382,7 +372,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <MenuIcon />
         </button>
-        <Link href="/app" className="flex min-h-11 items-center font-poppins text-lg font-bold text-white">
+        <Link href="/app" className="flex min-h-11 items-center gap-2 font-poppins text-lg font-bold text-white">
+          <BrandMark size={28} tone="onBrand" />
           FinVantage
         </Link>
         {current && (

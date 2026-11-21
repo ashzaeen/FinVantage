@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BrandMark } from "./BrandMark";
+import { BrandMark } from "@/components/ui/BrandMark";
 
 const NAV_LINKS = [
   { href: "#how", label: "How It Works" },
