@@ -213,7 +213,7 @@ export function AdvisorClient({ initialConversationId, situation }: { initialCon
               <button
                 type="button"
                 onClick={() => remove(c.id)}
-                className="mr-1.5 flex items-center justify-center rounded-lg p-1.5 text-subtle max-lg:h-11 max-lg:w-11 opacity-100 hover:bg-critical-bg hover:text-critical md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+                className="mr-1.5 flex items-center justify-center rounded-lg p-1.5 text-subtle max-lg:h-11 max-lg:w-11 opacity-100 hover:bg-critical-bg hover:text-loss md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
                 aria-label={`Delete ${c.title}`}
               >
                 <Trash2 size={14} />
@@ -234,7 +234,7 @@ export function AdvisorClient({ initialConversationId, situation }: { initialCon
         {/* 16px of frame plus 20px here: the title sits 36px down, like PageHeader on other tabs. */}
         <div className="hidden w-60 shrink-0 flex-col md:flex md:pt-5 lg:w-64">
           {/* Same title style and spacing as PageHeader on every other tab. */}
-          <h1 className="mb-8 font-poppins text-3xl font-bold tracking-tight text-[#16192c]">Advisor</h1>
+          <h1 className="mb-8 font-poppins text-3xl font-bold tracking-tight text-ink">Advisor</h1>
           <aside className={`min-h-0 flex-1 overflow-hidden ${panel}`}>{list}</aside>
         </div>
         {showList && (
@@ -303,7 +303,7 @@ export function AdvisorClient({ initialConversationId, situation }: { initialCon
                 </div>
               </div>
             )}
-            {error && <p role="alert" className="text-center text-sm text-critical">{error}</p>}
+            {error && <p role="alert" className="text-center text-sm text-loss">{error}</p>}
             <div ref={bottomRef} />
           </div>
 

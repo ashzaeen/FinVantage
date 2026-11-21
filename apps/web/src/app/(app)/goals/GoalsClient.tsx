@@ -25,9 +25,9 @@ function goalStatus(goal: Goal): VisibleGoalStatus {
 }
 
 const GOAL_STATUSES: { id: VisibleGoalStatus; label: string; hint: string; accent: string }[] = [
-  { id: "not_started", label: "To-do", hint: "Ready when you are", accent: "#8d94a8" },
-  { id: "in_progress", label: "In progress", hint: "Currently saving", accent: "#544af7" },
-  { id: "achieved", label: "Achieved", hint: "Target reached", accent: "#0b8f69" },
+  { id: "not_started", label: "To Do", hint: "Ready when you are", accent: "var(--ink-muted)" },
+  { id: "in_progress", label: "In Progress", hint: "Currently saving", accent: "var(--accent)" },
+  { id: "achieved", label: "Achieved", hint: "Target reached", accent: "var(--gain)" },
 ];
 
 function GoalCard({ goal, outcome, onOpen, draggable = false, onDragStart, onDragEnd, onMove, moving = false }: { goal: Goal; outcome?: GoalOutcome; onOpen: () => void; draggable?: boolean; onDragStart?: (event: DragEvent<HTMLDivElement>) => void; onDragEnd?: () => void; onMove?: (status: VisibleGoalStatus) => void; moving?: boolean }) {
@@ -39,9 +39,9 @@ function GoalCard({ goal, outcome, onOpen, draggable = false, onDragStart, onDra
     <Card>
       <div>
       <div className="flex items-start justify-between gap-2">
-        <button type="button" onClick={onOpen} className="min-w-0 truncate text-left font-semibold text-[#16192c] hover:text-[#544af7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]">{goal.name}</button>
+        <button type="button" onClick={onOpen} className="min-w-0 truncate text-left font-semibold text-ink hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">{goal.name}</button>
         <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium"
-          style={{ background: isFlexible ? "var(--good-bg)" : "var(--accent-soft, #eceeff)", color: isFlexible ? "var(--good)" : "var(--accent)" }}>
+          style={{ background: isFlexible ? "var(--good-bg)" : "var(--accent-soft, #eceeff)", color: isFlexible ? "var(--gain)" : "var(--accent)" }}>
           {isFlexible ? "Flexible" : "Fixed"}
         </span>
       </div>
@@ -63,10 +63,10 @@ function GoalCard({ goal, outcome, onOpen, draggable = false, onDragStart, onDra
       {outcome && <div className="mt-3 rounded-xl p-3" style={{ background: "var(--surface-inset)" }}>
         <ProbabilityRange low={outcome.probabilityLow} high={outcome.probabilityHigh} />
       </div>}
-      <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#edf0f7] pt-3">
-        <button type="button" onClick={onOpen} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-[#544af7] hover:bg-[#eef1fc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]">Manage</button>
-        {onMove && <label className="flex items-center gap-2 text-xs text-[#8d94a8]"><span>Move to</span><select aria-label={`Move ${goal.name} to`} value={goalStatus(goal)} disabled={moving} onChange={(event) => onMove(event.target.value as VisibleGoalStatus)} className="max-w-32 rounded-lg border border-[#e6e9f2] bg-white px-2 py-1.5 text-xs font-semibold text-[#4a4f68] outline-none focus:border-[#544af7] disabled:opacity-60">{GOAL_STATUSES.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}</select></label>}
-        {moving && <span className="text-xs text-[#8d94a8]">Saving…</span>}
+      <div className="mt-4 flex items-center justify-between gap-2 border-t border-line pt-3">
+        <button type="button" onClick={onOpen} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">Manage</button>
+        {onMove && <label className="flex items-center gap-2 text-xs text-muted"><span>Move To</span><select aria-label={`Move ${goal.name} to`} value={goalStatus(goal)} disabled={moving} onChange={(event) => onMove(event.target.value as VisibleGoalStatus)} className="max-w-32 rounded-lg border border-line bg-white px-2 py-1.5 text-xs font-semibold text-ink-secondary outline-none focus:border-accent disabled:opacity-60">{GOAL_STATUSES.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}</select></label>}
+        {moving && <span className="text-xs text-muted">Saving…</span>}
       </div>
       </div>
     </Card>
@@ -187,14 +187,14 @@ export function GoalsClient({ goals, outcomes, accounts }: { goals: Goal[]; outc
   return <>
     <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h2 className="font-semibold" style={{ color: "var(--ink)" }}>Your goals</h2>
+        <h2 className="font-semibold" style={{ color: "var(--ink)" }}>Your Goals</h2>
         <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>Track the things you’re saving toward.</p>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="inline-flex flex-wrap rounded-xl bg-[#f1f2f8] p-1" aria-label="Goal views">
-          <button type="button" aria-pressed={view === "board"} onClick={() => setView("board")} className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${view === "board" ? "bg-white text-[#544af7] shadow-sm" : "text-[#8d94a8]"}`}>Kanban view</button>
-          <button type="button" aria-pressed={view === "cards"} onClick={() => setView("cards")} className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${view === "cards" ? "bg-white text-[#544af7] shadow-sm" : "text-[#8d94a8]"}`}>Cards</button>
-          <button type="button" aria-pressed={view === "analysis"} onClick={() => setView("analysis")} className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${view === "analysis" ? "bg-white text-[#544af7] shadow-sm" : "text-[#8d94a8]"}`}>Analysis</button>
+        <div className="inline-flex flex-wrap rounded-xl bg-inset p-1" aria-label="Goal views">
+          <button type="button" aria-pressed={view === "board"} onClick={() => setView("board")} className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${view === "board" ? "bg-white text-accent shadow-sm" : "text-muted"}`}>Board</button>
+          <button type="button" aria-pressed={view === "cards"} onClick={() => setView("cards")} className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${view === "cards" ? "bg-white text-accent shadow-sm" : "text-muted"}`}>Cards</button>
+          <button type="button" aria-pressed={view === "analysis"} onClick={() => setView("analysis")} className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${view === "analysis" ? "bg-white text-accent shadow-sm" : "text-muted"}`}>Analysis</button>
         </div>
       </div>
     </div>
@@ -203,33 +203,33 @@ export function GoalsClient({ goals, outcomes, accounts }: { goals: Goal[]; outc
     <p role="status" aria-live="polite" className="sr-only">{feedback}</p>
 
     {view === "analysis" ? <GoalsAnalysisChart data={analysisData} /> : view === "board" ? <>
-      <p className="mb-3 text-xs text-[#8d94a8]">Drag a goal card anywhere into another column, choose “Move to” for a quick status change, or select Manage to edit all details.</p>
+      <p className="mb-3 text-xs text-muted">Drag a goal card anywhere into another column, choose “Move To” for a quick status change, or select Manage to edit all details.</p>
       <div className="page-cascade grid grid-cols-1 gap-4 xl:grid-cols-3">
       {GOAL_STATUSES.map((column) => {
         const columnGoals = goals.filter((goal) => goalStatus(goal) === column.id);
         const isDragTarget = dragOverColumn === column.id;
-        return <section key={column.id} aria-labelledby={`goal-column-${column.id}`} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDragOverColumn(column.id); }} onDrop={(event) => { event.preventDefault(); const goalId = event.dataTransfer.getData("text/plain"); setDragOverColumn(null); void moveGoal(goalId, column.id); }} className={`min-h-60 rounded-2xl border p-3 transition-colors sm:p-4 ${isDragTarget ? "border-[#544af7] bg-[#eef1fc] ring-2 ring-[#544af7]/15" : "border-[#edf0f7] bg-[#f8f9fe]"}`}>
+        return <section key={column.id} aria-labelledby={`goal-column-${column.id}`} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDragOverColumn(column.id); }} onDrop={(event) => { event.preventDefault(); const goalId = event.dataTransfer.getData("text/plain"); setDragOverColumn(null); void moveGoal(goalId, column.id); }} className={`min-h-60 rounded-2xl border p-3 transition-colors sm:p-4 ${isDragTarget ? "border-accent bg-accent-soft ring-2 ring-accent/15" : "border-line bg-surface"}`}>
           <header className="mb-3 flex items-center justify-between px-1">
-            <div><h3 id={`goal-column-${column.id}`} className="flex items-center gap-2 font-poppins text-sm font-bold text-[#16192c]"><span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: column.accent }} />{column.label}</h3><p className="mt-1 pl-4 text-[11px] text-[#8d94a8]">{column.hint}</p></div>
-            <div className="flex items-center gap-2"><span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-2 text-xs font-semibold text-[#626981]">{columnGoals.length}</span><button type="button" onClick={() => openCreateGoal(column.id)} aria-label={`Add a goal to ${column.label}`} className="rounded-lg px-2 py-1 text-sm font-semibold text-[#544af7] hover:bg-white">+ Add</button></div>
+            <div><h3 id={`goal-column-${column.id}`} className="flex items-center gap-2 font-poppins text-sm font-bold text-ink"><span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: column.accent }} />{column.label}</h3><p className="mt-1 pl-4 text-[11px] text-muted">{column.hint}</p></div>
+            <div className="flex items-center gap-2"><span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-2 text-xs font-semibold text-ink-chart">{columnGoals.length}</span><button type="button" onClick={() => openCreateGoal(column.id)} aria-label={`Add a goal to ${column.label}`} className="rounded-lg px-2 py-1 text-sm font-semibold text-accent hover:bg-white">+ Add</button></div>
           </header>
           <div className="page-cascade space-y-3">
             {columnGoals.map((goal) => <GoalCard key={goal.id} goal={goal} outcome={outcomes.find((outcome) => outcome.goalId === goal.id)} draggable moving={movingGoalId === goal.id} onMove={(status) => { void moveGoal(goal.id, status); }} onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", goal.id); }} onDragEnd={() => setDragOverColumn(null)} onOpen={() => { setError(""); setFeedback(""); setConfirmDelete(false); setSelectedGoal(goal); }} />)}
-            {!columnGoals.length && <p className="rounded-xl border border-dashed border-[#d9ddec] bg-white/70 px-3 py-6 text-center text-xs text-[#8d94a8]">Drop a goal here or use + Add in this column.</p>}
+            {!columnGoals.length && <p className="rounded-xl border border-dashed border-line-strong bg-white/70 px-3 py-6 text-center text-xs text-muted">Drop a goal here or use + Add in this column.</p>}
           </div>
         </section>;
       })}
       </div>
     </> : <div className="page-cascade grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-      <button type="button" onClick={() => openCreateGoal()} className="flex min-h-64 flex-col items-center justify-center rounded-3xl border-2 border-dashed border-[#d9ddec] bg-white p-8 text-center transition hover:border-[#544af7] hover:bg-[#fafaff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]">
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eef1fc] text-2xl font-semibold text-[#544af7]">+</span>
-        <span className="mt-3 font-semibold text-[#16192c]">Add a goal</span>
-        <span className="mt-1 text-sm text-[#8d94a8]">Create another savings goal</span>
+      <button type="button" onClick={() => openCreateGoal()} className="flex min-h-64 flex-col items-center justify-center rounded-3xl border-2 border-dashed border-line-strong bg-white p-8 text-center transition hover:border-accent hover:bg-[#fafaff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-2xl font-semibold text-accent">+</span>
+        <span className="mt-3 font-semibold text-ink">Add a goal</span>
+        <span className="mt-1 text-sm text-muted">Create another savings goal</span>
       </button>
       {goals.map((goal) => <GoalCard key={goal.id} goal={goal} outcome={outcomes.find((outcome) => outcome.goalId === goal.id)} onOpen={() => { setError(""); setConfirmDelete(false); setSelectedGoal(goal); }} />)}
     </div>}
 
-    {(showForm || selectedGoal) && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) { setShowForm(false); setSelectedGoal(null); setConfirmDelete(false); } }} className="fixed inset-0 z-[100] flex justify-center overflow-y-auto bg-[#16192c]/45 [&>*]:my-auto p-3 backdrop-blur-[2px] sm:p-6">
+    {(showForm || selectedGoal) && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) { setShowForm(false); setSelectedGoal(null); setConfirmDelete(false); } }} className="fixed inset-0 z-[100] flex justify-center overflow-y-auto bg-ink/45 [&>*]:my-auto p-3 backdrop-blur-[2px] sm:p-6">
       <div role="dialog" aria-modal="true" aria-labelledby="goal-form-title" className="w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl">
         <header className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: "var(--border)" }}>
           <div><p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--accent)" }}>{selectedGoal ? "Manage goal" : "New goal"}</p><h2 id="goal-form-title" className="mt-1 text-lg font-semibold" style={{ color: "var(--ink)" }}>{selectedGoal?.name ?? "Add a savings goal"}</h2><p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>{selectedGoal ? "Update the details and save your changes." : "Choose what you’re saving for and when you need it."}</p></div>
@@ -277,7 +277,7 @@ export function GoalsClient({ goals, outcomes, accounts }: { goals: Goal[]; outc
             <p className="text-sm font-semibold text-red-800">Delete “{selectedGoal.name}”?</p>
             <p className="mt-1 text-sm text-red-700">This goal will be removed from your list and future simulations.</p>
             <div className="mt-3 flex justify-end gap-2">
-              <button type="button" onClick={() => setConfirmDelete(false)} disabled={saving} className="rounded-lg px-3 py-2 text-sm font-medium text-[#4a4f68] disabled:opacity-50">Keep goal</button>
+              <button type="button" onClick={() => setConfirmDelete(false)} disabled={saving} className="rounded-lg px-3 py-2 text-sm font-medium text-ink-secondary disabled:opacity-50">Keep goal</button>
               <button type="button" onClick={deleteGoal} disabled={saving} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Deleting…" : "Delete goal"}</button>
             </div>
           </section>}

@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinVantage Dashboard Ideas</title>
+<style>
+:root{
+  --surface:#f8f9fe; --card:#fff; --line:#e6e9f4; --ink:#16192c; --ink2:#4a4f68; --muted:#6b7288; --inset:#f4f5fa;
+  --accent:#544af7; --accent-soft:#eef1fc;
+  --good:#0f766e; --good-bg:#e3f4f1; --warn:#9a4a0f; --warn-bg:#fdf0e3; --bad:#be3a55; --bad-bg:#fbe9ee;
+  --s1:#544af7; --s2:#2a9d8f; --s3:#dd6f2c; --s4:#b5479a; --s5:#2d83c9; --s6:#b08a1e;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --surface:#0f1120; --card:#171a2e; --line:#272b45; --ink:#eef0fa; --ink2:#b8bdd6; --muted:#8f96b3; --inset:#1d2138;
+    --accent:#8f88ff; --accent-soft:#242850;
+    --good:#4fd1c0; --good-bg:#12332f; --warn:#f0b36a; --warn-bg:#3a2a14; --bad:#f08aa0; --bad-bg:#3a1a25;
+  }
+}
+:root[data-theme="dark"]{
+  --surface:#0f1120; --card:#171a2e; --line:#272b45; --ink:#eef0fa; --ink2:#b8bdd6; --muted:#8f96b3; --inset:#1d2138;
+  --accent:#8f88ff; --accent-soft:#242850;
+  --good:#4fd1c0; --good-bg:#12332f; --warn:#f0b36a; --warn-bg:#3a2a14; --bad:#f08aa0; --bad-bg:#3a1a25;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--ink);font:15px/1.55 Roboto,system-ui,-apple-system,"Segoe UI",sans-serif}
+h1,h2,h3,h4{font-family:Poppins,system-ui,sans-serif;margin:0;line-height:1.25}
+.wrap{max-width:1200px;margin:0 auto;padding:28px 16px 96px}
+header h1{font-size:clamp(26px,4vw,36px);letter-spacing:-.01em}
+header p{color:var(--ink2);max-width:72ch;margin:8px 0 0}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 11px;font:600 12px Poppins,sans-serif;border:1px solid var(--line);background:var(--card);color:var(--ink2)}
+.theme{float:right;border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:10px;padding:8px 12px;min-height:40px;font:600 12px Poppins,sans-serif;cursor:pointer}
+section.block{margin-top:36px}
+section.block>h2{font-size:22px}
+section.block>p.lead{color:var(--ink2);margin:6px 0 16px;max-width:75ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@media(min-width:760px){.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.finding{display:flex;gap:12px}
+.finding .n{flex:none;width:28px;height:28px;border-radius:9px;background:var(--bad-bg);color:var(--bad);font:700 13px Poppins,sans-serif;display:flex;align-items:center;justify-content:center}
+.finding h4{font-size:14px}
+.finding p{margin:4px 0 0;color:var(--ink2);font-size:13.5px}
+.finding code{background:var(--inset);border-radius:6px;padding:1px 6px;font-size:12px}
+.nav{position:sticky;top:0;z-index:10;background:var(--surface);padding:10px 0;margin-top:30px;border-bottom:1px solid var(--line)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.chip{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:999px;padding:8px 15px;font:600 13px Poppins,sans-serif;cursor:pointer;min-height:40px}
+.chip[aria-selected=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px;color:var(--muted)}
+.fbtn{border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:10px;padding:6px 12px;font:600 12px Poppins,sans-serif;cursor:pointer;min-height:36px}
+.fbtn[aria-pressed=true]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.panel h2{font-size:24px;margin-top:22px}
+.panel .sum{color:var(--ink2);margin:6px 0 0;max-width:75ch}
+.cols{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;margin-top:18px}
+@media(min-width:1000px){.cols{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}}
+.audit h3,.ideas h3{font-size:15px;margin-bottom:10px;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.row{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.badge{flex:none;align-self:flex-start;min-width:62px;text-align:center;border-radius:8px;padding:2px 8px;font:700 11px Poppins,sans-serif}
+.keep{background:var(--good-bg);color:var(--good)}.improve{background:var(--warn-bg);color:var(--warn)}
+.rethink{background:var(--accent-soft);color:var(--accent)}.cut{background:var(--bad-bg);color:var(--bad)}
+.row b{font-size:14px}.row span.why{display:block;color:var(--ink2);font-size:13px}
+.ideagrid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@media(min-width:700px){.ideagrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.idea{display:flex;flex-direction:column;gap:8px;padding:14px;transition:transform .15s,box-shadow .15s}
+.idea:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(84,74,247,.1)}
+.idea h4{font-size:15px}
+.idea p{margin:0;color:var(--ink2);font-size:13.5px}
+.idea .why{color:var(--muted);font-size:12.5px}
+.viz{background:var(--inset);border-radius:12px;height:84px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.viz svg{width:100%;height:100%}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+.tag{border-radius:7px;padding:2px 8px;font:600 11px Roboto,sans-serif;background:var(--inset);color:var(--ink2)}
+.tag.S{background:var(--good-bg);color:var(--good)}.tag.M{background:var(--warn-bg);color:var(--warn)}.tag.L{background:var(--bad-bg);color:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:10px 8px;border-top:1px solid var(--line);vertical-align:top}
+th{font:700 11px Poppins,sans-serif;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-top:0}
+.scroll{overflow-x:auto}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--ink2);margin-top:8px}
+.note{font-size:12.5px;color:var(--muted);margin-top:14px}
+.hidden{display:none!important}
+@media (prefers-reduced-motion:reduce){.idea{transition:none}.idea:hover{transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <button class="theme" id="themeBtn" type="button">Toggle Theme</button>
+  <h1>Dashboard Audit and Ideas</h1>
+  <p>Every tab under the dashboard, checked card by card for whether it helps someone decide something, then a pile of things we could add. Sketches are mock-ups with made-up shapes, not real data.</p>
+  <div class="meta">
+    <span class="pill">13 tabs audited</span>
+    <span class="pill" id="countIdeas"></span>
+    <span class="pill">Read from the running app, 21 Nov 2026</span>
+  </div>
+</header>
+
+<section class="block">
+  <h2>What I Found Across All Tabs</h2>
+  <p class="lead">Before adding anything, these are the places where the dashboard already disagrees with itself or repeats itself. Most are cheap to fix and make every new chart more trustworthy.</p>
+  <div class="grid two" id="findings"></div>
+</section>
+
+<section class="block">
+  <h2>If We Only Build Ten Things</h2>
+  <p class="lead">Ranked by how much a person would feel it against how much work it is. All of them can be computed in the API from data we already hold, so the "math first" rule still holds.</p>
+  <div class="card scroll"><table id="top10"></table></div>
+</section>
+
+<div class="nav" id="nav">
+  <div class="chips" role="tablist" id="chips"></div>
+  <div class="filters">Show ideas:
+    <button class="fbtn" data-f="all" aria-pressed="true" type="button">All</button>
+    <button class="fbtn" data-f="S" aria-pressed="false" type="button">Quick Wins</button>
+    <button class="fbtn" data-f="have" aria-pressed="false" type="button">Data We Already Have</button>
+    <button class="fbtn" data-f="new" aria-pressed="false" type="button">Needs New Data</button>
+  </div>
+</div>
+<div id="panels"></div>
+
+<section class="block">
+  <h2>How To Read The Tags</h2>
+  <div class="legend">
+    <span><span class="badge keep">Keep</span> earns its space</span>
+    <span><span class="badge improve">Improve</span> right idea, weak execution</span>
+    <span><span class="badge rethink">Rethink</span> change what it shows</span>
+    <span><span class="badge cut">Cut</span> duplicate or no decision value</span>
+  </div>
+  <div class="legend">
+    <span><span class="tag S">S</span> a day or two</span>
+    <span><span class="tag M">M</span> about a week, usually one new API figure</span>
+    <span><span class="tag L">L</span> new data source or big UI piece</span>
+    <span><span class="tag">Have</span> data is already in the stores</span>
+    <span><span class="tag">API</span> needs a new computed figure in math-core</span>
+    <span><span class="tag">New</span> needs data we don't collect yet</span>
+  </div>
+  <p class="note">Every idea assumes the product rules stay on: figures are computed before any wording, suggestions never move money, probabilities show as ranges, mocked values keep their badge, and anything saved from parsed input waits for a confirm.</p>
+</section>
+</div>
+
+<script>
+/* ---------- tiny sketch library (made-up shapes, not data) ---------- */
+const C=['var(--s1)','var(--s2)','var(--s3)','var(--s4)','var(--s5)','var(--s6)'];
+const svg=(b)=>`<svg viewBox="0 0 200 84" preserveAspectRatio="xMidYMid meet" role="img" aria-hidden="true">${b}</svg>`;
+const V={
+ spark:()=>svg(`<polyline fill="none" stroke="${C[0]}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="12,62 36,54 60,58 84,40 108,44 132,26 156,30 188,14"/><circle cx="188" cy="14" r="4" fill="${C[0]}"/>`),
+ line2:()=>svg(`<polyline fill="none" stroke="${C[0]}" stroke-width="2.5" points="12,66 44,56 76,50 108,38 140,30 188,16"/><polyline fill="none" stroke="${C[2]}" stroke-width="2" stroke-dasharray="4 4" points="12,64 44,58 76,54 108,48 140,42 188,34"/>`),
+ band:()=>svg(`<polygon fill="${C[0]}" opacity=".18" points="12,56 60,48 108,36 156,22 188,10 188,62 156,56 108,54 60,58 12,60"/><polyline fill="none" stroke="${C[0]}" stroke-width="2.5" points="12,58 60,53 108,45 156,39 188,36"/>`),
+ bars:()=>svg([14,26,20,38,32,50,44].map((h,i)=>`<rect x="${14+i*26}" y="${74-h}" width="16" height="${h}" rx="4" fill="${C[i%2?1:0]}"/>`).join('')),
+ bars2:()=>svg([[40,26],[32,34],[48,30],[36,22],[52,40]].map(([a,b],i)=>`<rect x="${16+i*36}" y="${74-a}" width="13" height="${a}" rx="3" fill="${C[0]}"/><rect x="${31+i*36}" y="${74-b}" width="13" height="${b}" rx="3" fill="${C[2]}"/>`).join('')),
+ donut:()=>{let o=0,out='';[40,25,20,15].forEach((p,i)=>{out+=`<circle cx="100" cy="42" r="26" fill="none" stroke="${C[i]}" stroke-width="14" stroke-dasharray="${p*1.634} 163.4" stroke-dashoffset="${-o*1.634}" transform="rotate(-90 100 42)"/>`;o+=p});return svg(out)},
+ gauge:()=>svg(`<path d="M50 70 A50 50 0 0 1 150 70" fill="none" stroke="var(--line)" stroke-width="12" stroke-linecap="round"/><path d="M50 70 A50 50 0 0 1 128 30" fill="none" stroke="${C[1]}" stroke-width="12" stroke-linecap="round"/><text x="100" y="68" text-anchor="middle" font-size="16" font-weight="700" fill="var(--ink)">72</text>`),
+ bullet:()=>svg([[.9,0],[.55,1],[.3,2],[.75,4]].map(([p,c],i)=>`<rect x="20" y="${10+i*18}" width="160" height="9" rx="4.5" fill="var(--line)"/><rect x="20" y="${10+i*18}" width="${160*p}" height="9" rx="4.5" fill="${C[c]}"/>`).join('')),
+ target:()=>svg([[.7,.55],[.2,.3],[.1,.15]].map(([a,t],i)=>`<rect x="20" y="${12+i*22}" width="160" height="10" rx="5" fill="var(--line)"/><rect x="20" y="${12+i*22}" width="${160*a}" height="10" rx="5" fill="${C[i]}"/><rect x="${20+160*t}" y="${8+i*22}" width="3" height="18" fill="var(--ink)"/>`).join('')),
+ stack:()=>svg([[60,25,15],[50,30,20],[45,30,25],[40,35,25]].map((r,i)=>{let x=20,o='';r.forEach((w,j)=>{o+=`<rect x="${x}" y="${8+i*18}" width="${w*1.6}" height="12" rx="3" fill="${C[j]}"/>`;x+=w*1.6+0});return o}).join('')),
+ heat:()=>{let o='';for(let r=0;r<5;r++)for(let c=0;c<14;c++){const v=((r*7+c*13)%9)/9;o+=`<rect x="${14+c*13}" y="${8+r*14}" width="11" height="11" rx="3" fill="${C[0]}" opacity="${.12+v*.8}"/>`}return svg(o)},
+ cal:()=>{let o='';for(let r=0;r<4;r++)for(let c=0;c<7;c++){const d=r*7+c;const hit=[2,5,9,12,16,19,23,26].includes(d);o+=`<rect x="${22+c*24}" y="${6+r*19}" width="20" height="15" rx="4" fill="var(--line)"/>`+(hit?`<circle cx="${32+c*24}" cy="${13.5+r*19}" r="4" fill="${C[d%3===0?2:0]}"/>`:'')}return svg(o)},
+ waterfall:()=>svg(`<rect x="14" y="14" width="22" height="56" rx="3" fill="${C[0]}"/><rect x="44" y="14" width="22" height="14" rx="3" fill="${C[2]}"/><rect x="74" y="28" width="22" height="10" rx="3" fill="${C[2]}"/><rect x="104" y="30" width="22" height="-0" fill="none"/><rect x="104" y="38" width="22" height="12" rx="3" fill="${C[1]}"/><rect x="134" y="26" width="22" height="24" rx="3" fill="${C[1]}"/><rect x="164" y="26" width="22" height="44" rx="3" fill="${C[0]}"/>`),
+ timeline:()=>svg(`<line x1="14" y1="42" x2="186" y2="42" stroke="var(--line)" stroke-width="3"/>`+[28,70,104,142,174].map((x,i)=>`<circle cx="${x}" cy="42" r="7" fill="${C[i%6]}"/><rect x="${x-9}" y="${i%2?52:22}" width="18" height="8" rx="3" fill="${C[i%6]}" opacity=".35"/>`).join('')),
+ lanes:()=>svg([[10,70,0],[50,120,1],[90,170,2]].map(([a,b,c],i)=>`<rect x="${a+10}" y="${10+i*22}" width="${b-a}" height="14" rx="7" fill="${C[c]}" opacity=".85"/>`).join('')),
+ progress:()=>svg([.82,.5,.25].map((p,i)=>`<circle cx="${40+i*60}" cy="42" r="22" fill="none" stroke="var(--line)" stroke-width="8"/><circle cx="${40+i*60}" cy="42" r="22" fill="none" stroke="${C[i]}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${p*138} 138" transform="rotate(-90 ${40+i*60} 42)"/>`).join('')),
+ alert:()=>svg([[C[2],'.9'],[C[3],'.7'],[C[0],'.55']].map(([c,w],i)=>`<rect x="14" y="${8+i*24}" width="172" height="19" rx="7" fill="var(--card)" stroke="var(--line)"/><circle cx="26" cy="${17.5+i*24}" r="5" fill="${c}"/><rect x="38" y="${14+i*24}" width="${120*w}" height="7" rx="3.5" fill="var(--line)"/>`).join('')),
+ chat:()=>svg(`<rect x="14" y="8" width="110" height="22" rx="9" fill="var(--card)" stroke="var(--line)"/><rect x="76" y="38" width="110" height="22" rx="9" fill="${C[0]}" opacity=".9"/><rect x="24" y="16" width="80" height="6" rx="3" fill="var(--line)"/><rect x="88" y="46" width="80" height="6" rx="3" fill="#fff" opacity=".8"/><rect x="14" y="66" width="40" height="12" rx="6" fill="${C[1]}" opacity=".35"/><rect x="60" y="66" width="40" height="12" rx="6" fill="${C[3]}" opacity=".35"/>`),
+ slider:()=>svg(`<rect x="20" y="40" width="160" height="6" rx="3" fill="var(--line)"/><rect x="20" y="40" width="96" height="6" rx="3" fill="${C[0]}"/><circle cx="116" cy="43" r="9" fill="var(--card)" stroke="${C[0]}" stroke-width="3"/><text x="100" y="22" text-anchor="middle" font-size="12" fill="var(--ink2)">30% → 12%</text><text x="100" y="72" text-anchor="middle" font-size="11" fill="var(--muted)">score range 690 to 720</text>`),
+ toggle:()=>svg([[1,0],[0,1],[1,2],[0,3]].map(([on,c],i)=>`<rect x="${20+(i%2)*92}" y="${14+Math.floor(i/2)*30}" width="34" height="18" rx="9" fill="${on?C[c]:'var(--line)'}"/><circle cx="${on?45+(i%2)*92:29+(i%2)*92}" cy="${23+Math.floor(i/2)*30}" r="7" fill="#fff"/><rect x="${60+(i%2)*92}" y="${20+Math.floor(i/2)*30}" width="26" height="6" rx="3" fill="var(--line)"/>`).join('')),
+ table:()=>svg([0,1,2,3].map(i=>`<rect x="14" y="${8+i*18}" width="172" height="14" rx="5" fill="${i===0?'var(--line)':'var(--card)'}" stroke="var(--line)"/><rect x="22" y="${13+i*18}" width="50" height="5" rx="2.5" fill="var(--muted)" opacity=".5"/><rect x="150" y="${13+i*18}" width="28" height="5" rx="2.5" fill="${i===2?C[2]:'var(--muted)'}" opacity=".6"/>`).join('')),
+};
+
+/* ---------- content ---------- */
+const FINDINGS=[
+ ["Two Different Meanings of Spending","Overview Cash Flow says November spending is $3,552.56. The Spending tab says $5,902.56. The gap is $2,350 of savings and investing transfers, which the Spending tab counts as spent. Pick one definition, and show Spent and Saved as separate figures everywhere."],
+ ["Overview Shows Two Cards, Credit Shows Three","The Credit Cards panel on Overview lists the Cash Rewards and Travel Rewards cards. The Credit tab also has the 0% Promo Card, which is the one at 30% utilization and the most likely to need attention."],
+ ["A Price Hike That Does Not Add Up","On Subscriptions, City Power & Light reads \"Was $82.85, now $87.32\", but its row amount is $101.31. A reader cannot tell which number is the bill. Show the old and new amount in the same units as the row."],
+ ["Dates Run Past Today","Overview and Transactions lead with Dec 3 2026 items, and Spending's Top 10 for November includes Nov 30, while today is Nov 21. This is demo seed data that is not anchored to the current date, but it makes Recent Transactions and Recent Deposits look wrong in a demo."],
+ ["The Same List Appears Twice","Accounts has a collapsible \"All bank accounts\" directory that repeats the Assets and Liabilities lists right below it. Spending's Upcoming Bills and Recurring Charges repeat Subscriptions. Overview's three net worth tiles repeat the top of Accounts."],
+ ["Rows That Say Nothing","Changes From Last Month on Spending lists seven categories with \"▼ $0\". Goals shows probability ranges of 97 to 98 percent on four of five goals, so the label carries no information. Overview's Accounts tile is just the number 12."],
+ ["Top 10 Expenses Is Mostly Not Expenses","The November list is led by a $1,400 transfer to savings, the mortgage, a Roth IRA contribution and a brokerage deposit. None of that is a purchase decision. A discretionary-only view would show Green Grocer and Sunrise Diner, which is what someone can act on."],
+ ["Three Tabs Open Empty","Copilot shows \"No Copilot events yet\", Reports shows only a Generate button, and Life Events shows \"Results appear after Generate\". The product rule is that the demo never shows an empty state, so each should open with a worked example."],
+ ["An Outlier Skews \"Usually\"","The Spending budget row for Shopping says \"Usually $992.75\" against a $300 limit. One big month drags the average. A median of the last three or six months would be a fairer baseline."],
+ ["Settings Is Nearly Empty","Three items: categories and rules, a Copilot toggle, and reload demo data. There is nowhere to set alerts, export or delete data, see what the extension sends, or choose appearance."],
+];
+
+const TOP10=[
+ ["1","Needs Attention Today strip","Overview","One ranked list: budget over, price hike, card promo ending, bill due in 3 days. Every signal already exists in a different tab.","M","Have"],
+ ["2","Safe to Spend This Month","Overview","Income expected minus bills still due minus budgets remaining minus the savings target. The one number people open a finance app to learn.","M","API"],
+ ["3","One Definition of Spending","All","Separate Spent from Saved. Fixes the $3,552 vs $5,902 mismatch and the 32% kept figure.","S","Have"],
+ ["4","Money Calendar","Overview","Paydays, bills, card due dates and a projected balance line for the next 30 days.","M","Have"],
+ ["5","Debt Payoff Planner","Credit, Accounts","Avalanche vs snowball, with the payoff date and interest saved. Uses APRs we already store.","M","API"],
+ ["6","Monthly Needed per Goal","Goals","Replaces 98% badges with \"needs $412 a month, you add $380\".","M","API"],
+ ["7","Target Allocation Drift","Investments","Actual vs target by asset class, with a plain suggestion. No trades are placed.","M","API"],
+ ["8","Worked Examples on Empty Tabs","Copilot, Reports, Life Events","Open each with a sample result so the first screen is never blank.","S","Have"],
+ ["9","Utilization What-If","Credit","Slide a payment, see utilization and an estimated score range. Mocked badge stays.","M","API"],
+ ["10","Financial Health Score","Reports, Overview","One composite from savings rate, debt-to-income, utilization and runway, with the four parts shown.","M","API"],
+];
+
+const TABS=[
+{id:"overview",label:"Overview",sum:"The landing screen. It should answer \"am I okay, and what should I do next?\" in five seconds. Today it answers the first half and skips the second.",
+ audit:[
+  ["keep","Net Worth tile","The anchor number. Add a change since last month so it is a trend, not a snapshot."],
+  ["cut","Total Assets and Liabilities tiles","Both repeat the top of Accounts. Fold them into the Net Worth tile as a small split bar."],
+  ["cut","Accounts count (12)","A count with no decision attached. Replace with something that changes behavior."],
+  ["keep","Investments tile","Useful and correctly badged as mocked. Add today's change."],
+  ["improve","Subscriptions strip","Good link into the tab. \"Saved So Far $0\" is a dead figure until someone acts; show Next Charge instead."],
+  ["keep","Cash Flow chart","Core chart, and the income, spending and net trio is clear. It takes a lot of height for one chart."],
+  ["improve","Credit Cards panel","Misses the 0% Promo Card. Card artwork uses space that utilization bars and due dates could use."],
+  ["keep","Net Worth Trend","Strong. Needs a driver breakdown to say why it moved."],
+  ["cut","Spending by Category (Overview copy)","The Spending tab does it better. Keep one small top-3 instead."],
+  ["keep","Investment Performance vs S&P 500","Useful and honest about being sample data."],
+  ["improve","Recent Transactions","The Income and Expense pill repeats what the sign and colour already say. Show category and account instead."],
+ ],
+ ideas:[
+  {t:"Needs Attention Today",d:"A ranked strip of 3 to 5 items across the whole app, each linking to the tab that fixes it.",why:"The screen currently reports and never prompts.",data:"have",e:"M",v:"alert"},
+  {t:"Safe to Spend This Month",d:"Expected income, minus bills still due, minus budget room, minus the savings target. Shown as one number with the four parts beneath.",why:"Answers the question people actually have on day 21.",data:"api",e:"M",v:"gauge"},
+  {t:"What Moved Net Worth",d:"A waterfall for the month: contributions, market change, debt paid down, new spending.",why:"Turns a line going up into a reason.",data:"api",e:"M",v:"waterfall"},
+  {t:"Money Calendar",d:"Next 30 days: paydays, bills, card due dates, with the projected cash balance as a line under it.",why:"Spots a short week before it happens.",data:"have",e:"M",v:"cal"},
+  {t:"Cash Runway",d:"Months of normal spending your liquid cash covers, plotted against a 3 and 6 month line.",why:"The single best resilience number and it is missing.",data:"have",e:"S",v:"bullet"},
+  {t:"Savings Rate Ring",d:"Share of income saved this month with a 6 month trend behind it.",why:"Positive framing; ties to the 20% savings target already on Spending.",data:"have",e:"S",v:"progress"},
+  {t:"Pin and Hide Cards",d:"Let people choose which cards show on Overview and in what order.",why:"Different people care about different things.",data:"new",e:"L",v:"toggle"},
+ ]},
+{id:"advisor",label:"Advisor",sum:"A chat with five good starter prompts and a set of interactive visuals. The product is solid; the gaps are trust and carry-through.",
+ audit:[
+  ["keep","Starter prompts","Five concrete, real scenarios. Better than a blank box."],
+  ["keep","Conversations list","Saved as you go is the right default."],
+  ["keep","Loan, card, growth and goal visuals","These make an answer something you can poke at. The strongest part of the tab."],
+  ["improve","Answers with no visible inputs","Rule 1 says every figure links to its inputs. The chat should show which data it used."],
+  ["improve","No way to act on an answer","A good answer ends in a chat bubble. There is no path to a goal or life event."],
+ ],
+ ideas:[
+  {t:"\"Using\" Chips on Every Answer",d:"Small chips above the reply: November spending, 5 goals, 3 cards. Click one to open the underlying data.",why:"Trust, and it matches the math-first rule.",data:"have",e:"S",v:"chat"},
+  {t:"Save As Goal or Life Event",d:"A button under a visual that pre-fills a draft, then waits for Confirm.",why:"Closes the loop from advice to plan without silently saving.",data:"have",e:"M",v:"timeline"},
+  {t:"Prompts From Your Data",d:"Suggested questions generated from flags: \"Groceries is 11% over, want to see why?\"",why:"Starter prompts that are about you, not about an average user.",data:"have",e:"S",v:"alert"},
+  {t:"Two Scenarios Side by Side",d:"Ask for loan A and loan B and get both visuals in one card with the difference called out.",why:"People compare; the chat makes them hold both in their head.",data:"api",e:"M",v:"bars2"},
+  {t:"Tap a Number to See Its Math",d:"Every figure opens a small drawer with inputs, formula name and date of the data.",why:"Makes the safety story visible instead of claimed.",data:"api",e:"M",v:"table"},
+ ]},
+{id:"copilot",label:"Copilot",sum:"A page about a Chrome extension. If the extension is not installed, the page is an install ad plus an empty feed.",
+ audit:[
+  ["keep","Get the Copilot for Chrome","Clear and necessary."],
+  ["rethink","Activity feed (empty state)","\"No Copilot events yet\" breaks the never-empty rule and gives no reason to install."],
+  ["keep","Delete and clear-all with confirm","Right control over history."],
+ ],
+ ideas:[
+  {t:"Try It Now Button",d:"A one-click simulated purchase that fills the feed with a real card so the page shows what the extension does.",why:"Fixes the empty state and demos the product at once.",data:"have",e:"S",v:"alert"},
+  {t:"Impact Summary",d:"Purchases checked, total flagged, and how many days the flagged ones would have pushed goals back.",why:"Shows the value of the feature in one glance.",data:"api",e:"M",v:"bars"},
+  {t:"Bought or Skipped Log",d:"Mark each event as bought or skipped, then show what skipping did for the goal date.",why:"Gives the feed memory and a reason to return.",data:"new",e:"M",v:"timeline"},
+  {t:"Wishlist With a Cool-Off",d:"Park an item here, see when it fits the budget, and get a reminder. Suggest only, never buys.",why:"Delay is the most effective impulse tool.",data:"new",e:"M",v:"cal"},
+  {t:"Per-Merchant Alerts",d:"Always warn above a set price at a chosen merchant.",why:"Lets people tune the Copilot to their weak spots.",data:"api",e:"M",v:"toggle"},
+ ]},
+{id:"life",label:"Life Events",sum:"A form with five templates and a goal-funding comparison. The result is strong once generated; the first screen is a form with a blank result next to it.",
+ audit:[
+  ["keep","Built-in templates","New Baby, Buy a Home, Job Change, Move, Wedding: the right five."],
+  ["keep","Goal Funding Dates, before and after","The best idea on the tab: it shows consequences across every goal."],
+  ["rethink","Empty results pane","Shows a sentence until Generate. Show a worked example in place."],
+  ["improve","One event at a time","Real life stacks events. There is no way to see two together."],
+ ],
+ ideas:[
+  {t:"Pre-Generated Example",d:"Open with the New Baby result already drawn, labelled as an example.",why:"Shows the payoff before asking for input.",data:"have",e:"S",v:"waterfall"},
+  {t:"Compare Two Events",d:"Pick two saved events and see their funding dates and monthly cost side by side.",why:"The question is usually \"this or that\".",data:"have",e:"M",v:"bars2"},
+  {t:"Month-by-Month Cash Forecast",d:"A line with a range band: cash balance over 24 months with the event, with ranges not exact numbers.",why:"Shows the tightest month, not just the end date.",data:"api",e:"M",v:"band"},
+  {t:"Stress Test",d:"A switch for \"income drops 20%\" or \"rent rises 10%\" on top of any event.",why:"Tests whether the plan survives a bad year.",data:"api",e:"M",v:"slider"},
+  {t:"All Events on One Timeline",d:"Saved events as lanes across five years with goal dates marked.",why:"See pile-ups of big years.",data:"have",e:"M",v:"lanes"},
+  {t:"Break-Even Month",d:"The month the extra cost is covered by freed-up money elsewhere.",why:"A single, plain answer to \"when does this get easier\".",data:"api",e:"S",v:"spark"},
+ ]},
+{id:"subs",label:"Subscriptions",sum:"The most complete tab. It finds price rises, duplicates and annual renewals, and it never cancels anything for you.",
+ audit:[
+  ["keep","Monthly, yearly, active and share of income tiles","Four honest tiles. Yearly cost is the one that shocks people."],
+  ["keep","Needs a Look","Price rise, duplicate and annual-coming flags are exactly the right ones."],
+  ["improve","Price flag wording","City Power & Light shows $82.85 to $87.32 against a $101.31 row. Make the units match."],
+  ["keep","Subscriptions vs Bills split","Chosen versus owed is a smart divide."],
+  ["keep","Upcoming Charges, 30 days","Useful. A strip or calendar would read faster than a list."],
+  ["rethink","Saved So Far","Zero until someone cancels; sits on Overview as a dead figure."],
+ ],
+ ideas:[
+  {t:"Price History Per Subscription",d:"A small step line on each row showing every price it has had.",why:"Makes \"price went up\" visible and credible.",data:"have",e:"S",v:"spark"},
+  {t:"Renewal Calendar Strip",d:"A 90 day strip with every renewal as a dot, annual ones larger.",why:"Annual renewals hide from a monthly list.",data:"have",e:"S",v:"cal"},
+  {t:"What Cutting Flags Saves",d:"A waterfall of yearly cost if each flagged item were dropped, one at a time.",why:"Turns a flag into a figure worth acting on.",data:"api",e:"S",v:"waterfall"},
+  {t:"Free Trial Guard",d:"Spot a $0 or tiny first charge that later becomes a full price.",why:"Catches the trial that quietly converted.",data:"have",e:"M",v:"timeline"},
+  {t:"Recurring Spend by Category",d:"Donut of streaming, fitness, software, utilities.",why:"Shows where the commitments sit.",data:"have",e:"S",v:"donut"},
+  {t:"Is It Worth It",d:"Ask how often you use it and show cost per use over a year. Suggest only.",why:"Price alone cannot tell you if something is wasted.",data:"new",e:"M",v:"bullet"},
+ ]},
+{id:"reports",label:"Reports",sum:"A quarterly review with many good sections. Right now it needs a click to see any of it.",
+ audit:[
+  ["rethink","Generate Latest Report as the first view","The page is a button until clicked. Open with the latest report drawn."],
+  ["keep","Went well, needs attention, next steps","The right shape for a review."],
+  ["keep","Spending, income and savings charts","Clear and use shared chart styling."],
+  ["improve","No comparison to the last quarter","Says reports can add comparisons when a prior quarter exists; show deltas from day one with demo data."],
+ ],
+ ideas:[
+  {t:"Auto-Generate on First Visit",d:"Build and show the latest report as the page opens.",why:"Removes the blank first screen.",data:"have",e:"S",v:"table"},
+  {t:"Quarter Over Quarter",d:"Income, spending, savings, net worth and score as small deltas with arrows.",why:"A review is about change.",data:"have",e:"M",v:"bars2"},
+  {t:"Financial Health Score",d:"One composite from savings rate, debt-to-income, utilization and runway, with the four parts visible.",why:"A single number to track and discuss.",data:"api",e:"M",v:"gauge"},
+  {t:"Wins Timeline",d:"Milestones hit this quarter: goal passed 50%, utilization under 30%, first $100k net worth.",why:"Gives the report a positive anchor.",data:"have",e:"S",v:"timeline"},
+  {t:"Share as PDF",d:"Export a clean copy for a partner or advisor, made in the browser.",why:"Reviews get shared.",data:"have",e:"S",v:"table"},
+ ]},
+{id:"accounts",label:"Accounts",sum:"Net worth, a trend, linked banks and every account. Thorough, but it repeats itself.",
+ audit:[
+  ["cut","Net worth, assets and liabilities tiles","Identical to Overview. Keep one pair of numbers and use the space for the breakdown."],
+  ["keep","Net worth over time","The chart that earns the page."],
+  ["cut","\"All bank accounts\" directory","Repeats Assets and Liabilities directly below. Choose list or table."],
+  ["keep","Assets and Liabilities lists","Clear and sign-aware."],
+  ["keep","Linked Banks","Needed. Show last sync time and a health dot."],
+  ["keep","Account detail dialog","Good detail with recent transactions."],
+ ],
+ ideas:[
+  {t:"Net Worth by Account Type",d:"A stacked area: cash, investments, retirement, property against each debt type.",why:"Shows what is driving the line, not only the line.",data:"have",e:"M",v:"stack"},
+  {t:"Liquidity Ladder",d:"What is available today, within 30 days, and locked until a date (CDs, IRA).",why:"Net worth hides how much you can actually reach.",data:"have",e:"S",v:"bullet"},
+  {t:"Debt Payoff Race",d:"Avalanche against snowball as two lines with payoff dates and interest saved.",why:"Turns four balances into a plan.",data:"api",e:"M",v:"line2"},
+  {t:"Interest Earned vs Paid",d:"Per month bars: interest in from savings against interest out on loans and cards.",why:"One honest view of whether money is working for you.",data:"have",e:"M",v:"bars2"},
+  {t:"Stale Account Flag",d:"A badge on any manual account not updated in 30 days.",why:"Old balances quietly wreck net worth.",data:"have",e:"S",v:"alert"},
+ ]},
+{id:"transactions",label:"Transactions",sum:"A clean ledger with search, type and category filters. It lists well and teaches nothing.",
+ audit:[
+  ["keep","Search, type and category filters","Right set, fast."],
+  ["keep","Grouped by month with Recurring tags","Good scan pattern."],
+  ["improve","No totals for the current filter","Filter to Groceries and you still have to add it up yourself."],
+  ["improve","No signal for odd rows","A $300 charge at a $40 merchant looks like any other row."],
+ ],
+ ideas:[
+  {t:"Filter Summary Bar",d:"In, out and net for whatever is filtered, with a tiny bar by month.",why:"Search becomes an answer.",data:"have",e:"S",v:"bars"},
+  {t:"Unusual Charge Flags",d:"Mark a charge more than twice the merchant's usual amount.",why:"Finds mistakes and fraud early.",data:"have",e:"M",v:"alert"},
+  {t:"Merchant Leaderboard",d:"Top merchants by total and by visit count, over a chosen period.",why:"People rarely know their top five.",data:"have",e:"S",v:"bars"},
+  {t:"Spending Calendar Heat",d:"A day-by-day heat grid for the month.",why:"Shows the weekend spike or the payday spree.",data:"have",e:"S",v:"heat"},
+  {t:"Bulk Edit and Split",d:"Select several rows to recategorize, or split one row across categories.",why:"A $120 shop that was half groceries, half home goods.",data:"have",e:"M",v:"table"},
+  {t:"Export to CSV",d:"Download the filtered rows.",why:"Taxes and spreadsheets.",data:"have",e:"S",v:"table"},
+ ]},
+{id:"goals",label:"Goals",sum:"Three views of five goals, with probability ranges. The ranges are all near 98%, which is honest but not helpful.",
+ audit:[
+  ["keep","Board, Cards and Analysis views","Board is the clearest. Cards and Board show nearly the same thing."],
+  ["rethink","Likelihood range","97 to 98% on four goals says \"fine\" and nothing more. Show the gap to the plan instead."],
+  ["keep","Progress, target date and priority","The right fields."],
+  ["improve","Achieved column sits empty","A permanent empty column. Collapse it until it has a goal."],
+  ["improve","No \"how much a month\"","The most asked question is missing."],
+ ],
+ ideas:[
+  {t:"Monthly Needed vs Contributing",d:"For each goal: what it needs a month to hit its date, against what is flowing in.",why:"Moves from probability to a number you can act on.",data:"api",e:"M",v:"bullet"},
+  {t:"Where Each Month's Savings Go",d:"A stack showing how the monthly saving splits across goals by priority.",why:"Makes trade-offs between goals visible.",data:"have",e:"M",v:"stack"},
+  {t:"Milestone Ladder",d:"25, 50 and 75 percent marks with the date each is expected.",why:"Long goals need waypoints.",data:"have",e:"S",v:"timeline"},
+  {t:"Suggested Rebalance",d:"\"Move $60 a month from Kitchen to House and both land on time.\" Suggest only.",why:"The planner the page should be.",data:"api",e:"M",v:"waterfall"},
+  {t:"Projection Fan In the Card",d:"A small range chart per goal showing the likely finish window.",why:"Shows uncertainty as a range, as the rules require.",data:"have",e:"S",v:"band"},
+  {t:"Which Account Holds It",d:"Link a goal to the account where its money sits.",why:"Progress could update itself.",data:"new",e:"M",v:"progress"},
+ ]},
+{id:"income",label:"Income",sum:"The most complete finance tab. Every card here earns its place, so the ideas are about depth rather than repair.",
+ audit:[
+  ["keep","Expected Income with received percent","Smart: shows whether the paycheck landed."],
+  ["keep","Last month, 3 month average, year to date","Three useful baselines."],
+  ["keep","Income by Category","Paycheck, freelance, interest, dividends in one place."],
+  ["keep","Income vs Spending, six months","Core chart."],
+  ["keep","Debt-to-Income with a scale","Good use of a rule-of-thumb marker and a disclaimer."],
+  ["improve","Recent Deposits","Includes items dated after today."],
+  ["keep","Income Stability and kept share","Plain-language and useful. The 32% kept figure needs the spending fix above."],
+ ],
+ ideas:[
+  {t:"Income Sources Over Time",d:"Stacked months by source so a drop in freelance is visible.",why:"Shows dependence on any one source.",data:"have",e:"S",v:"stack"},
+  {t:"Freelance Range Band",d:"A band around the self-employment line showing its typical low and high.",why:"Variable income needs a range view.",data:"have",e:"M",v:"band"},
+  {t:"Next Payday Countdown",d:"Days until the next expected deposit and how much.",why:"The thing people check between paychecks.",data:"have",e:"S",v:"cal"},
+  {t:"Raise Impact",d:"Enter a raise and see the effect on goal dates and savings rate.",why:"Makes a pay talk concrete.",data:"api",e:"M",v:"bars2"},
+  {t:"Gross to Net",d:"Waterfall of gross pay, tax, retirement and take-home.",why:"The number in the bank is not the offer letter.",data:"new",e:"L",v:"waterfall"},
+ ]},
+{id:"spending",label:"Spending",sum:"Rich and mostly right: split, categories, budgets, changes and top expenses. It has the biggest definitional problem and the most duplicate cards.",
+ audit:[
+  ["keep","Spending Split with 50/30/20 targets","Clear and personal. Savings shows a check when over target."],
+  ["improve","Spent total includes savings transfers","$5,902.56 vs $3,552.56 on Overview. Separate Spent from Saved."],
+  ["keep","Spending by Category with drill-in","Good pattern."],
+  ["keep","Budgets with projection and \"usually\"","The best card here: spent, left, pace and normal."],
+  ["improve","\"Usually\" uses an average","Shopping shows $992.75. Use a median."],
+  ["improve","Changes From Last Month","Seven rows of ▼ $0. Hide unchanged and sort by size of change."],
+  ["rethink","Top 10 Expenses","Led by transfers and the mortgage. Show discretionary only."],
+  ["cut","Upcoming Bills and Recurring Charges","Subscriptions covers both better. Link instead."],
+ ],
+ ideas:[
+  {t:"Daily Pace Line",d:"Cumulative spend this month against last month and against the budget line.",why:"Shows \"ahead or behind\" on any day.",data:"have",e:"M",v:"line2"},
+  {t:"Category Trends in Small Multiples",d:"A tiny six month sparkline beside every category.",why:"Reveals slow creep that month-on-month hides.",data:"have",e:"S",v:"spark"},
+  {t:"Discretionary Top Purchases",d:"Top 10 with transfers, debt and fixed bills removed.",why:"The list people can act on.",data:"have",e:"S",v:"bars"},
+  {t:"Merchant Concentration",d:"How much of spending sits in your top five merchants.",why:"Finds where a small change has large effect.",data:"have",e:"S",v:"donut"},
+  {t:"No-Spend Day Streak",d:"A heat grid with calm days highlighted and a running streak.",why:"A friendly, gamified habit signal.",data:"have",e:"S",v:"heat"},
+  {t:"Suggested Budget Limits",d:"Offer a limit from the last three months' median. Applied only on Confirm.",why:"Budgets are tedious to guess.",data:"api",e:"M",v:"target"},
+  {t:"Weekday vs Weekend",d:"Average spend by day of week.",why:"Reveals when the money goes.",data:"have",e:"S",v:"bars"},
+ ]},
+{id:"investments",label:"Investments",sum:"The deepest page: value, returns, performance vs the S&P, allocation, holdings, watchlist, markets and news. Strong, though it leans toward a brokerage app rather than a plan.",
+ audit:[
+  ["keep","Total value, today and total return, cash, dividends","The right four numbers."],
+  ["keep","Performance vs S&P 500","Benchmark comparison with a table fallback for access."],
+  ["keep","Allocation","Clear. Needs a target to mean anything."],
+  ["keep","Holdings with expandable rows","Good, and sortable."],
+  ["keep","Watchlist","Handy; ETH and GOOGL are good examples of 52 week range."],
+  ["rethink","Markets and News","Closest to generic finance content; the least tied to this person's plan."],
+ ],
+ ideas:[
+  {t:"Target vs Actual Allocation",d:"Bars with a target tick and a drift band. A plain suggestion appears past the band. No trades.",why:"Allocation without a target is a picture.",data:"api",e:"M",v:"target"},
+  {t:"Contributions vs Market Growth",d:"Split total return into money put in and growth earned.",why:"Separates saving skill from market luck.",data:"api",e:"M",v:"waterfall"},
+  {t:"Dividend Calendar and Yield",d:"Next payments from holdings with a yield on cost.",why:"Dividends are already tracked at $1,783.80 year to date.",data:"have",e:"M",v:"cal"},
+  {t:"Concentration Alert",d:"Flag any holding over 10% or any theme over a set share.",why:"Four index funds hold 88% but the user may not see overlap.",data:"have",e:"S",v:"donut"},
+  {t:"Retirement Readiness Fan",d:"A range chart of projected balance at 65 using the simulator.",why:"Links the page to the goal engine, shown as a range.",data:"api",e:"M",v:"band"},
+  {t:"Tax-Advantaged Mix",d:"Share held in Roth, 401(k) and taxable accounts.",why:"Where money sits matters as much as what it holds.",data:"have",e:"S",v:"stack"},
+  {t:"Fee Drag",d:"Weighted expense ratio and what it costs over 20 years.",why:"Fees are the most reliable drag.",data:"new",e:"M",v:"line2"},
+ ]},
+{id:"credit",label:"Credit",sum:"A mocked score, three cards and generic education. Useful for framing, thin on what to do.",
+ audit:[
+  ["keep","Score and history, with a mocked badge","Clear labelling. The history shows +24 points."],
+  ["keep","Card debt, limit and utilization","Three tiles that matter most."],
+  ["rethink","What Shapes Your Score","Five factors, nearly all \"Positive\". Generic text that doesn't use the actual cards."],
+  ["improve","Your Credit Cards","Shows utilization, but not due date or promo-rate end for the 0% card."],
+  ["rethink","Education links","Fine as a footer; they carry no personal value."],
+ ],
+ ideas:[
+  {t:"Utilization What-If",d:"Slide a payment on a card and see new utilization and an estimated score range. Mocked badge stays.",why:"Turns the score into a lever.",data:"api",e:"M",v:"slider"},
+  {t:"Payoff Order Planner",d:"Which card to clear first for the least interest, with the date and total interest saved.",why:"APRs of 23%, 21% and 0% are already stored.",data:"api",e:"M",v:"line2"},
+  {t:"Promo Rate Countdown",d:"Days until the 0% card's rate ends, and the payment needed to clear it in time.",why:"Promo cliffs are the costly surprise.",data:"have",e:"S",v:"bullet"},
+  {t:"Due Date and Autopay Strip",d:"Every card's next due date with a minimum and a statement balance.",why:"A missed payment is the biggest score hit.",data:"have",e:"S",v:"cal"},
+  {t:"Monthly Interest Cost",d:"What each balance costs a month at its APR.",why:"Makes the 23% card feel expensive.",data:"have",e:"S",v:"bars"},
+  {t:"Personal Factor Cards",d:"Each factor tied to a real figure: utilization from the cards, age from account dates.",why:"Advice that is about you.",data:"have",e:"S",v:"progress"},
+ ]},
+{id:"settings",label:"Settings",sum:"Three items. It could be the place where trust is built.",
+ audit:[
+  ["keep","Spending Organization","Categories and rules, linked from Spending too."],
+  ["keep","Copilot toggle","Needed."],
+  ["keep","Reload demo profile","Useful for demos and testing."],
+  ["improve","Everything else is missing","No alerts, data export or delete, privacy view, profile or appearance."],
+ ],
+ ideas:[
+  {t:"Alert Preferences",d:"Choose which flags notify you: budget over, price hike, due date, promo ending.",why:"Pairs with Needs Attention Today.",data:"new",e:"M",v:"toggle"},
+  {t:"Export and Delete My Data",d:"One-click CSV and JSON, and a confirmed delete.",why:"A reducer for deletion already exists; this surfaces it.",data:"have",e:"M",v:"table"},
+  {t:"Privacy Center",d:"Shows the four fields the extension sends: page type, item type, price, merchant. Nothing else.",why:"Turns the strictest product rule into a selling point.",data:"have",e:"S",v:"toggle"},
+  {t:"Linked Bank Health",d:"Last sync, status and a re-link button for each bank.",why:"Stale data is the usual cause of a wrong number.",data:"have",e:"S",v:"alert"},
+  {t:"Profile That Tunes the Math",d:"Risk comfort, filing status, retirement age, used by the simulator.",why:"Simulation inputs should be editable in one place.",data:"new",e:"M",v:"slider"},
+  {t:"Appearance",d:"Light or dark, density, number format.",why:"Dark tokens already exist.",data:"have",e:"S",v:"toggle"},
+ ]},
+];
+
+/* ---------- render ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+$('#findings').innerHTML=FINDINGS.map((f,i)=>`<div class="card finding"><div class="n">${i+1}</div><div><h4>${f[0]}</h4><p>${f[1]}</p></div></div>`).join('');
+$('#top10').innerHTML='<thead><tr><th>#</th><th>Idea</th><th>Tab</th><th>What it does</th><th>Size</th><th>Data</th></tr></thead><tbody>'+TOP10.map(r=>`<tr><td><b>${r[0]}</b></td><td><b>${r[1]}</b></td><td>${r[2]}</td><td>${r[3]}</td><td><span class="tag ${r[4]}">${r[4]}</span></td><td><span class="tag">${r[5]}</span></td></tr>`).join('')+'</tbody>';
+const DATA={have:"Have",api:"API",new:"New"};
+let total=0;
+$('#panels').innerHTML=TABS.map(t=>{total+=t.ideas.length;return `<section class="panel hidden" id="p-${t.id}" role="tabpanel" aria-labelledby="c-${t.id}">
+ <h2>${t.label}</h2><p class="sum">${t.sum}</p>
+ <div class="cols">
+  <div class="card audit"><h3>What Is There Today</h3>${t.audit.map(a=>`<div class="row"><span class="badge ${a[0]}">${a[0][0].toUpperCase()+a[0].slice(1)}</span><div><b>${a[1]}</b><span class="why">${a[2]}</span></div></div>`).join('')}</div>
+  <div class="ideas"><h3>Ideas To Add</h3><div class="ideagrid">${t.ideas.map(i=>`<article class="card idea" data-e="${i.e}" data-data="${i.data}"><div class="viz">${V[i.v]()}</div><h4>${i.t}</h4><p>${i.d}</p><p class="why">${i.why}</p><div class="tags"><span class="tag ${i.e}">${i.e}</span><span class="tag">${DATA[i.data]}</span></div></article>`).join('')}</div></div>
+ </div></section>`}).join('');
+$('#countIdeas').textContent=total+' ideas proposed';
+$('#chips').innerHTML=TABS.map(t=>`<button class="chip" role="tab" id="c-${t.id}" aria-selected="false" data-t="${t.id}" type="button">${t.label}</button>`).join('');
+function show(id){
+ TABS.forEach(t=>{$('#p-'+t.id).classList.toggle('hidden',t.id!==id);$('#c-'+t.id).setAttribute('aria-selected',t.id===id)});
+ try{history.replaceState(null,'','#'+id)}catch(e){}
+}
+$('#chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(b){show(b.dataset.t);window.scrollTo({top:$('#nav').offsetTop-4,behavior:'smooth'})}});
+const start=location.hash.slice(1);show(TABS.some(t=>t.id===start)?start:'overview');
+document.querySelector('.filters').addEventListener('click',e=>{
+ const b=e.target.closest('.fbtn');if(!b)return;
+ document.querySelectorAll('.fbtn').forEach(x=>x.setAttribute('aria-pressed',x===b));
+ const f=b.dataset.f;
+ document.querySelectorAll('.idea').forEach(c=>{
+  const ok=f==='all'||(f==='S'&&c.dataset.e==='S')||(f==='have'&&c.dataset.data==='have')||(f==='new'&&c.dataset.data==='new');
+  c.classList.toggle('hidden',!ok);
+ });
+});
+$('#themeBtn').addEventListener('click',()=>{
+ const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+ r.dataset.theme=dark?'light':'dark';
+});
+</script>
+</body>
+</html>

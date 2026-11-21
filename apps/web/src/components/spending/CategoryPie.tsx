@@ -1,13 +1,13 @@
 "use client";
 
+import { OTHER_COLOR, seriesColor } from "@/lib/chartColors";
 import { useEffect, useMemo, useState } from "react";
 import { formatPercent, formatUsd, parentCategoryId, type SpendingBreakdownRow, type SpendingCategory } from "@finvantage/contracts";
 import { CategoryIcon } from "@/components/spending/CategoryIcon";
 import { Card } from "@/components/ui/Card";
 
 /** The dataviz skill's validated categorical order. Slots are assigned by rank, biggest first. */
-const SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"];
-const MAX_SLICES = SERIES.length;
+const MAX_SLICES = 7; // six palette colors, then a neutral "Other"
 const OTHER = "__other";
 const REST = "__rest";
 
@@ -155,7 +155,7 @@ export function CategoryPie({
   let angle = 0;
   const arcs = slices.map((slice, i) => {
     const sweep = total > 0 ? (slice.cents / total) * Math.PI * 2 : 0;
-    const arc = { slice, color: SERIES[i]!, start: angle, end: angle + sweep, mid: angle + sweep / 2 };
+    const arc = { slice, color: slice.id === OTHER ? OTHER_COLOR : seriesColor(i), start: angle, end: angle + sweep, mid: angle + sweep / 2 };
     angle += sweep;
     return arc;
   });

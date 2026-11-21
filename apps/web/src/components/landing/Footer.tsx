@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BrandMark } from "./BrandMark";
+import { BrandMark } from "@/components/ui/BrandMark";
 
 const REPO_URL = "https://github.com/ashzaeen/FinVantage";
 

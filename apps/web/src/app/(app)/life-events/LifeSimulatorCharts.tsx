@@ -2,7 +2,7 @@
 
 import { formatUsd, type LifeScenarioAnalysis, type LifeSimulatorContext } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
-import { SERIES } from "./lifeSimulatorShared";
+import { seriesColor } from "./lifeSimulatorShared";
 
 function MoneyFlowChart({ analysis, context }: { analysis: LifeScenarioAnalysis; context: LifeSimulatorContext }) {
   const included = analysis.goals.filter((goal) => goal.included);
@@ -28,16 +28,16 @@ function MoneyFlowChart({ analysis, context }: { analysis: LifeScenarioAnalysis;
           <div className="life-sim-bar flex w-full flex-col-reverse overflow-hidden rounded-t-lg" style={{ height: `${barHeight}px` }}>
             {bar.segments.map((segment, index) => {
               const height = Math.round((segment.cents / bar.segmentSum) * barHeight);
-              return <div key={segment.name} title={`${segment.name}: ${formatUsd(segment.cents)}`} style={{ height: `${height}px`, background: SERIES[index % SERIES.length] }} />;
+              return <div key={segment.name} title={`${segment.name}: ${formatUsd(segment.cents)}`} style={{ height: `${height}px`, background: seriesColor(index) }} />;
             })}
           </div>
         </div>
         <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>{bar.label}</p>
-        <p className="text-xs tabular-nums" style={{ color: overBudget ? "var(--critical)" : "var(--ink-muted)" }}>{formatUsd(bar.segmentSum)}{overBudget && ` of ${formatUsd(bar.total)}`}</p>
+        <p className="text-xs tabular-nums" style={{ color: overBudget ? "var(--loss)" : "var(--ink-muted)" }}>{formatUsd(bar.segmentSum)}{overBudget && ` of ${formatUsd(bar.total)}`}</p>
       </div>;
     })}</div>
     <ul className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 border-t pt-3 text-xs" style={{ borderColor: "var(--border)", color: "var(--ink-secondary)" }}>
-      {bars[1]!.segments.map((segment, index) => <li key={segment.name} className="inline-flex items-center gap-1.5"><i aria-hidden="true" className="h-2.5 w-2.5 rounded-sm" style={{ background: SERIES[index % SERIES.length] }} />{segment.name}: <span className="tabular-nums">{formatUsd(segment.cents)}</span></li>)}
+      {bars[1]!.segments.map((segment, index) => <li key={segment.name} className="inline-flex items-center gap-1.5"><i aria-hidden="true" className="h-2.5 w-2.5 rounded-sm" style={{ background: seriesColor(index) }} />{segment.name}: <span className="tabular-nums">{formatUsd(segment.cents)}</span></li>)}
     </ul>
     <style>{`
       @keyframes life-sim-bar-in { from { transform: scaleY(0); } to { transform: scaleY(1); } }

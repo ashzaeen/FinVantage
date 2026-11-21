@@ -2,7 +2,7 @@ import { ArrowRight, CalendarDays, CircleDollarSign, TrendingUp } from "lucide-r
 
 const GOALS = [
   { label: "House down payment", progress: 62, color: "var(--landing-primary)" },
-  { label: "Emergency fund", progress: 81, color: "#16856d" },
+  { label: "Emergency fund", progress: 81, color: "var(--gain)" },
 ];
 
 /** A labeled illustration of the product, not a real visitor's financial data. */

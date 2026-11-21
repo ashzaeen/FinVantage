@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinVantage Chart Palette Samples</title>
+<style>
+:root{
+  --surface:#f8f9fe; --card:#fff; --line:#edf0f7; --ink:#16192c; --ink2:#4a4f68; --muted:#6b7288; --inset:#f4f5fa;
+  --accent:#544af7;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--ink);font:14px/1.5 Roboto,system-ui,-apple-system,"Segoe UI",sans-serif}
+h1,h2,h3{font-family:Poppins,system-ui,sans-serif;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 80px}
+header h1{font-size:26px}
+header p{color:var(--ink2);max-width:70ch;margin:6px 0 0}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 6px;position:sticky;top:0;background:var(--surface);padding:10px 0;z-index:5}
+.tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 16px;font:600 13px Poppins,sans-serif;cursor:pointer;color:var(--ink2);min-height:40px}
+.tab[aria-selected=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tab small{font:400 11px Roboto,system-ui,sans-serif;opacity:.75;margin-left:6px}
+.blurb{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:8px 0 18px}
+.blurb h2{font-size:18px;margin-bottom:4px}
+.blurb p{margin:4px 0;color:var(--ink2)}
+.rules{display:grid;grid-template-columns:1fr;gap:6px;margin-top:10px;font-size:13px;color:var(--ink2)}
+@media(min-width:760px){.rules{grid-template-columns:1fr 1fr}}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:12px}
+.sw{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.sw i{display:block;height:38px}
+.sw span{display:block;padding:6px 8px;font-size:11px;line-height:1.3;color:var(--ink2)}
+.sw b{display:block;color:var(--ink);font-size:12px}
+.grid{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:900px){.grid{grid-template-columns:1fr 1fr}.span2{grid-column:span 2}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;min-width:0;box-shadow:0 4px 20px -2px rgba(22,25,44,.05)}
+.panel h3{font-size:16px}
+.panel .sub{font-size:12px;color:var(--muted);margin:2px 0 12px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--ink2);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:Roboto,system-ui,sans-serif}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:700px){.tiles{grid-template-columns:repeat(4,1fr)}}
+.tile{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff}
+.tile .ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;margin-bottom:8px}
+.tile .l{font-size:12px;color:var(--muted)} .tile .v{font:700 20px Poppins,sans-serif}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 10px;font:600 11px Roboto,system-ui,sans-serif;white-space:nowrap}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.row:first-child{border-top:0}
+.bar{height:8px;border-radius:99px;background:var(--inset);position:relative;overflow:hidden}
+.bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
+.bar>u{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
+.ask{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-top:22px}
+.ask li{margin:6px 0}
+.tag{font:600 10px Roboto,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Chart Palette Samples</h1>
+  <p>Same data, same charts, four palettes. "Current" is what ships today. The three proposals were run through a colorblind and contrast validator (categorical set: lightness band, chroma floor, colorblind separation, normal-vision separation). Pick a direction, or mix: for example, Ocean and Ember lines with Indigo Core categories.</p>
+</header>
+<div class="tabs" role="tablist" id="tabs"></div>
+<div id="stage"></div>
+
+<div class="ask">
+  <h3 style="font-size:16px">What I need from you</h3>
+  <ol>
+    <li>Which direction (or mix) for the palette?</li>
+    <li>Money in versus money out: do you want two hues (teal and orange, or blue and orange) or one hue in two strengths (Quiet Indigo)?</li>
+    <li>Should the dashboard get a dark mode later? Dark steps will be derived from whatever you pick, so this only affects planning.</li>
+    <li>Stat tiles: keep a different pastel per tile, or switch to white tiles with one tint (shown here)?</li>
+  </ol>
+</div>
+</div>
+
+<script>
+const MONTHS=['Jun','Jul','Aug','Sep','Oct','Nov'];
+const INCOME=[5700,5900,5780,6200,5780,6435];
+const SPEND=[3600,4700,5800,3400,3600,3550];
+const NW=[17.7,17.8,21,24.5,28,31.5,31.4,33,36,38,39.9];
+const CATS=[['Savings & Investing',2350],['Housing',1320],['Groceries',612],['Debt Payments',539],['Utilities',270],['Dining Out',203],['Shopping',164]];
+const ALLOC=[['US Stocks',72.1],['International',14.6],['Bonds',10.4],['Crypto',1.1],['Cash',1.7]];
+const PORT=[0,.4,-.2,-.5,.8,-.2,-.6,-1.4,-2.8,-.3,1.8,2.9,1.1,2.4,3.6,5.3];
+const BENCH=[0,.2,-.1,-.3,.5,-.4,-.9,-1.0,-2.1,.2,1.9,3.6,3.0,4.4,5.9,6.9];
+const ACCTS=[['Checking',3.4],['Savings',18.5],['CDs and IRAs',116.5],['Brokerage',18.2],['Auto and personal loans',-17],['Credit cards',-3.2],['Mortgages',-96.5]];
+const BUDGETS=[['Utilities','At Risk',84,100],['Groceries','Over',100,100],['Transportation','On Track',54,82],['Dining Out','On Track',63,90]];
+
+const DIRS={
+current:{
+  name:'Current',note:'as shipped',
+  desc:'What the app uses today: saturated green and coral-red for money in and out, purple for everything else, and a separate blue and orange set for donuts.',
+  cat:['#544af7','#3f7cac','#45a181','#d59a42','#b66b64','#8f80b8','#728196'],
+  donut:['#2979ff','#eb6834','#16a36e','#eda100','#e87ba4','#006400','#544af7'],
+  inn:'#0b8f69',out:'#d7465d',primary:'#544af7',bench:'#8d94a8',
+  gain:'#0b8f69',loss:'#d7465d',pos:'#544af7',neg:'#544af7',
+  ok:['#e6faf4','#0b8f69'],warn:['#fff5e6','#b36b00'],bad:['#ffecee','#d7465d'],
+  proj:'#cbc7fc',tileIcons:['#fff5e6','#e8f3ff','#e6faf4','#ffecee','#eef1fc'],
+  problems:['Green and coral-red are both fully saturated and fight with the purple.','Four different palettes: bars, donuts, allocation, and categories.','Liabilities and assets draw in the same purple.','Income and spending change meaning from page to page (green/red, purple/lavender).']
+},
+indigo:{
+  name:'Indigo Core',note:'brand-anchored',
+  desc:'Keeps the signature indigo as series 1, then teal, ember, magenta, blue, ochre. Money in is teal, money out is ember orange: warm versus cool, readable for every kind of colorblindness, and neither one says "good" or "bad". Gains and losses are separate: they use deep teal and rose as text only.',
+  cat:['#5b52f0','#2a9d8f','#dd6f2c','#b5479a','#2d83c9','#b08a1e'],
+  inn:'#2a9d8f',out:'#dd6f2c',primary:'#5b52f0',bench:'#8d94a8',
+  gain:'#0f766e',loss:'#be3a55',pos:'#2a9d8f',neg:'#be3a55',
+  ok:['#e3f5f2','#0f766e'],warn:['#fdf0e3','#9a4a0f'],bad:['#fce8ec','#a52f48'],
+  proj:'#c8d9d6',tileIcons:['#eceaff','#eceaff','#eceaff','#eceaff','#eceaff'],
+  validated:'Validated: all 6 pass (lightness, chroma, colorblind ΔE ≥ 8.3, normal-vision ΔE ≥ 20, contrast ≥ 3:1).'
+},
+ocean:{
+  name:'Ocean and Ember',note:'calmer, less purple',
+  desc:'Blue and orange is the most colorblind-safe pair there is. Money in is a calm blue, money out is orange. The brand purple stays on the chrome (sidebar, buttons) but charts lead with blue, so charts stop competing with the UI. Teal and rose carry gain and loss.',
+  cat:['#2c6fbb','#e07a3f','#2a9d8f','#8e6bbf','#c9a227','#d1566a'],
+  inn:'#2c6fbb',out:'#e07a3f',primary:'#2c6fbb',bench:'#8d94a8',
+  gain:'#0f766e',loss:'#be3a55',pos:'#2c6fbb',neg:'#e07a3f',
+  ok:['#e3f5f2','#0f766e'],warn:['#fdf0e3','#9a4a0f'],bad:['#fce8ec','#a52f48'],
+  proj:'#c9d9ee',tileIcons:['#e6eef9','#e6eef9','#e6eef9','#e6eef9','#e6eef9'],
+  validated:'Validated: all 6 pass categorical checks. Orange and gold are under 3:1 on white, so they always get a direct label or table view.'
+},
+quiet:{
+  name:'Quiet Indigo',note:'one hue, two strengths',
+  desc:'The calmest option. Money in is solid indigo, money out is the same hue in a light tint (the Income page already does this). Color is saved for categories and for status. Fewer hues on the page means the eye goes to the shape of the data first.',
+  cat:['#5b52f0','#2a9d8f','#dd6f2c','#b5479a','#2d83c9','#b08a1e'],
+  inn:'#5b52f0',out:'#c4c0fb',primary:'#5b52f0',bench:'#8d94a8',
+  gain:'#0f766e',loss:'#be3a55',pos:'#5b52f0',neg:'#aaa5f7',
+  ok:['#e3f5f2','#0f766e'],warn:['#fdf0e3','#9a4a0f'],bad:['#fce8ec','#a52f48'],
+  proj:'#dddafc',tileIcons:['#eceaff','#eceaff','#eceaff','#eceaff','#eceaff'],
+  validated:'Categorical set is the same validated set as Indigo Core. In and out differ by lightness, so they also get a legend and direct labels.'
+}
+};
+
+const usd=n=>'$'+Math.round(n).toLocaleString('en-US');
+const k=n=>'$'+(n>=1000?(n/1000).toFixed(n%1000?1:0)+'K':n);
+
+function legend(items){return '<div class="legend">'+items.map(([c,t])=>`<span><i style="background:${c}"></i>${t}</span>`).join('')+'</div>'}
+
+function cashflow(d){
+  const W=520,H=230,l=36,b=24,t=8,max=8000,bw=18,gap=2;
+  const y=v=>t+(H-t-b)*(1-v/max);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Income and spending by month">`;
+  [0,2000,4000,6000,8000].forEach(v=>{s+=`<line x1="${l}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="#edf0f7"/><text x="${l-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="#8d94a8">${v?k(v):'$0'}</text>`});
+  const step=(W-l)/6;
+  MONTHS.forEach((m,i)=>{
+    const cx=l+step*i+step/2;
+    const hi=y(0)-y(INCOME[i]),hs=y(0)-y(SPEND[i]);
+    s+=`<path d="M${cx-bw-gap/2},${y(0)} v${-(hi-4)} q0,-4 4,-4 h${bw-8} q4,0 4,4 v${hi-4} z" fill="${d.inn}"/>`;
+    s+=`<path d="M${cx+gap/2},${y(0)} v${-(hs-4)} q0,-4 4,-4 h${bw-8} q4,0 4,4 v${hs-4} z" fill="${d.out}"/>`;
+    s+=`<text x="${cx}" y="${H-6}" text-anchor="middle" font-size="11" fill="#8d94a8">${m}</text>`;
+  });
+  return s+'</svg>'+legend([[d.inn,'Income'],[d.out,'Spending']]);
+}
+function area(d){
+  const W=520,H=210,l=40,b=22,t=10,max=45;
+  const x=i=>l+(W-l-10)*i/(NW.length-1),y=v=>t+(H-t-b)*(1-v/max);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Net worth over time"><defs><linearGradient id="g${d.name.replace(/\W/g,'')}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${d.primary}" stop-opacity=".22"/><stop offset="1" stop-color="${d.primary}" stop-opacity="0"/></linearGradient></defs>`;
+  [0,15,30,45].forEach(v=>{s+=`<line x1="${l}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="#edf0f7"/><text x="${l-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="#8d94a8">$${v}K</text>`});
+  const pts=NW.map((v,i)=>[x(i),y(v)]);
+  const path=pts.map((p,i)=>(i?'L':'M')+p[0]+','+p[1]).join(' ');
+  s+=`<path d="${path} L${x(NW.length-1)},${y(0)} L${x(0)},${y(0)} Z" fill="url(#g${d.name.replace(/\W/g,'')})"/><path d="${path}" fill="none" stroke="${d.primary}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const e=pts[pts.length-1];
+  s+=`<circle cx="${e[0]}" cy="${e[1]}" r="4" fill="${d.primary}" stroke="#fff" stroke-width="2"/><text x="${e[0]-8}" y="${e[1]-12}" text-anchor="end" font-size="12" font-weight="600" fill="#16192c">$39,936</text>`;
+  ['Dec 25','Apr 26','Aug 26','Nov 26'].forEach((m,i)=>s+=`<text x="${l+(W-l-10)*i/3}" y="${H-5}" text-anchor="${i==0?'start':i==3?'end':'middle'}" font-size="11" fill="#8d94a8">${m}</text>`);
+  return s+'</svg>';
+}
+function hbars(d){
+  const W=520,rowH=30,H=CATS.length*rowH+4,l=130,max=2500;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Spending by category">`;
+  CATS.forEach(([n,v],i)=>{
+    const y=i*rowH+4,w=(W-l-60)*v/max;
+    s+=`<text x="${l-10}" y="${y+14}" text-anchor="end" font-size="12" fill="#4a4f68">${n}</text><path d="M${l},${y+4} h${Math.max(w-4,2)} q4,0 4,4 v6 q0,4 -4,4 h${-Math.max(w-4,2)} z" fill="${d.primary}"/><text x="${l+w+8}" y="${y+16}" font-size="12" font-weight="600" fill="#16192c">${usd(v)}</text>`;
+  });
+  return s+'</svg>';
+}
+function donut(d,data,colors,center){
+  const R=62,r=42,cx=80,cy=80,tot=data.reduce((a,b)=>a+b[1],0);
+  let a0=-Math.PI/2,s='<svg viewBox="0 0 160 160" role="img" aria-label="Allocation" style="max-width:170px">';
+  data.forEach(([n,v],i)=>{
+    const a1=a0+2*Math.PI*v/tot,g=0.03,A=a0+g,B=a1-g,big=B-A>Math.PI?1:0;
+    const p=(R_,a)=>[cx+R_*Math.cos(a),cy+R_*Math.sin(a)];
+    const [x1,y1]=p(R,A),[x2,y2]=p(R,B),[x3,y3]=p(r,B),[x4,y4]=p(r,A);
+    s+=`<path d="M${x1},${y1} A${R},${R} 0 ${big} 1 ${x2},${y2} L${x3},${y3} A${r},${r} 0 ${big} 0 ${x4},${y4} Z" fill="${colors[i%colors.length]}"/>`;
+    a0=a1;
+  });
+  s+=`<text x="80" y="76" text-anchor="middle" font-size="10" fill="#6b7288">Portfolio</text><text x="80" y="92" text-anchor="middle" font-size="13" font-weight="700" fill="#16192c">${center}</text></svg>`;
+  return `<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><div style="flex:0 0 150px">${s}</div><div style="flex:1;min-width:160px">`+data.map(([n,v],i)=>`<div class="row"><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${colors[i%colors.length]};margin-right:8px"></i>${n}</span><b>${v.toFixed(1)}%</b></div>`).join('')+'</div></div>';
+}
+function lines(d){
+  const W=520,H=210,l=36,b=22,t=10,mn=-4,mx=8;
+  const x=i=>l+(W-l-96)*i/(PORT.length-1),y=v=>t+(H-t-b)*(1-(v-mn)/(mx-mn));
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Portfolio versus S&P 500">`;
+  [-4,0,4,8].forEach(v=>s+=`<line x1="${l}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="${v===0?'#c9cfdd':'#edf0f7'}" ${v===0?'stroke-dasharray="4 4"':''}/><text x="${l-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="#8d94a8">${v}%</text>`);
+  const P=a=>a.map((v,i)=>(i?'L':'M')+x(i)+','+y(v)).join(' ');
+  s+=`<path d="${P(BENCH)}" fill="none" stroke="${d.bench}" stroke-width="2" stroke-dasharray="5 4"/><path d="${P(PORT)}" fill="none" stroke="${d.primary}" stroke-width="2" stroke-linejoin="round"/>`;
+  s+=`<circle cx="${x(15)}" cy="${y(5.3)}" r="4" fill="${d.primary}" stroke="#fff" stroke-width="2"/><text x="${x(15)+10}" y="${y(5.3)+14}" font-size="12" font-weight="600" fill="#16192c">Portfolio 5.3%</text><text x="${x(15)+10}" y="${y(6.9)-2}" font-size="12" fill="#6b7288">S&amp;P 500 6.9%</text>`;
+  return s+'</svg>'+legend([[d.primary,'Portfolio'],['#8d94a8','S&P 500 (dashed)']]);
+}
+function diverge(d){
+  const W=520,rowH=28,H=ACCTS.length*rowH+24,l=150,zero=l+(W-l)*0.58,sc=(W-l)*0.30/120;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Balance by account type"><line x1="${zero}" x2="${zero}" y1="0" y2="${ACCTS.length*rowH}" stroke="#c9cfdd"/>`;
+  ACCTS.forEach(([n,v],i)=>{
+    const y=i*rowH+4,w=Math.max(Math.abs(v)*sc,3),c=v>=0?d.pos:d.neg;
+    s+=`<text x="${l-10}" y="${y+14}" text-anchor="end" font-size="12" fill="#4a4f68">${n}</text>`;
+    s+=v>=0?`<path d="M${zero},${y+3} h${w-4} q4,0 4,4 v6 q0,4 -4,4 h${-(w-4)} z" fill="${c}"/><text x="${zero+w+8}" y="${y+16}" font-size="11" font-weight="600" fill="#16192c">${usd(v*1000)}</text>`
+            :`<path d="M${zero},${y+3} h${-(w-4)} q-4,0 -4,4 v6 q0,4 4,4 h${w-4} z" fill="${c}"/><text x="${zero-w-8}" y="${y+16}" text-anchor="end" font-size="11" font-weight="600" fill="#16192c">−${usd(-v*1000)}</text>`;
+  });
+  return s+'</svg>'+legend([[d.pos,'Assets'],[d.neg,'Liabilities']]);
+}
+function budgets(d){
+  const map={'On Track':[d.ok,'✓'],'At Risk':[d.warn,'!'],'Over':[d.bad,'▲']};
+  const barc={'On Track':d.primary,'At Risk':d.warn[1],'Over':d.bad[1]};
+  return BUDGETS.map(([n,st,sp,pr])=>{const [c,ic]=map[st];return `<div style="margin:12px 0"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px"><span style="display:flex;gap:8px;align-items:center;font-weight:500">${n} <span class="pill" style="background:${c[0]};color:${c[1]}">${ic} ${st}</span></span><span style="font-size:12px;color:#6b7288">${sp}% used</span></div><div class="bar"><u style="width:${pr}%;background:${d.proj}"></u><i style="width:${sp}%;background:${barc[st]}"></i></div></div>`}).join('')+legend([[d.primary,'Spent'],[d.proj,'Projected by month end']]);
+}
+function gauge(d){
+  const R=56,cx=70,cy=72,pct=(742-300)/550,a0=Math.PI*0.8,sweep=Math.PI*1.4;
+  const pt=a=>[cx+R*Math.cos(a),cy+R*Math.sin(a)];
+  const arc=(f)=>{const A=a0,B=a0+sweep*f,[x1,y1]=pt(A),[x2,y2]=pt(B);return `M${x1},${y1} A${R},${R} 0 ${sweep*f>Math.PI?1:0} 1 ${x2},${y2}`};
+  return `<svg viewBox="0 0 140 130" style="max-width:170px" role="img" aria-label="Credit score 742 of 850"><path d="${arc(1)}" fill="none" stroke="#edf0f7" stroke-width="10" stroke-linecap="round"/><path d="${arc(pct)}" fill="none" stroke="${d.primary}" stroke-width="10" stroke-linecap="round"/><text x="70" y="70" text-anchor="middle" font-size="26" font-weight="700" font-family="Poppins" fill="#16192c">742</text><text x="70" y="88" text-anchor="middle" font-size="11" fill="#6b7288">Very Good</text></svg>`;
+}
+function spark(d){
+  const v=[0,3,5,9,12,16,24],W=200,H=50,x=i=>4+(W-8)*i/6,y=a=>H-6-(H-12)*a/24;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Score history, up 24 points"><path d="${v.map((a,i)=>(i?'L':'M')+x(i)+','+y(a)).join(' ')}" fill="none" stroke="${d.primary}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${x(6)}" cy="${y(24)}" r="3.5" fill="${d.primary}" stroke="#fff" stroke-width="2"/></svg>`;
+}
+function tiles(d){
+  const T=[['Net Worth','$39,935.89','wallet'],['Total Assets','$156,600','up'],['Liabilities','$116,664.11','down'],['Investments','$124,700','chart']];
+  const g={wallet:'M3 7h14v8H3z M3 7l2-3h10l2 3',up:'M4 14l4-4 3 3 5-6',down:'M4 6l4 4 3-3 5 6',chart:'M4 14V8m4 6V5m4 9v-4m4 4V7'};
+  return '<div class="tiles">'+T.map(([l,v,ic],i)=>{const bg=d.tileIcons[i],fg=d.name==='Current'?['#b36b00','#2979ff','#0b8f69','#d7465d'][i]:d.primary;return `<div class="tile"><div class="ic" style="background:${bg}"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="${fg}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${g[ic]}"/></svg></div><div class="l">${l}</div><div class="v">${v}</div></div>`}).join('')+'</div>';
+}
+function status(d){
+  const p=(c,t,i)=>`<span class="pill" style="background:${c[0]};color:${c[1]}">${i} ${t}</span>`;
+  return `<div class="row"><span>Goal likelihood</span><span style="display:flex;gap:6px;flex-wrap:wrap">${p(d.ok,'Looks Good','✓')}${p(d.warn,'Worth a Look','!')}${p(d.bad,'Heads Up','▲')}</span></div>
+  <div class="row"><span>Today's return</span><b style="color:${d.gain}">▲ +$634.10 (+0.51%)</b></div>
+  <div class="row"><span>VXUS today</span><b style="color:${d.loss}">▼ −0.29%</b></div>
+  <div class="row"><span>Total Assets / Liabilities</span><span><b style="color:${d.gain}">$156,600</b> · <b style="color:${d.loss}">$116,664</b></span></div>`;
+}
+function swatches(d){
+  const items=[...(d.cat||[]).map((c,i)=>[c,'Series '+(i+1)]),[d.inn,'Money in'],[d.out,'Money out'],[d.gain,'Gain (text)'],[d.loss,'Loss (text)'],[d.bench,'Benchmark']];
+  return '<div class="swatches">'+items.map(([c,n])=>`<div class="sw"><i style="background:${c}"></i><span><b>${n}</b>${c}</span></div>`).join('')+'</div>';
+}
+
+function render(key){
+  const d=DIRS[key];
+  const rules=d.problems?d.problems.map(p=>`<div>✗ ${p}</div>`).join(''):`<div>✓ ${d.validated}</div><div>✓ Text always wears ink colors; color sits on the mark, never on labels (except gain and loss, which carry an arrow too).</div><div>✓ Status pills always carry an icon and a word.</div><div>✓ Magnitude charts use one hue. Only categories use the set.</div>`;
+  const donutCols=key==='current'?d.donut:d.cat, allocCols=key==='current'?d.cat:d.cat;
+  document.getElementById('stage').innerHTML=`
+  <div class="blurb"><h2>${d.name}</h2><p>${d.desc}</p><div class="rules">${rules}</div>${swatches(d)}</div>
+  <div class="grid">
+    <div class="panel span2"><h3>Stat Tiles</h3><div class="sub">Replaces the five pastel tiles on Overview.</div>${tiles(d)}</div>
+    <div class="panel"><h3>Cash Flow</h3><div class="sub">Income and spending, last six months. Used on Overview, Income, Reports.</div>${cashflow(d)}</div>
+    <div class="panel"><h3>Net Worth Trend</h3><div class="sub">Single series: one hue, a soft fill, a labeled end point.</div>${area(d)}</div>
+    <div class="panel"><h3>Spending by Category</h3><div class="sub">Ranked magnitude: one hue, not a rainbow.</div>${hbars(d)}</div>
+    <div class="panel"><h3>Allocation</h3><div class="sub">Parts of a whole: the categorical set, 2px gaps between slices.</div>${donut(d,ALLOC,allocCols,'$124.7K')}</div>
+    <div class="panel"><h3>Investment Performance</h3><div class="sub">Portfolio is always the brand-tone solid line. Benchmark is a gray dashed line. The line does not turn red or green.</div>${lines(d)}</div>
+    <div class="panel"><h3>Balance by Account Type</h3><div class="sub">Assets and liabilities finally differ.</div>${diverge(d)}</div>
+    <div class="panel"><h3>Budgets</h3><div class="sub">Status color on the bar, plus an icon and a word.</div>${budgets(d)}</div>
+    <div class="panel"><h3>Credit Score</h3><div class="sub">Gauge and history in the same primary hue.</div><div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">${gauge(d)}<div style="flex:1;min-width:180px">${spark(d)}<div class="legend"><span><b style="color:${d.gain}">▲ +24 pts</b> since April</span></div></div></div></div>
+    <div class="panel"><h3>Status and Change</h3><div class="sub">Pills, gain and loss text.</div>${status(d)}</div>
+  </div>`;
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.k===key));
+  try{location.hash=key}catch(e){}
+}
+window.addEventListener('hashchange',()=>{const k=location.hash.slice(1);if(DIRS[k])render(k)});
+const tabs=document.getElementById('tabs');
+Object.entries(DIRS).forEach(([k,d])=>{const b=document.createElement('button');b.className='tab';b.dataset.k=k;b.setAttribute('role','tab');b.innerHTML=`${d.name}<small>${d.note}</small>`;b.onclick=()=>render(k);tabs.appendChild(b)});
+render((location.hash||'#current').slice(1) in DIRS?(location.hash||'#current').slice(1):'current');
+</script>
+</body>
+</html>

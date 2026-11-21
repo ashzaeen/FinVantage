@@ -31,18 +31,25 @@
   --accent-hover:    #4338e3;
   --accent-soft:     #eef1fc;   /* Soft lavender for active states / buttons */
 
-  /* Semantic Data Colors */
-  --good:            #00c48c;   /* Green for positive / income / completed */
-  --good-bg:         #e6faf4;
-  --gain:            #0b8f69;   /* Readable green for gains shown as text */
-  --critical:        #ff4d6d;   /* Coral red for expenses / warnings */
-  --critical-bg:     #ffecee;
-  --loss:            #d7465d;   /* Readable red for losses shown as text */
-  --warning:         #ff9900;
-  --warning-bg:      #fff5e6;
-  --info:            #2979ff;
-  --info-bg:         #e8f3ff;
-  --cyan:            #38d2f0;   /* Outcome bar in analytics chart */
+  /* Semantic colors. Fills are soft; text variants (--gain, --loss, *-text) pass AA on white.
+     Money in and money out are NOT good and bad: they use --flow-in and --flow-out (teal and orange),
+     so a spending bar never reads as an error. Gain and loss carry meaning and always show an arrow. */
+  --good:            #2a9d8f;
+  --good-bg:         #e3f5f2;
+  --gain:            #0f766e;
+  --critical:        #d14a62;
+  --critical-bg:     #fce8ec;
+  --loss:            #be3a55;
+  --warning:         #dd8a1f;
+  --warning-bg:      #fdf0e3;
+  --warning-text:    #9a4a0f;
+  --info:            #2d83c9;
+  --info-bg:         #e6f0fa;
+  --cyan:            #2d83c9;
+  --flow-in:         #2a9d8f;
+  --flow-out:        #dd6f2c;
+  --border-strong:   #d9ddec;
+  --ink-chart:       #626981;   /* Axis and legend text inside charts */
 
   /* Elevation Shadows */
   --shadow-sm:       0 1px 3px 0 rgba(22, 25, 44, 0.04);
@@ -61,17 +68,22 @@
   --fan-inner:       #bcb7fc;
   --fan-line:        #544af7;
 
-  /* Comparison lines, in fixed order. Validated for colorblind separation and contrast on white. */
+  /* Chart palette (Indigo Core). Fixed order, never cycled; validated for lightness, chroma,
+     colorblind separation (deltaE 8.3 or more) and 3:1 contrast on white. Series 1 is the brand indigo.
+     Magnitude charts use series 1 only; the rest are for categories, donuts and comparison lines. */
   --series-1:        #544af7;
-  --series-2:        #0a8fb0;
-  --series-3:        #d4691a;
-  --series-4:        #1f9e6e;
-  /* Soft background for the cyan category tone, beside --series-2. */
-  --tone-cyan-bg:    #e3f8fd;
+  --series-2:        #2a9d8f;
+  --series-3:        #dd6f2c;
+  --series-4:        #b5479a;
+  --series-5:        #2d83c9;
+  --series-6:        #b08a1e;
+  --tone-cyan-bg:    #e6f0fa;
+  --chart-benchmark: #8d94a8;
+  --chart-other:     #aab1c3;
 
   /* Budget bars: the lighter bar behind spending shows the projected month end */
   --budget-projected:      #cbc7fc;
-  --budget-projected-over: #ffc2ca;
+  --budget-projected-over: #f6c4cd;
 
   /* Landing page v2. Distinct names, not a redefinition of --accent/--ink/etc. above, so this
      never reskins the dashboard. All checked against WCAG AA (4.5:1) on their stated backgrounds. */
@@ -116,6 +128,19 @@
   --color-critical-bg:  var(--critical-bg);
   --color-warning:      var(--warning);
   --color-warning-bg:   var(--warning-bg);
+  --color-warning-text: var(--warning-text);
+  --color-info:         var(--info);
+  --color-info-bg:      var(--info-bg);
+  --color-flow-in:      var(--flow-in);
+  --color-flow-out:     var(--flow-out);
+  --color-line-strong:  var(--border-strong);
+  --color-ink-chart:    var(--ink-chart);
+  --color-series-1:     var(--series-1);
+  --color-series-2:     var(--series-2);
+  --color-series-3:     var(--series-3);
+  --color-series-4:     var(--series-4);
+  --color-series-5:     var(--series-5);
+  --color-series-6:     var(--series-6);
 }
 
 /* ─── Base Styles ──────────────────────────────────────────────────────────── */

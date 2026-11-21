@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { niceTicks, tickPercent } from "@/lib/chartAxis";
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatUsd, INVESTMENT_RANGES, type InvestmentRange, type InvestmentView, type PerformancePoint } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
@@ -51,7 +52,7 @@ function LegendItem({ label, rate, dashed }: { label: string; rate: number; dash
   return (
     <span className="inline-flex items-center gap-2 text-xs text-ink-secondary">
       <svg width="18" height="4" aria-hidden="true">
-        <line x1="0" x2="18" y1="2" y2="2" stroke={dashed ? "var(--series-2)" : "var(--series-1)"} strokeWidth="2" strokeDasharray={dashed ? "4 3" : undefined} />
+        <line x1="0" x2="18" y1="2" y2="2" stroke={dashed ? "var(--chart-benchmark)" : "var(--series-1)"} strokeWidth="2" strokeDasharray={dashed ? "4 3" : undefined} />
       </svg>
       {label}
       <span className="font-semibold tabular-nums text-ink">{signedPercent(rate)}</span>
@@ -62,6 +63,7 @@ function LegendItem({ label, rate, dashed }: { label: string; rate: number; dash
 export function PerformanceCard({ view }: { view: InvestmentView }) {
   const [range, setRange] = useState<InvestmentRange>("1M");
   const performance = view.performance[range];
+  const yAxis = niceTicks(performance.points.flatMap((p) => [p.portfolioChangeRate, p.benchmarkChangeRate]));
   const weekTicks = range === "1W" ? performance.points.filter((p) => p.at.endsWith("T10:00")).map((p) => p.at) : undefined;
 
   return (
@@ -100,15 +102,17 @@ export function PerformanceCard({ view }: { view: InvestmentView }) {
               dataKey="at"
               ticks={weekTicks}
               tickFormatter={(at: string) => tickLabel(at, range)}
-              tick={{ fill: "var(--ink-muted)", fontSize: 11 }}
+              tick={{ fill: "var(--ink-muted)", fontSize: 12 }}
               axisLine={false}
               tickLine={false}
               minTickGap={40}
+              tickMargin={8}
             />
             <YAxis
-              domain={["auto", "auto"]}
-              tickFormatter={(rate: number) => `${(rate * 100).toFixed(rate !== 0 && Math.abs(rate) < 0.01 ? 1 : 0)}%`}
-              tick={{ fill: "var(--ink-muted)", fontSize: 11 }}
+              domain={yAxis.domain}
+              ticks={yAxis.ticks}
+              tickFormatter={(rate: number) => tickPercent(rate)}
+              tick={{ fill: "var(--ink-muted)", fontSize: 12 }}
               axisLine={false}
               tickLine={false}
               width={44}
@@ -119,7 +123,7 @@ export function PerformanceCard({ view }: { view: InvestmentView }) {
               content={(props) => <ChartTooltip point={props.payload?.[0]?.payload as PerformancePoint | undefined} range={range} />}
             />
             <Area type="monotone" dataKey="portfolioChangeRate" name="Portfolio" stroke="var(--series-1)" strokeWidth={2.5} fill="url(#investFill)" baseValue="dataMin" dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--surface-card)" }} animationDuration={700} animationEasing="ease-out" />
-            <Line type="monotone" dataKey="benchmarkChangeRate" name="S&P 500" stroke="var(--series-2)" strokeWidth={2} strokeDasharray="5 4" dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--surface-card)" }} animationDuration={700} animationEasing="ease-out" />
+            <Line type="monotone" dataKey="benchmarkChangeRate" name="S&P 500" stroke="var(--chart-benchmark)" strokeWidth={2} strokeDasharray="5 4" dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--surface-card)" }} animationDuration={700} animationEasing="ease-out" />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

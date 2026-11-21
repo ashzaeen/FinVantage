@@ -28,7 +28,7 @@ export function InstallExtension() {
           href="/finvantage-copilot.zip"
           download
           onClick={() => setOpen(true)}
-          className="inline-flex min-h-11 items-center rounded-full bg-[#544af7] px-4 py-2 font-roboto text-sm font-semibold text-white transition-colors hover:bg-[#4338ca] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#544af7]"
+          className="inline-flex min-h-11 items-center rounded-full bg-accent px-4 py-2 font-roboto text-sm font-semibold text-white transition-colors hover:bg-[#4338ca] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           Download extension
         </a>
@@ -38,7 +38,7 @@ export function InstallExtension() {
           <ol className="mt-5 space-y-3 border-t border-[#d4c8f7] pt-5">
             {STEPS.map((step, index) => (
               <li key={step} className="flex gap-3 font-roboto text-sm text-[#393464]">
-                <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-white text-xs font-semibold text-[#544af7]">
+                <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-white text-xs font-semibold text-accent">
                   {index + 1}
                 </span>
                 <span>{step}</span>
@@ -52,7 +52,7 @@ export function InstallExtension() {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="mt-3 min-h-11 font-roboto text-sm text-[#514c7d] underline underline-offset-2 hover:text-[#302a76] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]"
+            className="mt-3 min-h-11 font-roboto text-sm text-[#514c7d] underline underline-offset-2 hover:text-[#302a76] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             Hide steps
           </button>
@@ -61,7 +61,7 @@ export function InstallExtension() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="mt-4 min-h-11 font-roboto text-sm font-medium text-[#514c7d] underline underline-offset-2 hover:text-[#302a76] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]"
+          className="mt-4 min-h-11 font-roboto text-sm font-medium text-[#514c7d] underline underline-offset-2 hover:text-[#302a76] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           How to install
         </button>

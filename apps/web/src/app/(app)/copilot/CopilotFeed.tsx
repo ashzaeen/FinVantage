@@ -67,8 +67,8 @@ export function CopilotFeed({ initial }: { initial: CopilotEvent[] }) {
       <Card>
         <div className="py-10 text-center">
           <span className="text-3xl mb-2 block">⚡️</span>
-          <p className="font-poppins font-bold text-base text-[#16192c]">No Copilot events yet</p>
-          <p className="font-roboto text-xs text-[#8d94a8] mt-1">
+          <p className="font-poppins font-bold text-base text-ink">No Copilot events yet</p>
+          <p className="font-roboto text-xs text-muted mt-1">
             Open any online store or demo listing page with the Chrome extension active to see real-time guidance.
           </p>
         </div>
@@ -81,19 +81,19 @@ export function CopilotFeed({ initial }: { initial: CopilotEvent[] }) {
       <div className="flex flex-wrap items-center justify-end gap-3">
         {confirmingClear ? (
           <div className="flex items-center gap-2 font-roboto text-sm" role="group" aria-label="Confirm clearing all">
-            <span className="text-[#16192c]">Delete all {events.length}?</span>
+            <span className="text-ink">Delete all {events.length}?</span>
             <button
               type="button"
               onClick={clearAll}
               disabled={busy === "all"}
-              className="rounded-full bg-[#d14343] px-3 py-1.5 font-semibold text-white disabled:opacity-60"
+              className="rounded-full bg-loss px-3 py-1.5 font-semibold text-white disabled:opacity-60"
             >
               {busy === "all" ? "Deleting…" : "Delete all"}
             </button>
             <button
               type="button"
               onClick={() => setConfirmingClear(false)}
-              className="rounded-full border border-[#edf0f7] bg-white px-3 py-1.5 text-[#4b5268]"
+              className="rounded-full border border-line bg-white px-3 py-1.5 text-[#4b5268]"
             >
               Cancel
             </button>
@@ -102,14 +102,14 @@ export function CopilotFeed({ initial }: { initial: CopilotEvent[] }) {
           <button
             type="button"
             onClick={() => setConfirmingClear(true)}
-            className="rounded-full border border-[#edf0f7] bg-white px-3 py-1.5 font-roboto text-sm text-[#4b5268] hover:border-[#d14343] hover:text-[#d14343]"
+            className="rounded-full border border-line bg-white px-3 py-1.5 font-roboto text-sm text-[#4b5268] hover:border-loss hover:text-loss"
           >
             Clear all
           </button>
         )}
       </div>
       {error && (
-        <p role="alert" className="font-roboto text-sm text-[#d14343]">
+        <p role="alert" className="font-roboto text-sm text-loss">
           {error}
         </p>
       )}
@@ -119,7 +119,7 @@ export function CopilotFeed({ initial }: { initial: CopilotEvent[] }) {
           title={`${event.merchant} · ${formatUsd(event.extractedPriceCents)}`}
           action={
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-[#eef1fc] px-3 py-1 font-roboto text-[11px] font-semibold text-[#544af7]">
+              <span className="rounded-full bg-accent-soft px-3 py-1 font-roboto text-[11px] font-semibold text-accent">
                 Copilot Intervention
               </span>
               <button
@@ -128,16 +128,16 @@ export function CopilotFeed({ initial }: { initial: CopilotEvent[] }) {
                 disabled={busy === event.id}
                 aria-label={`Delete the ${event.merchant} ${formatUsd(event.extractedPriceCents)} intervention`}
                 title="Delete"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none text-[#8d94a8] hover:bg-[#fdecec] hover:text-[#d14343] disabled:opacity-50"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none text-muted hover:bg-critical-bg hover:text-loss disabled:opacity-50"
               >
                 ×
               </button>
             </div>
           }
         >
-          <div className="rounded-2xl bg-[#f8f9fd] p-4 border border-[#edf0f7]">
-            <p className="font-roboto text-sm font-medium text-[#16192c]">{event.card.impact}</p>
-            <p className="font-roboto text-xs text-[#544af7] font-semibold mt-2">{event.card.smartMove}</p>
+          <div className="rounded-2xl bg-[#f8f9fd] p-4 border border-line">
+            <p className="font-roboto text-sm font-medium text-ink">{event.card.impact}</p>
+            <p className="font-roboto text-xs text-accent font-semibold mt-2">{event.card.smartMove}</p>
           </div>
           <Link
             href={`/advisor?copilotEvent=${encodeURIComponent(event.id)}`}

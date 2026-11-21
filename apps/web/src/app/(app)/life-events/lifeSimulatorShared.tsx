@@ -50,13 +50,13 @@ export const OPTION_ORDER: readonly RecoveryOption[] = ["keep", "save_more", "re
 export { LifeScenarioEventType, LifeScenarioOption };
 
 /** The dataviz skill's validated categorical order, same series Spending's pie chart uses. */
-export const SERIES = ["#544af7", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#2a78d6", "#6250d6", "#e34948"];
+export { seriesColor as seriesColor } from "@/lib/chartColors";
 
-export const fieldClass = "mt-1.5 h-11 w-full rounded-xl border border-[#e6e9f2] bg-[#fafbfe] px-3.5 text-sm tabular-nums text-[#16192c] outline-none transition focus:border-[#544af7] focus:bg-white focus:ring-4 focus:ring-[#544af7]/10";
+export const fieldClass = "mt-1.5 h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-sm tabular-nums text-ink outline-none transition focus:border-accent focus:bg-white focus:ring-4 focus:ring-accent/10";
 
 const GOAL_TIMELINE_COLORS = [
   { accent: "#287a78", tint: "#e2f2f0" },
-  { accent: "#4e69b1", tint: "#e7ecf8" },
+  { accent: "#4e69b1", tint: "var(--border)" },
   { accent: "#b66831", tint: "#f9ebdd" },
   { accent: "#8d5b8d", tint: "#f3eaf3" },
   { accent: "#3e7d48", tint: "#e8f2e7" },
@@ -156,7 +156,7 @@ export function InputField({
   const id = label.toLowerCase().replaceAll(" ", "-");
   return <label htmlFor={id} className="block text-sm font-medium" style={{ color: "var(--ink-secondary)" }}>
     {label}
-    <span className="mt-1.5 flex h-11 items-center rounded-xl border border-[#e6e9f2] bg-[#fafbfe] px-3.5 transition focus-within:border-[#544af7] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#544af7]/10">
+    <span className="mt-1.5 flex h-11 items-center rounded-xl border border-line bg-surface px-3.5 transition focus-within:border-accent focus-within:bg-white focus-within:ring-4 focus-within:ring-accent/10">
       <span className="text-sm" style={{ color: "var(--ink-muted)" }}>$</span>
       <input id={id} aria-label={label} type="number" min={0} step={step / 100} value={(valueCents / 100).toFixed(0)} onChange={(event) => {
         const amount = Number(event.target.value);
@@ -195,12 +195,12 @@ export function EventForm({
     <div>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div><p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Choose a Life Event</p></div>
-        <button type="button" onClick={() => onChange({ ...form, eventType: "custom" })} className="min-h-11 rounded-xl px-3.5 text-sm font-semibold text-white transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ background: "#544af7" }}>Add New Event</button>
+        <button type="button" onClick={() => onChange({ ...form, eventType: "custom" })} className="min-h-11 rounded-xl px-3.5 text-sm font-semibold text-white transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>Add Event</button>
       </div>
       <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--ink-muted)" }}>Built-In Templates</p>
-      <div className="no-scrollbar -mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">{LifeScenarioEventType.options.filter((type): type is Exclude<EventType, "custom"> => type !== "custom").map((type) => {
+      <div className="no-scrollbar -mx-1 flex snap-x gap-2 overflow-x-auto pb-1 pl-1 pr-12" style={{ maskImage: "linear-gradient(to right, #000 calc(100% - 48px), transparent)", WebkitMaskImage: "linear-gradient(to right, #000 calc(100% - 48px), transparent)" }}>{LifeScenarioEventType.options.filter((type): type is Exclude<EventType, "custom"> => type !== "custom").map((type) => {
         const selected = form.eventType === type;
-        return <button key={type} type="button" aria-pressed={selected} onClick={() => onChange({ ...form, eventType: type })} className="min-h-[68px] w-56 shrink-0 snap-start rounded-xl border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]" style={{ borderColor: selected ? "var(--accent)" : "var(--border)", background: selected ? "var(--accent-soft, #eceeff)" : "var(--surface-raised)" }}>
+        return <button key={type} type="button" aria-pressed={selected} onClick={() => onChange({ ...form, eventType: type })} className="min-h-[68px] w-56 shrink-0 snap-start rounded-xl border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" style={{ borderColor: selected ? "var(--accent)" : "var(--border)", background: selected ? "var(--accent-soft, #eceeff)" : "var(--surface-raised)" }}>
           <span className="block text-sm font-semibold" style={{ color: selected ? "var(--accent)" : "var(--ink)" }}>{EVENT_LABEL[type]}</span>
           <span className="mt-0.5 block text-xs leading-4" style={{ color: "var(--ink-muted)" }}>{EVENT_TEMPLATE_DESCRIPTION[type]}</span>
         </button>;
@@ -214,7 +214,7 @@ export function EventForm({
         {DATE_LABEL[form.eventType]}
         <input id="scenario-start-month" type="date" value={form.startMonth} onChange={(event) => onChange({ ...form, startMonth: event.target.value })} className={fieldClass} />
       </label>
-      {error?.code === "event_not_future" && <p role="alert" className="-mt-2 text-xs sm:col-start-2" style={{ color: "var(--critical)" }}>{error.message}</p>}
+      {error?.code === "event_not_future" && <p role="alert" className="-mt-2 text-xs sm:col-start-2" style={{ color: "var(--loss)" }}>{error.message}</p>}
 
       {form.eventType === "custom" && <label htmlFor="scenario-custom-name" className="block text-sm font-medium sm:col-span-2" style={{ color: "var(--ink-secondary)" }}>
         Name Your Event

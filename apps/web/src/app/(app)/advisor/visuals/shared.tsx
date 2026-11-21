@@ -92,7 +92,7 @@ export function VisualCard({ children, pending, failed, label }: { children: Rea
     >
       <div className={`p-4 transition-opacity duration-200 sm:p-5 ${pending ? "opacity-60" : "opacity-100"}`}>{children}</div>
       {pending && <div className="advisor-visual-progress absolute inset-x-0 top-0 h-0.5 bg-accent" aria-hidden />}
-      {failed && <p role="alert" className="px-5 pb-3 text-xs text-critical">Couldn&apos;t update just now. Try again in a moment.</p>}
+      {failed && <p role="alert" className="px-5 pb-3 text-xs text-loss">Couldn&apos;t update just now. Try again in a moment.</p>}
     </section>
   );
 }

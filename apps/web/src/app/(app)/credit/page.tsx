@@ -28,7 +28,7 @@ function CreditIcon({ kind }: { kind: "check" | "arrow" | "clock" | "search" | "
 /* ── Credit factor row ─────────────────────────────────────────────── */
 
 function Factor({ title, detail, icon, tone, value }: { title: string; detail: string; icon: "check" | "arrow" | "clock" | "search" | "percent"; tone: "good" | "attention" | "neutral"; value?: string }) {
-  const color = tone === "good" ? "#0b8f69" : tone === "attention" ? "#c47708" : "#544af7";
+  const color = tone === "good" ? "var(--gain)" : tone === "attention" ? "#c47708" : "var(--accent)";
   return (
     <div className="tile-lift flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: "var(--surface-inset)" }}>
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs" style={{ color, backgroundColor: `${color}12` }}><CreditIcon kind={icon} /></span>
@@ -99,14 +99,14 @@ export default async function CreditPage() {
       <main className="space-y-6 pb-8">
 
         {/* ── Score gauge + factors ────────────────────── */}
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          <Card title="Your Credit Snapshot" subtitle="A clear view of where you stand" action={<MockedBadge />}>
+        <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
+          <Card title="Credit Snapshot" subtitle="A clear view of where you stand" action={<MockedBadge />}>
             <ScoreGauge score={credit.score} />
             <ScoreChart history={credit.history} />
             <div className="mt-4 grid grid-cols-3 gap-2">
               <div className="tile-lift rounded-xl p-2.5" style={{ background: "var(--surface-inset)" }}>
                 <p className="text-[10px]" style={{ color: "var(--ink-muted)" }}>Card Debt</p>
-                <p className="mt-0.5 text-sm font-bold tabular-nums" style={{ color: "var(--critical, #d7465d)" }}>{formatUsd(totalBalance)}</p>
+                <p className="mt-0.5 text-sm font-bold tabular-nums" style={{ color: "var(--critical, var(--loss))" }}>{formatUsd(totalBalance)}</p>
               </div>
               <div className="tile-lift rounded-xl p-2.5" style={{ background: "var(--surface-inset)" }}>
                 <p className="text-[10px]" style={{ color: "var(--ink-muted)" }}>Credit Limit</p>
@@ -133,8 +133,8 @@ export default async function CreditPage() {
         {/* ── Credit cards ─────────────────────────────── */}
         <section id="credit-cards" className="scroll-mt-6">
           <div className="mb-4">
-            <h2 className="font-poppins text-xl font-bold text-[#16192c]">Your Credit Cards</h2>
-            <p className="mt-1 text-sm text-[#8d94a8]">Balances, limits, and utilization at a glance</p>
+            <h2 className="font-poppins text-xl font-bold text-ink">Your Credit Cards</h2>
+            <p className="mt-1 text-sm text-muted">Balances, limits, and utilization at a glance</p>
           </div>
           {cards.length === 0 ? (
             <Card>
@@ -152,23 +152,23 @@ export default async function CreditPage() {
         {/* ── Learn section ────────────────────────────── */}
         <section id="credit-learning" className="scroll-mt-6">
           <div className="mb-4">
-            <h2 className="font-poppins text-xl font-bold text-[#16192c]">Learn How to Build Stronger Credit</h2>
-            <p className="mt-1 text-sm text-[#8d94a8]">Guides from trusted credit education sources</p>
+            <h2 className="font-poppins text-xl font-bold text-ink">Build Stronger Credit</h2>
+            <p className="mt-1 text-sm text-muted">Guides from trusted credit education sources</p>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <a href="https://www.myfico.com/credit-education/improve-your-credit-score" target="_blank" rel="noreferrer" className="group rounded-3xl border border-[#edf0f7] bg-white p-6 transition hover:-translate-y-0.5 hover:shadow-lg">
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#eef1fc] text-[#544af7]"><CreditIcon kind="spark" /></div>
-              <p className="text-xs font-bold uppercase tracking-wider text-[#544af7]">myFICO · Credit Education</p>
-              <h3 className="mt-2 font-poppins text-lg font-bold text-[#16192c]">How to Improve Your Credit Score</h3>
+            <a href="https://www.myfico.com/credit-education/improve-your-credit-score" target="_blank" rel="noreferrer" className="group rounded-3xl border border-line bg-white p-6 transition hover:-translate-y-0.5 hover:shadow-lg">
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent"><CreditIcon kind="spark" /></div>
+              <p className="text-xs font-bold uppercase tracking-wider text-accent">myFICO · Credit Education</p>
+              <h3 className="mt-2 font-poppins text-lg font-bold text-ink">How to Improve Your Credit Score</h3>
               <p className="mt-2 text-sm leading-6 text-[#6c7288]">Understand the habits that can strengthen your score over time.</p>
-              <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#544af7]">Read Article <CreditIcon kind="arrow" /></span>
+              <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-accent">Read Article <CreditIcon kind="arrow" /></span>
             </a>
-            <a href="https://www.consumerfinance.gov/consumer-tools/credit-reports-and-scores/how-to-rebuild-your-credit/" target="_blank" rel="noreferrer" className="group rounded-3xl border border-[#edf0f7] bg-white p-6 transition hover:-translate-y-0.5 hover:shadow-lg">
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#e6faf4] text-[#0b8f69]"><CreditIcon kind="arrow" /></div>
-              <p className="text-xs font-bold uppercase tracking-wider text-[#0b8f69]">CFPB · Consumer Guidance</p>
-              <h3 className="mt-2 font-poppins text-lg font-bold text-[#16192c]">How to Rebuild Your Credit</h3>
+            <a href="https://www.consumerfinance.gov/consumer-tools/credit-reports-and-scores/how-to-rebuild-your-credit/" target="_blank" rel="noreferrer" className="group rounded-3xl border border-line bg-white p-6 transition hover:-translate-y-0.5 hover:shadow-lg">
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-good-bg text-gain"><CreditIcon kind="arrow" /></div>
+              <p className="text-xs font-bold uppercase tracking-wider text-gain">CFPB · Consumer Guidance</p>
+              <h3 className="mt-2 font-poppins text-lg font-bold text-ink">How to Rebuild Your Credit</h3>
               <p className="mt-2 text-sm leading-6 text-[#6c7288]">Practical steps and resources from the Consumer Financial Protection Bureau.</p>
-              <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#544af7]">Read Article <CreditIcon kind="arrow" /></span>
+              <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-accent">Read Article <CreditIcon kind="arrow" /></span>
             </a>
           </div>
         </section>

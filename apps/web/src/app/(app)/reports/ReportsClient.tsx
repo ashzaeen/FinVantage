@@ -12,10 +12,10 @@ import { QuarterlyReportCharts } from "./QuarterlyReportCharts";
 
 /** Same icon and color palette as the Overview page's stat cards, so the two pages read as one system. */
 const SUMMARY_STAT_STYLE = [
-  { label: "Net Worth", icon: <Wallet size={22} strokeWidth={2} aria-hidden="true" />, iconBg: "#fff5e6", iconColor: "#ff9900", cardBg: "#f0edff" },
-  { label: "Monthly Income", icon: <CircleDollarSign size={22} strokeWidth={2} aria-hidden="true" />, iconBg: "#e8f3ff", iconColor: "#2979ff", cardBg: "#eaf4ff" },
-  { label: "Monthly Spending", icon: <TrendingDown size={22} strokeWidth={2} aria-hidden="true" />, iconBg: "#ffecee", iconColor: "#ff4d6d", cardBg: "#fff1ef" },
-  { label: "Monthly Savings", icon: <PiggyBank size={22} strokeWidth={2} aria-hidden="true" />, iconBg: "#e6faf4", iconColor: "#00c48c", cardBg: "#edf8f1" },
+  { label: "Net Worth", icon: <Wallet size={22} strokeWidth={2} aria-hidden="true" />, iconBg: "var(--accent-soft)", iconColor: "var(--accent)", },
+  { label: "Monthly Income", icon: <CircleDollarSign size={22} strokeWidth={2} aria-hidden="true" />, iconBg: "var(--accent-soft)", iconColor: "var(--accent)", },
+  { label: "Monthly Spending", icon: <TrendingDown size={22} strokeWidth={2} aria-hidden="true" />, iconBg: "var(--accent-soft)", iconColor: "var(--accent)", },
+  { label: "Monthly Savings", icon: <PiggyBank size={22} strokeWidth={2} aria-hidden="true" />, iconBg: "var(--accent-soft)", iconColor: "var(--accent)", },
 ] as const;
 
 function ReportSection({
@@ -95,8 +95,8 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
 
   if (!latest) {
     return (
-      <div className="space-y-5 text-ink capitalize">
-        <Card title="Your latest completed quarter">
+      <div className="space-y-5 text-ink">
+        <Card title="Latest Quarter">
           <p className="text-sm text-muted">
             Reports can start from one saved quarter and add comparisons when a prior quarter exists.
           </p>
@@ -105,16 +105,16 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
             disabled={busy}
             className="mt-4 rounded bg-accent px-3 py-2 text-sm text-surface disabled:opacity-50"
           >
-            {busy ? "Generating..." : "Generate latest report"}
+            {busy ? "Generating..." : "Generate Latest Report"}
           </button>
-          {error && <p className="mt-3 text-sm text-critical">{error}</p>}
+          {error && <p className="mt-3 text-sm text-loss">{error}</p>}
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 text-ink capitalize">
+    <div className="space-y-6 text-ink">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white p-3 shadow-sm">
         <div className="flex gap-2 overflow-x-auto no-scrollbar" aria-label="Generated quarterly reports">
           {[...reports].sort((left, right) => left.quarter.localeCompare(right.quarter)).map((report) => (
@@ -161,7 +161,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
         </div>
       </div>
 
-      {error && <p className="rounded-xl bg-critical-bg p-3 text-sm text-critical">{error}</p>}
+      {error && <p className="rounded-xl bg-critical-bg p-3 text-sm text-loss">{error}</p>}
 
       <p className="text-sm text-muted">
         {latest.visuals.dataSource === "bank" ? (
@@ -187,7 +187,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
         ].map((value, index) => {
           const style = SUMMARY_STAT_STYLE[index]!;
           return (
-            <div key={style.label} className="rounded-2xl border border-line p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_8px_30px_-4px_rgba(84,74,247,0.08)]" style={{ backgroundColor: style.cardBg }}>
+            <div key={style.label} className="rounded-2xl border border-line p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_8px_30px_-4px_rgba(84,74,247,0.08)]" >
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: style.iconBg, color: style.iconColor }}>{style.icon}</span>
               <span className="mt-3 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{style.label}</span>
               <p className="mt-1 text-right font-poppins text-2xl font-bold tabular-nums text-ink">{value}</p>
@@ -204,19 +204,19 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
       )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <ReportSection title="What went well" eyebrow="Positive movement">
+        <ReportSection title="What Went Well" eyebrow="Positive movement">
           <ul className="space-y-3 text-sm">
             {latest.wentWell.map((item) => <li key={item} className="flex gap-3"><span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-good" />{item}</li>)}
           </ul>
         </ReportSection>
-        <ReportSection title="Needs attention" eyebrow="Risks and gaps">
+        <ReportSection title="Needs Attention" eyebrow="Risks and gaps">
           <ul className="space-y-3 text-sm">
             {latest.didNotGoWell.map((item) => <li key={item} className="flex gap-3"><span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-warning" />{item}</li>)}
           </ul>
         </ReportSection>
       </div>
 
-      <ReportSection title="Why it changed" eyebrow="Quarter-over-quarter analysis">
+      <ReportSection title="Why It Changed" eyebrow="Quarter-over-quarter analysis">
         <p className="text-sm">{latest.why}</p>
         {latest.largestChange ? (
           <div className="mt-4 border-t border-line pt-4">
@@ -233,7 +233,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
         )}
       </ReportSection>
 
-      <ReportSection title="Quarter evidence" eyebrow="Traceable figures">
+      <ReportSection title="Supporting Numbers" eyebrow="Traceable figures">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {latest.evidence.map((item) => (
             <div key={`${item.quarter}-${item.sourceId}`}>
@@ -249,7 +249,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
         </div>
       </ReportSection>
 
-      <ReportSection title="Quarterly agent coverage" eyebrow="Sources reviewed">
+      <ReportSection title="What We Checked" eyebrow="Sources reviewed">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="rounded-xl bg-inset p-4">
             <p className="text-right font-poppins text-2xl font-bold tabular-nums">{latest.sourceIds.simulationRunIds.length}</p>
@@ -301,7 +301,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
         </ReportSection>
       )}
 
-      <ReportSection title="Goal outlook" eyebrow="Forward estimates">
+      <ReportSection title="Goal Outlook" eyebrow="Forward estimates">
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {latest.visuals.goalPathways.map((goal) => (
             <div key={goal.goalId} className="rounded-2xl border border-line bg-inset/50 p-4">
@@ -328,15 +328,15 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
       </ReportSection>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <ReportSection title="Look ahead" eyebrow="Next quarter"><p className="text-sm leading-6">{latest.lookAhead}</p></ReportSection>
-        <ReportSection title="Next steps" eyebrow="Primary actions">
+        <ReportSection title="Look Ahead" eyebrow="Next quarter"><p className="text-sm leading-6">{latest.lookAhead}</p></ReportSection>
+        <ReportSection title="Next Steps" eyebrow="Primary actions">
           <ol className="list-decimal space-y-2 pl-5 text-sm">
             {latest.nextSteps.map((step) => <li key={step}>{step}</li>)}
           </ol>
         </ReportSection>
       </div>
 
-      <ReportSection title="Suggested focus" eyebrow="Planning prompts">
+      <ReportSection title="Suggested Focus" eyebrow="Planning prompts">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {latest.visuals.suggestions.map((suggestion) => (
             <div key={suggestion.goalId} className="rounded-2xl border border-line bg-inset/50 p-4">

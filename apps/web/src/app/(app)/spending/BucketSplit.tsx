@@ -46,7 +46,7 @@ export function BucketSplit({ initial }: { initial: BucketSummary }) {
 
   return (
     <Card
-      title="Nature of Spending"
+      title="Spending Split"
       subtitle={`${summary.month} · of ${formatUsd(summary.incomeCents)} monthly income`}
       action={
         !editing && (
@@ -86,10 +86,10 @@ export function BucketSplit({ initial }: { initial: BucketSummary }) {
               </label>
             ))}
           </div>
-          <p className="text-xs" style={{ color: total === 100 ? "var(--ink-muted)" : "var(--critical)" }}>
+          <p className="text-xs" style={{ color: total === 100 ? "var(--ink-muted)" : "var(--loss)" }}>
             Total {total}%{total === 100 ? "" : ". The three shares must add up to 100%."}
           </p>
-          {error && <p className="text-xs" style={{ color: "var(--critical)" }}>{error}</p>}
+          {error && <p className="text-xs" style={{ color: "var(--loss)" }}>{error}</p>}
           <div className="flex gap-2">
             <button
               type="submit"
@@ -107,7 +107,10 @@ export function BucketSplit({ initial }: { initial: BucketSummary }) {
       ) : (
         <ul className="space-y-4">
           {summary.buckets.map((row) => {
-            const over = row.spentCents > row.targetCents;
+            // Savings is a floor, not a ceiling: going past the target is the good outcome, never an overspend.
+            const isSavings = row.bucket === "savings";
+            const over = !isSavings && row.spentCents > row.targetCents;
+            const met = isSavings && row.spentCents >= row.targetCents;
             const width = row.targetCents > 0 ? Math.min(100, (row.spentCents / row.targetCents) * 100) : 0;
             return (
               <li key={row.bucket}>
@@ -118,12 +121,12 @@ export function BucketSplit({ initial }: { initial: BucketSummary }) {
                       Target {formatPercent(summary.split[row.bucket])}
                     </span>
                   </span>
-                  <span className="tabular-nums text-xs" style={{ color: over ? "var(--critical)" : "var(--ink-muted)" }}>
-                    {formatUsd(row.spentCents)} of {formatUsd(row.targetCents)}
+                  <span className="tabular-nums text-xs" style={{ color: over ? "var(--loss)" : met ? "var(--gain)" : "var(--ink-muted)" }}>
+                    {met && "✓ "}{formatUsd(row.spentCents)} of {formatUsd(row.targetCents)}
                   </span>
                 </div>
                 <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
-                  <div className="meter-fill h-2.5 rounded-full" style={{ width: `${width}%`, background: over ? "var(--critical)" : "var(--accent)" }} />
+                  <div className="meter-fill h-2.5 rounded-full" style={{ width: `${width}%`, background: over ? "var(--critical)" : met ? "var(--good)" : "var(--accent)" }} />
                 </div>
                 <p className="mt-1 flex justify-between text-xs" style={{ color: "var(--ink-muted)" }}>
                   <span>{BUCKET_HINT[row.bucket]}</span>

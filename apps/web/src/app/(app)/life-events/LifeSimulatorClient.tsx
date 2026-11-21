@@ -356,7 +356,7 @@ export function LifeSimulatorClient() {
   }
 
   if (contextLoading) return <><PageHeader title="Life Events" /><p className="py-16 text-center text-sm" style={{ color: "var(--ink-muted)" }}>Loading your goals…</p></>;
-  if (contextError || !context) return <><PageHeader title="Life Events" /><p role="alert" className="py-16 text-center text-sm" style={{ color: "var(--critical)" }}>{contextError || "Could not load life events."}</p></>;
+  if (contextError || !context) return <><PageHeader title="Life Events" /><p role="alert" className="py-16 text-center text-sm" style={{ color: "var(--loss)" }}>{contextError || "Could not load life events."}</p></>;
   if (context.goals.length === 0) return <><PageHeader title="Life Events" /><p className="py-12 text-center text-sm" style={{ color: "var(--ink-muted)" }}>Add a goal before modeling a life event. <a href="/goals" className="font-semibold underline">Go to Goals</a></p></>;
   if (!form) return null;
 
@@ -369,15 +369,15 @@ export function LifeSimulatorClient() {
 
   return <>
     <PageHeader title="Life Events" action={<div className="flex items-center gap-3">
-      <button type="button" onClick={() => setShowSavedChanges((showing) => !showing)} className="min-h-11 rounded-xl border px-4 text-sm font-semibold transition-colors hover:bg-[var(--surface-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>{showSavedChanges ? "Model Changes" : "Saved Changes"}</button>
-      {saved && <span role="status" aria-live="polite" className="text-xs font-medium" style={{ color: "var(--good)" }}>Saved ✓</span>}
-      <button type="button" onClick={() => void downloadPdf()} disabled={pdfLoading || !generatedForm || hasUnappliedEdits} className="min-h-11 rounded-xl border px-4 text-sm font-semibold transition-colors hover:bg-[var(--surface-inset)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>{pdfLoading ? "Preparing PDF…" : "Download PDF"}</button>
-      <button type="button" onClick={() => void saveChanges()} disabled={saving || !generatedForm || hasUnappliedEdits} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>{saving ? "Saving…" : "Save Changes"}</button>
+      <button type="button" onClick={() => setShowSavedChanges((showing) => !showing)} className="min-h-11 rounded-xl border px-4 text-sm font-semibold transition-colors hover:bg-[var(--surface-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>{showSavedChanges ? "Model Changes" : "Saved Changes"}</button>
+      {saved && <span role="status" aria-live="polite" className="text-xs font-medium" style={{ color: "var(--gain)" }}>Saved ✓</span>}
+      <button type="button" onClick={() => void downloadPdf()} disabled={pdfLoading || !generatedForm || hasUnappliedEdits} className="min-h-11 rounded-xl border px-4 text-sm font-semibold transition-colors hover:bg-[var(--surface-inset)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>{pdfLoading ? "Preparing PDF…" : "Download PDF"}</button>
+      <button type="button" onClick={() => void saveChanges()} disabled={saving || !generatedForm || hasUnappliedEdits} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>{saving ? "Saving…" : "Save Changes"}</button>
     </div>} />
     <div className="space-y-5">
       <p className="-mt-3 text-sm" style={{ color: "var(--ink-muted)" }}>Model an event and compare its effect across all of your goals. As of {formatDate(context.asOf)}.</p>
 
-      {genericError && <p role="alert" className="px-4 py-3 text-sm" style={{ background: "var(--critical-bg)", color: "var(--critical)" }}>{genericError}</p>}
+      {genericError && <p role="alert" className="px-4 py-3 text-sm" style={{ background: "var(--critical-bg)", color: "var(--loss)" }}>{genericError}</p>}
 
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
         <Card title={showSavedChanges ? "Saved Models" : "Model an Event"} className="min-w-0">
@@ -389,7 +389,7 @@ export function LifeSimulatorClient() {
                   : savedScenarios.length
                     ? <div className="divide-y" style={{ borderColor: "var(--border)" }}>{savedScenarios.map((scenario) => <div key={scenario.id} className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
                         <div className="min-w-0"><p className="truncate text-sm font-semibold" style={{ color: "var(--ink)" }}>{scenarioLabels.get(scenario.id) ?? eventNameFor(scenario)}</p><p className="mt-0.5 text-xs" style={{ color: "var(--ink-muted)" }}>Updated {formatDate(scenario.updatedAt)}</p></div>
-                        <button type="button" onClick={() => void openSavedEvent(scenario.id)} disabled={analysisLoading} className="min-h-10 shrink-0 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] disabled:opacity-50" style={{ color: "var(--accent)" }}>{analysisLoading && currentScenarioId === scenario.id ? "Opening…" : currentScenarioId === scenario.id ? "Currently Viewing" : "View Charts"}</button>
+                        <button type="button" onClick={() => void openSavedEvent(scenario.id)} disabled={analysisLoading} className="min-h-10 shrink-0 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50" style={{ color: "var(--accent)" }}>{analysisLoading && currentScenarioId === scenario.id ? "Opening…" : currentScenarioId === scenario.id ? "Currently Viewing" : "View Charts"}</button>
                       </div>)}</div>
                     : <p className="py-8 text-center text-sm" style={{ color: "var(--ink-muted)" }}>No saved models yet. Generate an event, then choose Save Changes.</p>}
                 {currentScenarioId && analysis && generatedForm && <div className="mt-4 border-t pt-4" style={{ borderColor: "var(--border)" }}>
@@ -400,7 +400,7 @@ export function LifeSimulatorClient() {
             : <>
                 <EventForm context={context} form={form} onChange={updateForm} error={fieldError} />
                 <div className="mt-5 border-t pt-4" style={{ borderColor: "var(--border)" }}>
-                  <button type="button" onClick={() => void generate()} disabled={analysisLoading} className="min-h-12 w-full rounded-xl px-6 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7] focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>{analysisLoading ? "Generating…" : "Generate"}</button>
+                  <button type="button" onClick={() => void generate()} disabled={analysisLoading} className="min-h-12 w-full rounded-xl px-6 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>{analysisLoading ? "Generating…" : "Generate"}</button>
                 </div>
                 {analysis && generatedForm && <ScenarioInsight analysis={analysis} />}
               </>}
@@ -410,11 +410,11 @@ export function LifeSimulatorClient() {
           {analysis && generatedForm && <LifeSimulatorCharts context={context} analysis={analysis} />}
 
           <section aria-labelledby="funded-heading" className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 id="funded-heading" className="font-poppins text-lg font-bold" style={{ color: "var(--ink)" }}>When Each Goal Gets Funded</h2><p className="mt-1 text-xs" style={{ color: "var(--ink-muted)" }}>{generatedForm ? `Generated for ${generatedEventName}` : "Results appear after Generate"}</p></div><span className="rounded-full px-3 py-1.5 text-xs font-semibold tabular-nums" style={{ color: "#176b5a", background: "#e5f3ed" }}>{analysis ? `${analysis.goals.filter((goal) => goal.included).length} goals compared` : `${context.goals.length} goals`}</span></div>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 id="funded-heading" className="font-poppins text-lg font-bold" style={{ color: "var(--ink)" }}>Goal Funding Dates</h2><p className="mt-1 text-xs" style={{ color: "var(--ink-muted)" }}>{generatedForm ? `Generated for ${generatedEventName}` : "Results appear after Generate"}</p></div><span className="rounded-full px-3 py-1.5 text-xs font-semibold tabular-nums" style={{ color: "#176b5a", background: "#e5f3ed" }}>{analysis ? `${analysis.goals.filter((goal) => goal.included).length} goals compared` : `${context.goals.length} goals`}</span></div>
             {analysis && generatedForm
               ? <GoalTimeline goals={analysis.goals} />
               : <div className="flex min-h-56 items-center justify-center px-5 text-center" style={{ background: "var(--surface-inset)" }}><p className="max-w-xs text-sm leading-6" style={{ color: "var(--ink-muted)" }}>Your goal funding dates will appear here after you generate a comparison.</p></div>}
-            {hasUnappliedEdits && <p className="mt-3 text-xs" style={{ color: "var(--warning)" }}>Your inputs changed. Generate again to refresh these results.</p>}
+            {hasUnappliedEdits && <p className="mt-3 text-xs" style={{ color: "var(--warning-text)" }}>Your inputs changed. Generate again to refresh these results.</p>}
           </section>
 
         </div>
@@ -429,9 +429,9 @@ export function LifeSimulatorClient() {
 function ScenarioInsight({ analysis }: { analysis: LifeScenarioAnalysis }) {
   const insight = scenarioInsight(analysis);
   const colors = {
-    low: { text: "#087653", background: "#e6faf4" },
-    medium: { text: "#915600", background: "#fff5e6" },
-    high: { text: "#a62840", background: "#ffecee" },
+    low: { text: "var(--gain)", background: "var(--good-bg)" },
+    medium: { text: "#915600", background: "var(--warning-bg)" },
+    high: { text: "var(--loss)", background: "var(--critical-bg)" },
   }[insight.tone];
   return <section aria-live="polite" aria-label="Event insight" className="mt-4 rounded-xl border p-4 sm:p-5" style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
     <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3" style={{ borderColor: "var(--border)" }}>
@@ -446,9 +446,9 @@ function ScenarioInsight({ analysis }: { analysis: LifeScenarioAnalysis }) {
     <ul className="mt-3 divide-y border-y" style={{ borderColor: "var(--border)" }} aria-label="Priority by goal">
       {insight.goalRows.map(({ goal, tone, priority, progress, change }) => {
         const goalColors = {
-          low: { text: "#087653", background: "#e6faf4" },
-          medium: { text: "#915600", background: "#fff5e6" },
-          high: { text: "#a62840", background: "#ffecee" },
+          low: { text: "var(--gain)", background: "var(--good-bg)" },
+          medium: { text: "#915600", background: "var(--warning-bg)" },
+          high: { text: "var(--loss)", background: "var(--critical-bg)" },
         }[tone]!;
         return <li key={goal.goalId} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-xs" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>
           <span className="min-w-0 flex-1"><strong>{goal.name}</strong><span className="ml-2" style={{ color: "var(--ink-muted)" }}>{progress} · {change}</span></span>

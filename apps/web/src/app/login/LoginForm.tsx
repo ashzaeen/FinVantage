@@ -142,7 +142,7 @@ export function LoginForm({ embedded = false, footer }: LoginFormProps = {}) {
             <p
               role="alert"
               className="rounded-xl px-3 py-2.5 text-sm"
-              style={{ background: "var(--critical-bg)", color: "var(--critical)" }}
+              style={{ background: "var(--critical-bg)", color: "var(--loss)" }}
             >
               {error}
             </p>

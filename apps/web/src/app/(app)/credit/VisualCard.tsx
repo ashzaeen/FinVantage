@@ -5,9 +5,9 @@ import { formatUsd, formatPercent, type Account } from "@finvantage/contracts";
 
 const CARD_GRADIENTS = [
   "linear-gradient(135deg, #37337c 0%, #4c46b4 45%, #6a60ea 100%)",
-  "linear-gradient(135deg, #18b6e6 0%, #3e68e4 55%, #5a4ff5 100%)",
+  "linear-gradient(135deg, #2d83c9 0%, #3e68e4 55%, #544af7 100%)",
   "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
-  "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+  "linear-gradient(135deg, #0e5f58 0%, #1d8a7e 55%, #2a9d8f 100%)",
 ];
 
 export function VisualCard({ account, index }: { account: Account; index: number }) {
@@ -55,7 +55,7 @@ export function VisualCard({ account, index }: { account: Account; index: number
         {/* Front */}
         <div
           className="relative overflow-hidden rounded-3xl p-5 text-white"
-          style={{ background: gradient, minHeight: 180, backfaceVisibility: "hidden" }}
+          style={{ background: gradient, minHeight: 236, backfaceVisibility: "hidden", visibility: flipped ? "hidden" : "visible", transition: "visibility 0s linear 0.15s" }}
         >
           {/* Shine effect on hover */}
           <div
@@ -103,13 +103,17 @@ export function VisualCard({ account, index }: { account: Account; index: number
             background: gradient,
             backfaceVisibility: "hidden",
             transform: "rotateY(180deg)",
+            // backface-visibility alone leaves the mirrored back showing when an ancestor flattens 3D,
+            // so each face is also hidden outright while it is the one facing away.
+            visibility: flipped ? "visible" : "hidden",
+            transition: "visibility 0s linear 0.15s",
           }}
         >
           <div className="pointer-events-none absolute -bottom-10 -right-8 h-44 w-44 rounded-full bg-white/10 blur-xl" />
 
           <p className="font-roboto text-xs font-medium text-white/70">Card Details</p>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-3 space-y-2.5">
             {limit > 0 && (
               <div className="flex justify-between">
                 <span className="font-roboto text-xs text-white/60">Available Credit</span>
@@ -142,7 +146,7 @@ export function VisualCard({ account, index }: { account: Account; index: number
             )}
           </div>
 
-          <p className="mt-4 text-center font-roboto text-[10px] text-white/40">Click to flip back</p>
+          <p className="mt-3 text-center font-roboto text-[10px] text-white/60">Click to flip back</p>
         </div>
       </div>
     </div>

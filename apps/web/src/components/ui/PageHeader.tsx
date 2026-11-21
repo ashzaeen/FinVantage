@@ -15,7 +15,7 @@ export function PageHeader({
 }) {
   return (
     <header className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 sm:mb-8">
-      <h1 className="font-poppins text-2xl font-bold tracking-tight text-[#16192c] sm:text-3xl">
+      <h1 className="font-poppins text-2xl font-bold tracking-tight text-ink sm:text-3xl">
         {title}
       </h1>
 
@@ -25,7 +25,7 @@ export function PageHeader({
             <input
               type="search"
               placeholder="Search for anything...."
-              className="w-full rounded-2xl border border-[#edf0f7] bg-white py-2.5 pl-4 pr-10 font-roboto text-xs font-normal text-[#16192c] placeholder-[#8d94a8] outline-none shadow-sm focus:border-[#544af7]"
+              className="w-full rounded-2xl border border-line bg-white py-2.5 pl-4 pr-10 font-roboto text-xs font-normal text-ink placeholder-muted outline-none shadow-sm focus:border-accent"
             />
             <svg
               width="15"
@@ -36,7 +36,7 @@ export function PageHeader({
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8d94a8]"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted"
             >
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />

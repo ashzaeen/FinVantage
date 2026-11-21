@@ -6,7 +6,7 @@ import { CountUp } from "@/components/ui/CountUp";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { api } from "@/lib/api";
 
-const ACCENT = "#544af7";
+const ACCENT = "var(--accent)";
 
 const monthName = (month: string, style: "short" | "long" = "short") =>
   new Date(`${month}-01T00:00:00`).toLocaleDateString("en-US", { month: style });
@@ -23,9 +23,9 @@ const STABILITY: Record<IncomeSummary["stability"], { label: string; note: strin
 
 /** Lenders often use 36% as the comfortable line and 43% as the ceiling. A rule of thumb, not advice. */
 function debtBand(ratio: number) {
-  if (ratio <= 0.36) return { label: "Comfortable", color: "#00a37a" };
+  if (ratio <= 0.36) return { label: "Comfortable", color: "var(--gain)" };
   if (ratio <= 0.43) return { label: "Getting Tight", color: "#d97706" };
-  return { label: "High", color: "var(--critical)" };
+  return { label: "High", color: "var(--loss)" };
 }
 
 function MiniStat({ label, value }: { label: string; value: ReactNode }) {
@@ -65,7 +65,7 @@ function ExpectedIncome({ income }: { income: IncomeSummary }) {
         <MiniStat label="Year to Date" value={<CountUp value={income.yearToDateCents} />} />
       </div>
       {income.lastMonthCents > 0 && (
-        <p className="mt-3 text-xs" style={{ color: diff >= 0 ? "#00a37a" : "var(--critical)" }}>
+        <p className="mt-3 text-xs" style={{ color: diff >= 0 ? "var(--gain)" : "var(--loss)" }}>
           {diff >= 0 ? "Up" : "Down"} {formatUsd(Math.abs(diff))} from last month
         </p>
       )}
@@ -123,7 +123,7 @@ function DebtRatio({ income }: { income: IncomeSummary }) {
   const { ratio, monthlyDebtCents, monthlyIncomeCents } = income.debtToIncome;
   const band = ratio === null ? null : debtBand(ratio);
   return (
-    <Card title="Income to Debt Ratio">
+    <Card title="Debt-to-Income">
       {ratio === null || !band ? (
         <p className="text-sm" style={{ color: "var(--ink-muted)" }}>Set a monthly income on your profile to see this.</p>
       ) : (
@@ -159,8 +159,8 @@ function RecentDeposits({ income }: { income: IncomeSummary }) {
         <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
           {income.recent.map((t, i) => (
             <li key={t.id} className="row-cascade flex items-center justify-between gap-3 py-2.5 text-sm" style={{ "--i": i } as CSSProperties}>
-              <span className="min-w-0 truncate" style={{ color: "var(--ink)" }}>{t.merchant}</span>
-              <span className="shrink-0 text-xs" style={{ color: "var(--ink-muted)" }}>{dayName(t.date)}</span>
+              <span className="min-w-0 flex-1 truncate" style={{ color: "var(--ink)" }}>{t.merchant}</span>
+              <span className="w-14 shrink-0 text-xs tabular-nums" style={{ color: "var(--ink-muted)" }}>{dayName(t.date)}</span>
               <span className="w-24 shrink-0 text-right font-bold tabular-nums" style={{ color: "var(--ink)" }}>+{formatUsd(t.amountCents)}</span>
             </li>
           ))}
@@ -174,7 +174,7 @@ function Stability({ income }: { income: IncomeSummary }) {
   const stability = STABILITY[income.stability];
   const lastThree = income.trend.slice(-4, -1);
   return (
-    <Card title="Stability">
+    <Card title="Income Stability">
       <p className="font-poppins text-2xl font-bold" style={{ color: "var(--ink)" }}>{stability.label}</p>
       <p className="mt-1 text-sm" style={{ color: "var(--ink-secondary)" }}>{stability.note}</p>
       <div className="mt-4 grid grid-cols-3 gap-2">
@@ -198,7 +198,7 @@ export default async function IncomePage() {
   return (
     <>
       <PageHeader title="Income" />
-      <div className="page-cascade grid grid-cols-1 gap-5 md:grid-cols-2">
+      <div className="page-cascade grid grid-cols-1 items-start gap-5 md:grid-cols-2">
         <ExpectedIncome income={income} />
         <IncomePie income={income} categories={categories} />
         <TrendBars trend={income.trend} />

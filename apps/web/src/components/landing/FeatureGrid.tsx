@@ -99,7 +99,7 @@ const FEATURES = [
     title: "Check a Purchase While You Shop",
     body: "A Chrome extension that tells you what a purchase does to your goals, right on the product page, before you buy.",
     points: ["Works on Amazon product pages", "A clear verdict: looks good, heads up, or warning", "Only the price and store ever leave your browser"],
-    accent: "#544af7",
+    accent: "var(--accent)",
   },
   {
     name: "AI Advisor",
@@ -107,7 +107,7 @@ const FEATURES = [
     title: "Ask Your AI Advisor",
     body: "Ask about your money in plain English and get answers grounded in your own accounts, transactions, and goals.",
     points: ["Uses your real balances and spending", "Shows charts and what-if scenarios", "Numbers are calculated first, then explained"],
-    accent: "#16856d",
+    accent: "var(--gain)",
   },
   {
     name: "Life Events",
@@ -140,7 +140,7 @@ function RotatingName({ index, animate }: { index: number; animate: boolean }) {
           <span
             key={i}
             className="block h-[1.25em] whitespace-nowrap bg-clip-text text-transparent"
-            style={{ backgroundImage: "linear-gradient(90deg, var(--landing-primary), #16856d)" }}
+            style={{ backgroundImage: "linear-gradient(90deg, var(--landing-primary), var(--gain))" }}
           >
             {feature.name}
           </span>
@@ -229,7 +229,7 @@ export function FeatureGrid() {
                 onClick={() => goTo(i)}
                 aria-label={`Show ${feature.name}`}
                 aria-current={i === active}
-                className="group flex h-11 min-w-11 items-center justify-center rounded-full px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]"
+                className="group flex h-11 min-w-11 items-center justify-center rounded-full px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <span
                   aria-hidden="true"
@@ -240,10 +240,10 @@ export function FeatureGrid() {
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => goTo((active + FEATURES.length - 1) % FEATURES.length)} aria-label="Previous feature" className="flex min-h-11 min-w-11 items-center justify-center rounded-full border bg-white text-[#3730A3] transition-colors hover:bg-[#EEF2FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]" style={{ borderColor: "var(--landing-border)" }}>
+            <button type="button" onClick={() => goTo((active + FEATURES.length - 1) % FEATURES.length)} aria-label="Previous feature" className="flex min-h-11 min-w-11 items-center justify-center rounded-full border bg-white text-[#3730A3] transition-colors hover:bg-[#EEF2FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" style={{ borderColor: "var(--landing-border)" }}>
               <ChevronLeft size={19} aria-hidden="true" />
             </button>
-            <button type="button" onClick={() => goTo(active + 1)} aria-label="Next feature" className="flex min-h-11 min-w-11 items-center justify-center rounded-full border bg-white text-[#3730A3] transition-colors hover:bg-[#EEF2FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]" style={{ borderColor: "var(--landing-border)" }}>
+            <button type="button" onClick={() => goTo(active + 1)} aria-label="Next feature" className="flex min-h-11 min-w-11 items-center justify-center rounded-full border bg-white text-[#3730A3] transition-colors hover:bg-[#EEF2FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" style={{ borderColor: "var(--landing-border)" }}>
               <ChevronRight size={19} aria-hidden="true" />
             </button>
           </div>

@@ -134,18 +134,18 @@ export function LinkedBanks({ initialItems }: { initialItems: BankItemSummary[] 
   }
 
   return (
-    <section className="mb-6 rounded-3xl border border-[#edf0f7] bg-white p-5 shadow-[0_2px_12px_rgba(22,25,44,0.03)] sm:p-6">
+    <section className="mb-6 rounded-3xl border border-line bg-white p-5 shadow-[0_2px_12px_rgba(22,25,44,0.03)] sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="font-poppins text-base font-bold text-[#16192c]">Linked Banks</h3>
-          <p className="mt-1 text-xs text-[#8d94a8]">
+          <h3 className="font-poppins text-base font-bold text-ink">Linked Banks</h3>
+          <p className="mt-1 text-xs text-muted">
             Connected securely through Plaid. FinVantage reads balances and transactions; it never moves money.
           </p>
         </div>
         {signedIn === false ? (
           <Link
             href="/login?next=/accounts"
-            className="self-start rounded-xl border border-[#e6e9f2] px-4 py-2.5 text-sm font-semibold text-[#544af7] hover:bg-[#eef1fc] sm:self-auto"
+            className="self-start rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-accent hover:bg-accent-soft sm:self-auto"
           >
             Sign In to Connect a Bank
           </Link>
@@ -154,25 +154,25 @@ export function LinkedBanks({ initialItems }: { initialItems: BankItemSummary[] 
             type="button"
             onClick={connect}
             disabled={signedIn !== true || busy !== null}
-            className="self-start rounded-xl bg-[#544af7] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#453bc9] disabled:cursor-not-allowed disabled:opacity-50 sm:self-auto"
+            className="self-start rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#453bc9] disabled:cursor-not-allowed disabled:opacity-50 sm:self-auto"
           >
             {busy === "connect" ? "Opening Plaid…" : "+ Connect a Bank"}
           </button>
         )}
       </div>
 
-      {notice && <p aria-live="polite" className="mt-4 rounded-xl bg-[#eef1fc] px-3 py-2.5 text-sm text-[#544af7]">{notice}</p>}
-      {error && <p role="alert" className="mt-4 rounded-xl bg-[#ffecee] px-3 py-2.5 text-sm text-[#ff4d6d]">{error}</p>}
+      {notice && <p aria-live="polite" className="mt-4 rounded-xl bg-accent-soft px-3 py-2.5 text-sm text-accent">{notice}</p>}
+      {error && <p role="alert" className="mt-4 rounded-xl bg-critical-bg px-3 py-2.5 text-sm text-loss">{error}</p>}
 
       {items.length > 0 && (
-        <ul className="mt-4 divide-y divide-[#edf0f7] rounded-2xl border border-[#edf0f7]">
+        <ul className="mt-4 divide-y divide-line rounded-2xl border border-line">
           {items.map((item) => (
             <li key={item.itemId} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[#16192c]">{item.institutionName}</p>
-                <p className="text-xs text-[#8d94a8]">
+                <p className="truncate text-sm font-semibold text-ink">{item.institutionName}</p>
+                <p className="text-xs text-muted">
                   {item.accountCount} {item.accountCount === 1 ? "account" : "accounts"}
-                  {item.status !== "good" && <span className="ml-2 font-semibold text-[#ff9900]">Needs attention: {item.status}</span>}
+                  {item.status !== "good" && <span className="ml-2 font-semibold text-warning-text">Needs attention: {item.status}</span>}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -180,7 +180,7 @@ export function LinkedBanks({ initialItems }: { initialItems: BankItemSummary[] 
                   type="button"
                   onClick={() => refresh(item.itemId)}
                   disabled={busy !== null}
-                  className="rounded-lg px-3 py-1.5 text-sm font-semibold text-[#544af7] hover:bg-[#eef1fc] disabled:opacity-50"
+                  className="rounded-lg px-3 py-1.5 text-sm font-semibold text-accent hover:bg-accent-soft disabled:opacity-50"
                 >
                   {busy === item.itemId ? "Working…" : "Refresh"}
                 </button>
@@ -188,7 +188,7 @@ export function LinkedBanks({ initialItems }: { initialItems: BankItemSummary[] 
                   type="button"
                   onClick={() => remove(item)}
                   disabled={busy !== null}
-                  className="rounded-lg px-3 py-1.5 text-sm font-semibold text-[#8d94a8] hover:bg-[#f4f5fa] hover:text-[#ff4d6d] disabled:opacity-50"
+                  className="rounded-lg px-3 py-1.5 text-sm font-semibold text-muted hover:bg-inset hover:text-loss disabled:opacity-50"
                 >
                   Disconnect
                 </button>

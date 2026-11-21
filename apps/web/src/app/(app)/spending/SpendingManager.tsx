@@ -71,9 +71,9 @@ function CategorySelect({
 
 function Status({ status }: { status: Budget["status"] }) {
   const look = {
-    on_track: { label: "On Track", color: "var(--good)", bg: "var(--good-bg)" },
-    at_risk: { label: "At Risk", color: "var(--warning)", bg: "var(--warning-bg)" },
-    over: { label: "Over", color: "var(--critical)", bg: "var(--critical-bg)" },
+    on_track: { label: "On Track", color: "var(--gain)", bg: "var(--good-bg)" },
+    at_risk: { label: "At Risk", color: "var(--warning-text)", bg: "var(--warning-bg)" },
+    over: { label: "Over", color: "var(--loss)", bg: "var(--critical-bg)" },
   }[status];
   return (
     <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: look.color, background: look.bg }}>
@@ -83,7 +83,7 @@ function Status({ status }: { status: Budget["status"] }) {
 }
 
 function ErrorLine({ children }: { children: ReactNode }) {
-  return children ? <p className="text-xs" style={{ color: "var(--critical)" }}>{children}</p> : null;
+  return children ? <p className="text-xs" style={{ color: "var(--loss)" }}>{children}</p> : null;
 }
 
 /* ─── Budgets ───────────────────────────────────────────────────────────── */
@@ -133,7 +133,7 @@ export function BudgetsPanel({ budgets, categories }: { budgets: Budget[]; categ
       <span className="flex items-center gap-1 rounded-xl border px-3 py-2" style={inputStyle}>
         <span style={{ color: "var(--ink-muted)" }}>$</span>
         <input
-          aria-label="Monthly limit"
+          aria-label="Monthly Limit"
           inputMode="decimal"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
@@ -302,7 +302,7 @@ export function CategoryManager({ categories }: { categories: SpendingCategory[]
             {c.hidden ? "Show" : "Hide"}
           </button>
           {c.custom && (
-            <button type="button" disabled={busy} onClick={() => run(() => api.deleteSpendingCategory({ params: { id: c.id } }), "Could not delete the category.")} className={quietCls} style={{ color: "var(--critical)" }}>Delete</button>
+            <button type="button" disabled={busy} onClick={() => run(() => api.deleteSpendingCategory({ params: { id: c.id } }), "Could not delete the category.")} className={quietCls} style={{ color: "var(--loss)" }}>Delete</button>
           )}
         </div>
         {action?.id === c.id && (
@@ -383,7 +383,7 @@ export function RulesPanel({ rules, categories }: { rules: CategoryRule[]; categ
   return (
     <Card title="Merchant Rules" subtitle="New transactions from these merchants go straight to a category">
       <form onSubmit={add} className="flex flex-wrap items-center gap-2">
-        <input aria-label="Merchant name contains" value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Merchant, like Starbucks" className={`${inputCls} flex-1`} style={inputStyle} />
+        <input aria-label="Merchant Name Contains" value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Merchant, like Starbucks" className={`${inputCls} flex-1`} style={inputStyle} />
         <CategorySelect ariaLabel="Rule category" categories={categories} value={category} onChange={setCategory} />
         <label className="flex items-center gap-1.5 text-xs" style={{ color: "var(--ink-secondary)" }}>
           <input type="checkbox" checked={applyToPast} onChange={(e) => setApplyToPast(e.target.checked)} /> Apply to Past
@@ -391,7 +391,7 @@ export function RulesPanel({ rules, categories }: { rules: CategoryRule[]; categ
         <button disabled={busy || merchant.trim().length < 2} className={primaryCls} style={{ background: "var(--accent)" }}>Add Rule</button>
       </form>
       <ErrorLine>{error}</ErrorLine>
-      {note && <p className="mt-2 text-xs" style={{ color: "var(--good)" }}>{note}</p>}
+      {note && <p className="mt-2 text-xs" style={{ color: "var(--gain)" }}>{note}</p>}
       <ul className="mt-3 space-y-2">
         {rules.length === 0 && <li className="text-sm" style={{ color: "var(--ink-muted)" }}>No rules yet.</li>}
         {rules.map((r) => (
@@ -438,7 +438,7 @@ export function RecentTransactions({ transactions, categories }: { transactions:
   return (
     <Card title="Recent Transactions" subtitle="Move any transaction to a category, or make it a rule">
       <ErrorLine>{error}</ErrorLine>
-      {saved && <p className="mb-2 text-xs" style={{ color: "var(--good)" }}>{saved}</p>}
+      {saved && <p className="mb-2 text-xs" style={{ color: "var(--gain)" }}>{saved}</p>}
       <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
         {transactions.map((t) => {
           const current = t.subcategory ?? t.category ?? "";

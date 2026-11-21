@@ -18,7 +18,7 @@ function DtiMeter({ before, after, guideline }: { before: number; after: number;
         <span className="text-muted">Debt-to-income</span>
         <span className="tabular-nums text-ink">
           {formatPercent(before)} <span className="text-subtle">→</span>{" "}
-          <span className={`font-semibold ${over ? "text-critical" : "text-ink"}`}>{formatPercent(after)}</span>
+          <span className={`font-semibold ${over ? "text-loss" : "text-ink"}`}>{formatPercent(after)}</span>
         </span>
       </div>
       <div className="relative mt-2 h-2.5 rounded-full bg-accent-soft">
@@ -27,7 +27,7 @@ function DtiMeter({ before, after, guideline }: { before: number; after: number;
         <div className="absolute -inset-y-1 w-0.5 rounded bg-ink" style={{ left: `${(guideline / scale) * 100}%` }} aria-hidden />
       </div>
       <p className="mt-1.5 flex items-center gap-1 text-[11px] text-muted">
-        {over ? <AlertTriangle size={12} className="text-critical" aria-hidden /> : <CheckCircle2 size={12} className="text-good" aria-hidden />}
+        {over ? <AlertTriangle size={12} className="text-loss" aria-hidden /> : <CheckCircle2 size={12} className="text-gain" aria-hidden />}
         {over ? `Above the ${formatPercent(guideline)} many lenders use` : `Under the ${formatPercent(guideline)} many lenders use`}
       </p>
     </div>
@@ -83,7 +83,7 @@ export function LoanExplorer({ initial }: { initial: LoanExplorerVisual }) {
             <span className="font-semibold tabular-nums text-ink">{formatUsd(v.cushion.afterDownPaymentCents)}</span>
           </div>
           <p className="mt-2 flex items-center gap-1.5 text-xs text-muted">
-            {cushionOk ? <CheckCircle2 size={14} className="text-good" aria-hidden /> : <AlertTriangle size={14} className="text-warning" aria-hidden />}
+            {cushionOk ? <CheckCircle2 size={14} className="text-gain" aria-hidden /> : <AlertTriangle size={14} className="text-warning-text" aria-hidden />}
             {cushionOk ? "Stays above" : "Drops below"} your {formatUsd(v.cushion.bufferTargetCents)} target
           </p>
           <p className="mt-1 text-xs text-muted">

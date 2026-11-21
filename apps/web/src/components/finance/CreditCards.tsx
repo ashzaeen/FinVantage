@@ -46,10 +46,10 @@ export function CreditCards({ accounts }: { accounts: Account[] }) {
 
   if (cards.length === 0) {
     return (
-      <div className="flex min-h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-[#d9ddec] px-5 text-center">
-        <p className="text-sm font-semibold text-[#16192c]">No credit cards connected</p>
-        <p className="mt-1 text-xs leading-5 text-[#8d94a8]">Connect or add a credit card to see its balance and available credit here.</p>
-        <Link href="/accounts" className="mt-4 rounded-xl bg-[#eef1fc] px-4 py-2.5 text-sm font-semibold text-[#544af7] transition hover:bg-[#e2e6fc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#544af7]">Manage Accounts</Link>
+      <div className="flex min-h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-line-strong px-5 text-center">
+        <p className="text-sm font-semibold text-ink">No credit cards connected</p>
+        <p className="mt-1 text-xs leading-5 text-muted">Connect or add a credit card to see its balance and available credit here.</p>
+        <Link href="/accounts" className="mt-4 rounded-xl bg-accent-soft px-4 py-2.5 text-sm font-semibold text-accent transition hover:bg-[#e2e6fc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">Manage Accounts</Link>
       </div>
     );
   }
@@ -61,26 +61,26 @@ export function CreditCards({ accounts }: { accounts: Account[] }) {
       <div className={`relative ${cards.length > 1 ? "h-[242px]" : "h-[204px]"}`} aria-label="Credit card previews">
         {faceAccounts.map((account, index) => <CreditCardFace key={account.id} account={account} index={index} muted={cards.length > 1 && index === 0} />)}
       </div>
-      <div className="space-y-3 border-t border-[#edf0f7] pt-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#8d94a8]">Card balances</p>
+      <div className="space-y-3 border-t border-line pt-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-muted">Card balances</p>
         {cards.map((account) => {
           const limit = account.creditLimitCents ?? 0;
           const available = account.availableBalanceCents ?? Math.max(0, limit - account.balanceCents);
           const utilization = limit > 0 ? Math.min(100, Math.round((account.balanceCents / limit) * 100)) : null;
-          return <div key={account.id} className="rounded-xl bg-[#f8f9fe] px-3 py-2.5">
+          return <div key={account.id} className="rounded-xl bg-surface px-3 py-2.5">
             <div className="flex items-center justify-between gap-3">
-              <span className="min-w-0 truncate text-xs font-medium text-[#4a4f68]">{account.name}</span>
-              <span className="shrink-0 text-xs font-semibold tabular-nums text-[#16192c]">{formatUsd(account.balanceCents)} owed</span>
+              <span className="min-w-0 truncate text-xs font-medium text-ink-secondary">{account.name}</span>
+              <span className="shrink-0 text-xs font-semibold tabular-nums text-ink">{formatUsd(account.balanceCents)} owed</span>
             </div>
-            <div className="mt-1.5 flex items-center justify-between gap-3 text-[10px] text-[#8d94a8]">
+            <div className="mt-1.5 flex items-center justify-between gap-3 text-[10px] text-muted">
               <span>{limit > 0 ? `${formatUsd(available)} available` : "Credit limit not provided"}</span>
               {utilization !== null && <span className="shrink-0 tabular-nums">{utilization}% used</span>}
             </div>
-            {utilization !== null && <div className="mt-2 h-1 overflow-hidden rounded-full bg-white" role="progressbar" aria-label={`${account.name} credit utilization`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={utilization}><div className="h-full rounded-full bg-[#544af7]" style={{ width: `${utilization}%` }} /></div>}
+            {utilization !== null && <div className="mt-2 h-1 overflow-hidden rounded-full bg-white" role="progressbar" aria-label={`${account.name} credit utilization`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={utilization}><div className="h-full rounded-full bg-accent" style={{ width: `${utilization}%` }} /></div>}
           </div>;
         })}
       </div>
-      {accounts.filter((account) => account.type === "credit_card").length > 2 && <Link href="/accounts" className="mt-3 flex min-h-11 items-center justify-center text-center text-xs font-semibold text-[#544af7] hover:underline">View all credit cards</Link>}
+      {accounts.filter((account) => account.type === "credit_card").length > 2 && <Link href="/accounts" className="mt-3 flex min-h-11 items-center justify-center text-center text-xs font-semibold text-accent hover:underline">View all credit cards</Link>}
     </div>
   );
 }

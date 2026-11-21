@@ -25,7 +25,8 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
 | `src/lib/nav.ts` | Navigation items |
 | `src/lib/subscriptions.ts` | Words and ordering for the Subscriptions page: cadence and flag labels, one sentence per flag from the API's figures, sorting, and the 30-day upcoming window. Tested in `subscriptions.test.ts`. It computes no financial figures |
 | `src/app/(app)/subscriptions` | The Subscriptions page (Intelligence): headline tiles, Needs a Look, the subscription and bill lists with a filter and sort, Upcoming Charges and a Cancelled card. Each row has a Manage panel (`SubscriptionActions.tsx`): keep, cancelling, cancelled, the cancellation guide, drafted messages to copy, and, for a cancelled one, Put This Toward a Goal, which previews and then saves a recurring life event only on Confirm. Plan: `docs/workstreams/subscriptions.md` |
-| `src/app/globals.css` | Design tokens for light and dark |
+| `src/lib/chartColors.ts` | The one categorical chart palette (`seriesColor`, `ASSET_CLASS_COLOR`). Read it instead of writing colors into a chart |
+| `src/app/globals.css` | Design tokens. Chart colors, money in and out, gain and loss are explained in the comments there |
 
 ## Rules
 
@@ -34,6 +35,7 @@ Next.js App Router and Tailwind v4. Read the root `AGENTS.md` first. Brief: `doc
 - Do not compute financial figures here. If the API does not return a number you need, add it to the API. Every number must link back to its inputs.
 - Show probabilities only through `ProbabilityRange`, as a range with its disclaimer.
 - Put `MockedBadge` beside any mocked value.
+- **Chart colors:** categories use `seriesColor(i)`, money in is `--flow-in` (teal) and money out is `--flow-out` (orange), magnitude charts use `--series-1` alone, and gain and loss are `--gain` and `--loss` text with an arrow. Never draw spending in red. Decision and validation: `docs/DECISIONS.md`, "Chart palette and UI pass".
 - Use token classes such as `bg-raised` and `text-muted`, not raw colors. Add new tokens to both the light and dark blocks in `globals.css`.
 - Layouts must work down to phone width. Check 320, 390 and 768px.
   - Give every `grid` a base `grid-cols-1` before its `sm:` and `md:` columns. A bare `grid` sizes its column to its widest child and makes the page scroll sideways.
