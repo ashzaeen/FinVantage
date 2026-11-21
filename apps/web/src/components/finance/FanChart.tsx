@@ -89,12 +89,12 @@ export function FanChart({
           {comparisonMedian && <span className="inline-flex items-center gap-1.5"><i aria-hidden="true" className="h-0.5 w-4 border-t border-dashed" style={{ borderColor: "var(--ink-muted)" }} />{comparisonLabel}</span>}
         </span>
       </figcaption>
-      <details className="mt-3 rounded-xl border border-[#edf0f7] bg-[#fafbfe] px-3 py-2 text-xs text-[#626981]">
-        <summary className="cursor-pointer font-semibold text-[#4a4f68]">View Projection Data</summary>
+      <details className="mt-3 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink-chart">
+        <summary className="cursor-pointer font-semibold text-ink-secondary">View Projection Data</summary>
         <div className="mt-2 max-h-52 overflow-auto">
           <table className="w-full min-w-[34rem] border-collapse text-left">
-            <thead><tr className="border-b border-[#e8ebf3] text-[10px] uppercase tracking-wide text-[#8d94a8]"><th className="py-2 pr-3">Date</th><th className="py-2 pr-3">Low</th><th className="py-2 pr-3">Median</th><th className="py-2 pr-3">High</th>{comparisonMedian && <th className="py-2">{comparisonLabel}</th>}</tr></thead>
-            <tbody>{points.map((point, index) => <tr key={point.date} className="border-b border-[#edf0f7] last:border-0"><td className="py-2 pr-3">{point.date}</td><td className="py-2 pr-3">{formatUsd(point.p10Cents)}</td><td className="py-2 pr-3 font-semibold text-[#16192c]">{formatUsd(point.p50Cents)}</td><td className="py-2 pr-3">{formatUsd(point.p90Cents)}</td>{comparisonMedian && <td className="py-2">{comparisonPoints[Math.round(index * (comparisonPoints.length - 1) / (points.length - 1))] ? formatUsd(comparisonPoints[Math.round(index * (comparisonPoints.length - 1) / (points.length - 1))]!.p50Cents) : "—"}</td>}</tr>)}</tbody>
+            <thead><tr className="border-b border-[var(--border)] text-[10px] uppercase tracking-wide text-muted"><th className="py-2 pr-3">Date</th><th className="py-2 pr-3">Low</th><th className="py-2 pr-3">Median</th><th className="py-2 pr-3">High</th>{comparisonMedian && <th className="py-2">{comparisonLabel}</th>}</tr></thead>
+            <tbody>{points.map((point, index) => <tr key={point.date} className="border-b border-line last:border-0"><td className="py-2 pr-3">{point.date}</td><td className="py-2 pr-3">{formatUsd(point.p10Cents)}</td><td className="py-2 pr-3 font-semibold text-ink">{formatUsd(point.p50Cents)}</td><td className="py-2 pr-3">{formatUsd(point.p90Cents)}</td>{comparisonMedian && <td className="py-2">{comparisonPoints[Math.round(index * (comparisonPoints.length - 1) / (points.length - 1))] ? formatUsd(comparisonPoints[Math.round(index * (comparisonPoints.length - 1) / (points.length - 1))]!.p50Cents) : "—"}</td>}</tr>)}</tbody>
           </table>
         </div>
       </details>

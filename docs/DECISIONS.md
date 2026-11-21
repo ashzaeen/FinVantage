@@ -339,3 +339,19 @@ Answers to the open questions above. These replace those rows.
 | On touch screens below 1024px, buttons and tabs are at least 44px wide as well as tall, and text fields at least 44px tall | A re-test found 36 to 40px-wide targets (landing carousel dots were 16px, "1Y", "All", "Edit") |
 | While the phone drawer is open, the top bar and `main` are `inert`, and Tab is moved by script (wrapping at both ends) rather than left to the browser | A Chromium test showed Tab leaving the drawer for the page behind and skipping its links, so the trap did not work. `aria-modal` alone does not stop focus |
 | A full-screen overlay that holds a form is a flex box with `overflow-y-auto` and `[&>*]:my-auto` on it, never `items-center` | `items-center` on a scrolling box centres a tall dialog and cuts off its top, with its heading and close button out of reach. Auto margins centre it only when it fits |
+
+## Chart palette and UI pass, decided 2026-11-21
+
+| Decision | Why |
+| --- | --- |
+| One categorical chart palette, "Indigo Core": `--series-1` to `--series-6` (`#544af7`, `#2a9d8f`, `#dd6f2c`, `#b5479a`, `#2d83c9`, `#b08a1e`), in fixed order. A seventh slice folds into a neutral `--chart-other`. `src/lib/chartColors.ts` is the one place components read it | The old app had four unrelated sets (bars, donuts, allocation, categories). The set passes the dataviz validator: lightness band, chroma floor, colorblind separation of 8.3 or more, normal-vision separation of 20 or more, and 3:1 contrast on white. Samples: `docs/design/chart-palette-samples.html` |
+| Money in is teal (`--flow-in`) and money out is orange (`--flow-out`) on every chart. Magnitude charts (ranked bars, lines, areas, gauge) use `--series-1` only | Money out is not "bad", so spending never reads as an error. Two hues also survive every kind of colorblindness |
+| Gain and loss are text only: `--gain` (deep teal) and `--loss` (rose), always with an arrow. Soft fills are `--good`, `--critical`, `--warning` with their `-bg` partners; text on them uses `--gain`, `--loss` and `--warning-text` | The soft fills are under 4.5:1 as text on white. `ProbabilityRange`, `Stat` and status pills use the text variants |
+| Asset-class colors follow the asset, from `ASSET_CLASS_COLOR`, on Overview, Investments and Reports | The same portfolio was drawn in two palettes. A slice keeps its color on every page |
+| The Needs, Wants and Savings card treats Savings as a floor: past the target is green with a check, never red | Saving more than the target is the good outcome |
+| The Overview and Reports stat tiles are white with one indigo-tinted icon, not five pastels | One system, and no tile reads as a status |
+| Hardcoded hex in `apps/web/src` moved to tokens (`bg-ink`, `text-muted`, `var(--border)` and so on). Left alone on purpose: brand marks, credit card gradients, landing-page tokens and the extension | A palette change is now one edit in `globals.css` |
+| The credit card flip hides each face with `visibility` as well as `backface-visibility` | With only `backface-visibility`, both faces drew and the back showed mirrored |
+| `capitalize` was removed from the Reports wrapper | It Title Cased body copy. The Title Case rule is for interface labels only |
+| Card names were shortened: Spending Split, Changes From Last Month, Goal Funding Dates, Latest Quarter, Supporting Numbers, What We Checked, Debt-to-Income, Income Stability, Board (was Kanban view) | Clearer for an everyday reader. "Income to Debt Ratio" was also the wrong name for the figure |
+

@@ -101,14 +101,14 @@ export function GoalPlanner({ initial, id }: { initial: GoalPlanVisual; id: stri
           onClick={save}
           disabled={saveState === "saving" || saveState === "saved"}
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition ${
-            saveState === "saved" ? "bg-good-bg text-good" : "bg-accent text-white hover:opacity-90"
+            saveState === "saved" ? "bg-good-bg text-gain" : "bg-accent text-white hover:opacity-90"
           } disabled:cursor-default`}
         >
           {saveState === "saved" ? <Check size={15} aria-hidden /> : <Plus size={15} aria-hidden />}
           {saveState === "saved" ? "Saved as Goal" : saveState === "saving" ? "Saving…" : "Save as Goal"}
         </button>
       </div>
-      {saveState === "error" && <p role="alert" className="mt-1 text-xs text-critical">That didn&apos;t save. Please try again.</p>}
+      {saveState === "error" && <p role="alert" className="mt-1 text-xs text-loss">That didn&apos;t save. Please try again.</p>}
 
       <div className="mt-4">
         <Chips

@@ -98,7 +98,7 @@ export function AdvisorMessage({ message }: { message: Message }) {
       <div className={`min-w-0 w-full space-y-3 ${message.attachments.some((a) => a.kind === "visual") ? "max-w-full sm:max-w-[56rem]" : "max-w-[95%] sm:max-w-[80%]"}`}>
         <div className="rounded-2xl rounded-tl-md bg-inset px-4 py-3 text-sm leading-6 text-ink">
           {message.source === "fallback" && (
-            <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-warning-bg px-2.5 py-0.5 text-xs font-medium text-warning">
+            <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-warning-bg px-2.5 py-0.5 text-xs font-medium text-warning-text">
               <ShieldCheck size={13} aria-hidden /> Safe Answer
             </p>
           )}

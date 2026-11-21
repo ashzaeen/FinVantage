@@ -61,12 +61,12 @@ function CategoryPicker({ categories, value, onChange }: {
     <div className="space-y-3">
       {levels.map((level, i) => (
         <div key={level.parentId ?? "root"} style={{ animation: i > 0 ? "cascadeIn 200ms ease-out" : undefined }}>
-          <label className="block text-sm font-medium text-[#4a4f68]">
+          <label className="block text-sm font-medium text-ink-secondary">
             {levelLabels[i] ?? `Level ${i + 1}`}
             <select
               value={level.selected ?? ""}
               onChange={(e) => handleChange(i, e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-[#e6e9f2] bg-[#f8f9fe] px-4 py-3 text-base text-[#16192c] outline-none transition focus:border-[#544af7] focus:bg-white"
+              className="mt-1.5 w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:bg-white"
             >
               <option value="">{i === 0 ? "Uncategorized" : `All ${byId.get(level.parentId!)?.label ?? ""}`}</option>
               {level.options.map((c) => (
@@ -77,7 +77,7 @@ function CategoryPicker({ categories, value, onChange }: {
         </div>
       ))}
       {value && (
-        <p className="flex items-center gap-1.5 text-xs text-[#8d94a8]">
+        <p className="flex items-center gap-1.5 text-xs text-muted">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           {chain.map((id) => byId.get(id)?.label ?? id).join(" → ")}
         </p>
@@ -88,7 +88,7 @@ function CategoryPicker({ categories, value, onChange }: {
 
 function StatusBadge({ positive }: { positive: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${positive ? "bg-good-bg text-good" : "bg-critical-bg text-critical"}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${positive ? "bg-good-bg text-gain" : "bg-critical-bg text-loss"}`}>
       {positive ? <ArrowDownLeft size={12} aria-hidden /> : <ArrowUpRight size={12} aria-hidden />}
       {positive ? "Income" : "Expense"}
     </span>
@@ -222,7 +222,7 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search merchant, category, date, or amount…"
-            className="w-full rounded-xl border border-line bg-inset py-2.5 pl-10 pr-10 text-sm text-ink outline-none transition placeholder:text-subtle focus:border-accent focus:bg-card focus:ring-4 focus:ring-[#544af7]/10"
+            className="w-full rounded-xl border border-line bg-inset py-2.5 pl-10 pr-10 text-sm text-ink outline-none transition placeholder:text-subtle focus:border-accent focus:bg-card focus:ring-4 focus:ring-accent/10"
           />
           {query && (
             <button type="button" aria-label="Clear search" onClick={() => setQuery("")} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-muted hover:bg-accent-soft hover:text-accent">
@@ -290,14 +290,14 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
                                   <Repeat size={10} aria-hidden /> Recurring
                                 </span>
                               )}
-                              {tx.pending && <span className="shrink-0 rounded-full bg-warning-bg px-1.5 py-px text-[10px] font-medium text-warning">Pending</span>}
+                              {tx.pending && <span className="shrink-0 rounded-full bg-warning-bg px-1.5 py-px text-[10px] font-medium text-warning-text">Pending</span>}
                             </span>
                           </span>
                         </span>
                         <span className="col-start-1 row-start-2 pl-[46px] text-xs text-muted sm:col-auto sm:row-auto sm:pl-0 sm:text-sm">
                           {new Date(`${tx.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </span>
-                        <span className={`col-start-2 row-start-1 text-right text-sm font-semibold tabular-nums sm:col-auto sm:row-auto ${income ? "text-good" : "text-critical"}`}>
+                        <span className={`col-start-2 row-start-1 text-right text-sm font-semibold tabular-nums sm:col-auto sm:row-auto ${income ? "text-gain" : "text-loss"}`}>
                           {income ? "+" : "−"}{formatCurrency(Math.abs(tx.originalAmountCents ?? tx.amountCents), tx.originalAmountCents == null ? "USD" : tx.currency)}
                           {tx.currency !== "USD" && <span className="mt-0.5 block text-[11px] font-normal text-muted">{formatUsd(tx.amountCents)} equivalent</span>}
                         </span>
@@ -334,20 +334,20 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
         </div>
       )}
     </section>
-    {editing && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setEditing(null); setIsCreating(false); } }} className="fixed inset-0 z-[100] flex justify-center overflow-y-auto bg-[#16192c]/45 [&>*]:my-auto p-3 text-[#16192c] backdrop-blur-[2px] sm:p-6">
-      <div role="dialog" aria-modal="true" aria-labelledby="transaction-edit-title" className="max-h-[94dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-[#f8f9fe] shadow-2xl sm:max-h-[90dvh]">
-        <header className="sticky top-0 z-10 flex h-[70px] items-center justify-between border-b border-[#edf0f7] bg-white px-6 shadow-sm sm:px-8"><h2 id="transaction-edit-title" className="font-poppins text-xl font-semibold">{isCreating ? "Add Transaction" : "Edit Transaction"}</h2><button type="button" onClick={() => { setEditing(null); setIsCreating(false); }} aria-label="Close transaction editor" className="rounded-xl p-2 text-3xl leading-none text-[#8d94a8] hover:bg-[#f1f2f8] hover:text-[#16192c]">×</button></header>
+    {editing && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setEditing(null); setIsCreating(false); } }} className="fixed inset-0 z-[100] flex justify-center overflow-y-auto bg-ink/45 [&>*]:my-auto p-3 text-ink backdrop-blur-[2px] sm:p-6">
+      <div role="dialog" aria-modal="true" aria-labelledby="transaction-edit-title" className="max-h-[94dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-surface shadow-2xl sm:max-h-[90dvh]">
+        <header className="sticky top-0 z-10 flex h-[70px] items-center justify-between border-b border-line bg-white px-6 shadow-sm sm:px-8"><h2 id="transaction-edit-title" className="font-poppins text-xl font-semibold">{isCreating ? "Add Transaction" : "Edit Transaction"}</h2><button type="button" onClick={() => { setEditing(null); setIsCreating(false); }} aria-label="Close transaction editor" className="rounded-xl p-2 text-3xl leading-none text-muted hover:bg-inset hover:text-ink">×</button></header>
         <form onSubmit={saveTransaction}>
           <div className="flex flex-col gap-5 bg-white p-6 sm:p-8">
-            <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#f1f2f8] p-1"><label className="cursor-pointer"><input type="radio" name="type" value="expense" defaultChecked={isCreating || editing.amountCents < 0} className="peer sr-only" /><span className="block rounded-lg px-4 py-3 text-center font-semibold text-[#8d94a8] transition peer-checked:bg-white peer-checked:text-[#544af7] peer-checked:shadow-sm">Expense</span></label><label className="cursor-pointer"><input type="radio" name="type" value="income" defaultChecked={!isCreating && editing.amountCents >= 0} className="peer sr-only" /><span className="block rounded-lg px-4 py-3 text-center font-semibold text-[#8d94a8] transition peer-checked:bg-white peer-checked:text-[#0b8f69] peer-checked:shadow-sm">Income</span></label></div>
-            <label className="space-y-2 text-sm font-medium text-[#4a4f68]">Amount *<div className="flex gap-3"><input name="amount" type="number" min="0" step="0.01" required defaultValue={isCreating ? "" : (Math.abs(editing.originalAmountCents ?? editing.amountCents) / 100).toFixed(2)} className="w-full rounded-xl border border-[#e6e9f2] bg-[#f8f9fe] px-4 py-3 text-lg text-[#16192c] outline-none focus:border-[#544af7] focus:bg-white"/><select name="currency" defaultValue={editing.currency} aria-label="Transaction currency" className="rounded-xl border border-[#e6e9f2] bg-[#f8f9fe] px-3 text-[#4a4f68] outline-none focus:border-[#544af7]">{CURRENCIES.map((code) => <option key={code} value={code}>{code}</option>)}</select></div><span className="block text-xs font-normal text-[#8d94a8]">Non-USD amounts are converted to USD for your dashboard using the transaction-date exchange rate.</span></label>
-            <label className="space-y-2 text-sm font-medium text-[#4a4f68]">Merchant<input name="merchant" required maxLength={120} defaultValue={editing.merchant} className="mt-2 w-full rounded-xl border border-[#e6e9f2] bg-[#f8f9fe] px-4 py-3 text-base text-[#16192c] outline-none focus:border-[#544af7] focus:bg-white" /></label>
-            <label className="space-y-2 text-sm font-medium text-[#4a4f68]">Account<select name="accountId" required defaultValue={editing.accountId} className="mt-2 w-full rounded-xl border border-[#e6e9f2] bg-[#f8f9fe] px-4 py-3 text-base text-[#16192c] outline-none focus:border-[#544af7]">{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-inset p-1"><label className="cursor-pointer"><input type="radio" name="type" value="expense" defaultChecked={isCreating || editing.amountCents < 0} className="peer sr-only" /><span className="block rounded-lg px-4 py-3 text-center font-semibold text-muted transition peer-checked:bg-white peer-checked:text-accent peer-checked:shadow-sm">Expense</span></label><label className="cursor-pointer"><input type="radio" name="type" value="income" defaultChecked={!isCreating && editing.amountCents >= 0} className="peer sr-only" /><span className="block rounded-lg px-4 py-3 text-center font-semibold text-muted transition peer-checked:bg-white peer-checked:text-gain peer-checked:shadow-sm">Income</span></label></div>
+            <label className="space-y-2 text-sm font-medium text-ink-secondary">Amount *<div className="flex gap-3"><input name="amount" type="number" min="0" step="0.01" required defaultValue={isCreating ? "" : (Math.abs(editing.originalAmountCents ?? editing.amountCents) / 100).toFixed(2)} className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-lg text-ink outline-none focus:border-accent focus:bg-white"/><select name="currency" defaultValue={editing.currency} aria-label="Transaction currency" className="rounded-xl border border-line bg-surface px-3 text-ink-secondary outline-none focus:border-accent">{CURRENCIES.map((code) => <option key={code} value={code}>{code}</option>)}</select></div><span className="block text-xs font-normal text-muted">Non-USD amounts are converted to USD for your dashboard using the transaction-date exchange rate.</span></label>
+            <label className="space-y-2 text-sm font-medium text-ink-secondary">Merchant<input name="merchant" required maxLength={120} defaultValue={editing.merchant} className="mt-2 w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent focus:bg-white" /></label>
+            <label className="space-y-2 text-sm font-medium text-ink-secondary">Account<select name="accountId" required defaultValue={editing.accountId} className="mt-2 w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent">{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
             <CategoryPicker categories={spendingCategories} value={editCategory} onChange={setEditCategory} />
-            <label className="space-y-2 text-sm font-medium text-[#4a4f68]">Date<input name="date" type="date" required defaultValue={editing.date} className="mt-2 w-full rounded-xl border border-[#e6e9f2] bg-[#f8f9fe] px-4 py-3 text-base text-[#16192c] outline-none focus:border-[#544af7] focus:bg-white" /></label>
-            <label className="flex items-center gap-3 text-sm text-[#4a4f68]"><input name="isRecurring" type="checkbox" defaultChecked={editing.isRecurring} className="h-4 w-4 accent-[#544af7]"/>Recurring Transaction</label>
-            {saveError && <p role="alert" className="text-sm text-[#d7465d]">{saveError}</p>}
-            <button disabled={saving} type="submit" className="mt-auto rounded-2xl bg-[#544af7] px-5 py-4 font-semibold text-white transition hover:bg-[#453bc9] disabled:opacity-50">{saving ? "Saving…" : isCreating ? "Add Transaction" : "Save Changes"}</button>
+            <label className="space-y-2 text-sm font-medium text-ink-secondary">Date<input name="date" type="date" required defaultValue={editing.date} className="mt-2 w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent focus:bg-white" /></label>
+            <label className="flex items-center gap-3 text-sm text-ink-secondary"><input name="isRecurring" type="checkbox" defaultChecked={editing.isRecurring} className="h-4 w-4 accent-accent"/>Recurring Transaction</label>
+            {saveError && <p role="alert" className="text-sm text-loss">{saveError}</p>}
+            <button disabled={saving} type="submit" className="mt-auto rounded-2xl bg-accent px-5 py-4 font-semibold text-white transition hover:bg-[#453bc9] disabled:opacity-50">{saving ? "Saving…" : isCreating ? "Add Transaction" : "Save Changes"}</button>
           </div>
         </form>
       </div>

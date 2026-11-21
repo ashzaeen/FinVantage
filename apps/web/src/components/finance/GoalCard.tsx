@@ -14,7 +14,7 @@ export function GoalCard({ goal, outcome }: { goal: Goal; outcome?: GoalOutcome 
           className="rounded-full px-2 py-0.5 text-xs font-medium shrink-0"
           style={{
             background: isFlexible ? "var(--good-bg)" : "#eceeff",
-            color: isFlexible ? "var(--good)" : "var(--accent)",
+            color: isFlexible ? "var(--gain)" : "var(--accent)",
           }}
         >
           {isFlexible ? "Flexible" : "Fixed"}

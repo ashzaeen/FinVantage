@@ -196,7 +196,7 @@ function SidebarLink({ item, pathname, hero = false }: { item: NavItem; pathname
       className={`flex items-center gap-3 rounded-2xl px-3.5 font-roboto text-sm transition-all duration-150 max-lg:min-h-11 ${hero ? "py-2" : "py-2.5"}`}
       style={{
         backgroundColor: active ? "#ffffff" : "transparent",
-        color: active ? "#544af7" : "rgba(255, 255, 255, 0.72)",
+        color: active ? "var(--accent)" : "rgba(255, 255, 255, 0.72)",
         boxShadow: active ? "0 4px 14px 0 rgba(0, 0, 0, 0.08)" : "none",
         fontWeight: active ? 600 : 400,
       }}
@@ -233,7 +233,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
                 d="M12 2C8.5 6 6 9.5 6 13.5a6 6 0 0 0 12 0c0-4-2.5-7.5-6-11.5z"
                 fill="white"
               />
-              <circle cx="12" cy="14" r="2.5" fill="#544af7" />
+              <circle cx="12" cy="14" r="2.5" fill="var(--accent)" />
             </svg>
           </span>
           <div className="flex items-baseline">
@@ -343,12 +343,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const current = NAV_ITEMS.find((item) => (item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href)));
 
   return (
-    <div className="flex min-h-dvh bg-[#f8f9fe]">
+    <div className="flex min-h-dvh bg-surface">
       {/* ── Sidebar (Desktop, from 1024px) ───────────────────────────── */}
       <aside
         className="hidden lg:flex lg:w-[260px] lg:flex-col lg:shrink-0 justify-between select-none"
         style={{
-          backgroundColor: "#544af7",
+          backgroundColor: "var(--accent)",
           position: "sticky",
           top: 0,
           height: "100dvh",
@@ -364,7 +364,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         inert={menuOpen}
         className="lg:hidden fixed inset-x-0 top-0 z-50 flex items-center gap-1 px-2 text-white"
         style={{
-          backgroundColor: "#544af7",
+          backgroundColor: "var(--accent)",
           height: "calc(56px + env(safe-area-inset-top))",
           paddingTop: "env(safe-area-inset-top)",
           paddingLeft: "max(0.5rem, env(safe-area-inset-left))",
@@ -396,7 +396,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {menuOpen && (
         <div className="lg:hidden fixed inset-0 z-[60]">
           <div
-            className="nav-backdrop absolute inset-0 bg-[#16192c]/50"
+            className="nav-backdrop absolute inset-0 bg-ink/50"
             onClick={() => setMenuOpen(false)}
             aria-hidden="true"
           />
@@ -407,7 +407,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label="Main Menu"
             className="nav-drawer absolute inset-y-0 left-0 flex w-[min(320px,86vw)] flex-col justify-between overscroll-contain text-white shadow-2xl select-none"
             style={{
-              backgroundColor: "#544af7",
+              backgroundColor: "var(--accent)",
               padding:
                 "calc(16px + env(safe-area-inset-top)) 14px calc(16px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left))",
             }}

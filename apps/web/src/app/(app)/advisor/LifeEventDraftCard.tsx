@@ -99,7 +99,7 @@ export function LifeEventDraftCard({ id, draft, goalChanges }: { id: string; dra
           >
             Dismiss
           </button>
-          {state === "error" && <p role="alert" className="text-xs text-critical">That didn't save. Please try again.</p>}
+          {state === "error" && <p role="alert" className="text-xs text-loss">That didn't save. Please try again.</p>}
         </div>
       )}
     </div>

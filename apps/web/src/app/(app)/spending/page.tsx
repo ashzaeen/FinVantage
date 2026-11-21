@@ -100,13 +100,13 @@ export default async function SpendingPage() {
   return (
     <>
       <PageHeader title="Spending" action={<ManageTools categories={categories} rules={rules} transactions={recentSpending} />} />
-      <div className="page-cascade grid grid-cols-1 gap-5 md:grid-cols-2">
+      <div className="page-cascade grid grid-cols-1 items-start gap-5 md:grid-cols-2">
         <BucketSplit initial={buckets} />
         <SpendingPie month={summary.month} categories={categories} breakdown={breakdown} />
 
         <BudgetsPanel budgets={budgets} categories={categories} />
 
-        <Card title="Summary" subtitle={`${summary.month} · change against last month`}>
+        <Card title="Changes From Last Month" subtitle={`${summary.month} · change against last month`}>
           <ul className="space-y-2">
             {summary.categories.map((row, i) => {
               const isIncrease = row.changeVsPriorMonthCents > 0;
@@ -118,7 +118,7 @@ export default async function SpendingPage() {
                   </span>
                   <div className="text-right">
                     <span className="block text-sm font-bold tabular-nums" style={{ color: "var(--ink)" }}><CountUp value={row.spentCents} /></span>
-                    <span className="text-xs" style={{ color: isIncrease ? "var(--critical)" : "var(--good)" }}>
+                    <span className="text-xs" style={{ color: isIncrease ? "var(--loss)" : "var(--gain)" }}>
                       {isIncrease ? "▲" : "▼"} {formatUsd(Math.abs(row.changeVsPriorMonthCents))}
                     </span>
                   </div>

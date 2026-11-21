@@ -5,7 +5,7 @@ export function MockedBadge() {
       className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium"
       style={{
         background: "var(--warning-bg)",
-        color: "var(--warning)",
+        color: "var(--warning-text)",
         border: "1px solid var(--warning-bg)",
       }}
     >

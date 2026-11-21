@@ -56,7 +56,7 @@ function RateRow({
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl px-2 py-1.5 hover:bg-inset">
       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} aria-hidden />
       <span className="min-w-0 flex-1 truncate text-sm text-ink">{rate.label}</span>
-      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${rate.source === "assumed" ? "bg-warning-bg text-warning" : "bg-accent-soft text-accent"}`}>
+      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${rate.source === "assumed" ? "bg-warning-bg text-warning-text" : "bg-accent-soft text-accent"}`}>
         {Icon && <Icon size={10} aria-hidden />} {source.label}
       </span>
       <span className="inline-flex items-center rounded-lg border border-line">
@@ -80,7 +80,7 @@ function RateRow({
       </span>
       <span className="w-20 text-right text-sm font-medium tabular-nums text-ink">{formatUsd(valueCents)}</span>
       {onRemove ? (
-        <button type="button" onClick={onRemove} className="rounded-md p-1 text-subtle hover:text-critical" aria-label={`Remove ${rate.label}`}>
+        <button type="button" onClick={onRemove} className="rounded-md p-1 text-subtle hover:text-loss" aria-label={`Remove ${rate.label}`}>
           <X size={14} />
         </button>
       ) : (

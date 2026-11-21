@@ -100,10 +100,10 @@ export function GoalDraftCard({
           >
             Dismiss
           </button>
-          {state === "error" && <p role="alert" className="text-xs text-critical">That didn&apos;t save. Please try again.</p>}
+          {state === "error" && <p role="alert" className="text-xs text-loss">That didn&apos;t save. Please try again.</p>}
         </div>
       ) : (
-        <p className="mt-3 text-xs text-good">Saved to your goals.</p>
+        <p className="mt-3 text-xs text-gain">Saved to your goals.</p>
       )}
     </div>
   );

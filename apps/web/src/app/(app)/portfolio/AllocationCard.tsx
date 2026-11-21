@@ -3,16 +3,9 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { ASSET_CLASS_LABEL, formatUsd, type AllocationSlice, type AssetClass, type InvestmentView } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
+import { ASSET_CLASS_COLOR } from "@/lib/chartColors";
 import { percent } from "./parts";
 
-/** Color follows the asset class, so switching accounts never repaints a slice. Cash is neutral. */
-const SLICE_COLOR: Record<AssetClass, string> = {
-  us_stocks: "var(--series-1)",
-  international: "var(--series-2)",
-  bonds: "var(--series-3)",
-  crypto: "var(--series-4)",
-  cash: "var(--ink-light)",
-};
 
 function SliceTooltip({ slice }: { slice: AllocationSlice | undefined }) {
   if (!slice) return null;
@@ -35,7 +28,7 @@ export function AllocationCard({ view }: { view: InvestmentView }) {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart key={view.id}>
                 <Pie data={view.allocation} dataKey="valueCents" nameKey="assetClass" innerRadius="68%" outerRadius="100%" startAngle={90} endAngle={-270} stroke="var(--surface-card)" strokeWidth={2} cornerRadius={4} animationDuration={700} animationEasing="ease-out">
-                  {view.allocation.map((slice) => <Cell key={slice.assetClass} fill={SLICE_COLOR[slice.assetClass]} />)}
+                  {view.allocation.map((slice) => <Cell key={slice.assetClass} fill={ASSET_CLASS_COLOR[slice.assetClass]} />)}
                 </Pie>
                 <Tooltip content={(props) => <SliceTooltip slice={props.payload?.[0]?.payload as AllocationSlice | undefined} />} />
               </PieChart>
@@ -48,7 +41,7 @@ export function AllocationCard({ view }: { view: InvestmentView }) {
             {view.allocation.map((slice) => (
               <li key={slice.assetClass} className="flex items-center justify-between gap-2 text-[13px]">
                 <span className="flex min-w-0 items-center gap-2 text-ink-secondary">
-                  <i aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: SLICE_COLOR[slice.assetClass] }} />
+                  <i aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: ASSET_CLASS_COLOR[slice.assetClass] }} />
                   <span className="truncate">{ASSET_CLASS_LABEL[slice.assetClass]}</span>
                 </span>
                 <span className="shrink-0 font-semibold tabular-nums text-ink">{percent(slice.weight)}</span>

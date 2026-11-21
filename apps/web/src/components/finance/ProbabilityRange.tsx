@@ -16,14 +16,14 @@ export function ProbabilityRange({
 }) {
   const avg = (low + high) / 2;
   const color =
-    avg >= 0.75 ? "var(--good)" :
-    avg >= 0.5  ? "var(--warning)" :
-    "var(--critical)";
+    avg >= 0.75 ? "var(--gain)" :
+    avg >= 0.5  ? "var(--warning-text)" :
+    "var(--loss)";
 
   return (
     <div>
       <p className="text-sm font-semibold" style={{ color }}>
-        {formatPercent(low)} – {formatPercent(high)} likely
+        {formatPercent(low) === formatPercent(high) ? `About ${formatPercent(low)}` : `${formatPercent(low)} – ${formatPercent(high)}`} likely
       </p>
       {note && (
         <p className="mt-0.5 text-xs" style={{ color: "var(--ink-muted)" }}>

@@ -7,9 +7,9 @@ import { MockedBadge } from "@/components/ui/MockedBadge";
 import { Chips, Eyebrow, Slider, Ticker, useTween, useVisual, VisualCard } from "./shared";
 
 const STATUS = {
-  good: { icon: CheckCircle2, color: "text-good" },
-  warning: { icon: AlertTriangle, color: "text-warning" },
-  critical: { icon: XCircle, color: "text-critical" },
+  good: { icon: CheckCircle2, color: "text-gain" },
+  warning: { icon: AlertTriangle, color: "text-warning-text" },
+  critical: { icon: XCircle, color: "text-loss" },
   info: { icon: Info, color: "text-accent" },
 } as const;
 
@@ -82,7 +82,7 @@ export function CardEvaluator({ initial }: { initial: CardEvaluatorVisual }) {
             onChange={(o) => update({ ...inputs, paysInFull: o === "full" })}
             render={(o) => (o === "full" ? "I Pay in Full" : "I Carry a Balance")}
           />
-          <p className={`mt-3 font-poppins text-4xl font-semibold tracking-tight ${positive ? "text-ink" : "text-critical"}`}>
+          <p className={`mt-3 font-poppins text-4xl font-semibold tracking-tight ${positive ? "text-ink" : "text-loss"}`}>
             {positive ? "+" : "−"}
             <Ticker value={Math.abs(figures.netCents)} format={formatUsd} />
             <span className="ml-1 text-base font-normal text-muted">/year for you</span>
