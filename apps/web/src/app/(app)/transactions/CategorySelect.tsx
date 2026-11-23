@@ -19,7 +19,7 @@ export function CategorySelect({ categories, value, onChange, label, allowNone =
       aria-label={label}
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value || null)}
-      className="h-11 w-full min-w-0 rounded-xl border border-line bg-surface px-3 text-base text-ink outline-none focus:border-accent-ink"
+      className="h-11 w-full min-w-0 rounded-xl border border-line bg-surface px-3 text-base text-ink outline-none focus:border-accent-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
     >
       {allowNone && <option value="">Uncategorized</option>}
       {rows.map(({ c, depth }) => <option key={c.id} value={c.id}>{depth ? "  " : ""}{c.label}</option>)}

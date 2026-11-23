@@ -79,7 +79,7 @@ export function CompareEvents() {
 
   const select = (label: string, value: string, set: (v: string) => void) => (
     <label className="block text-sm font-medium text-ink">{label}
-      <select value={value} onChange={(e) => { set(e.target.value); setResults(null); }} className="mt-2 h-11 w-full rounded-xl border border-line bg-surface px-3 text-base text-ink outline-none focus:border-accent-ink">
+      <select value={value} onChange={(e) => { set(e.target.value); setResults(null); }} className="mt-2 h-11 w-full rounded-xl border border-line bg-surface px-3 text-base text-ink outline-none focus:border-accent-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink">
         {saved.map((s) => <option key={s.id} value={s.id}>{nameOf(s)}</option>)}
       </select>
     </label>

@@ -46,7 +46,7 @@ export function SplitDialog({ transaction, categories, onSplit, onClose }: {
         <div className="mt-4 space-y-4">
           <div>
             <label className="block text-sm font-medium text-ink">Part One ($)
-              <input type="number" inputMode="decimal" min={0.01} step={0.01} value={firstText} onChange={(e) => setFirstText(e.target.value)} className="mt-2 h-11 w-full rounded-xl border border-line bg-surface px-3 text-base tabular-nums text-ink outline-none focus:border-accent-ink" />
+              <input type="number" inputMode="decimal" min={0.01} step={0.01} value={firstText} onChange={(e) => setFirstText(e.target.value)} className="mt-2 h-11 w-full rounded-xl border border-line bg-surface px-3 text-base tabular-nums text-ink outline-none focus:border-accent-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink" />
             </label>
             <div className="mt-2"><CategorySelect categories={categories} value={catA} onChange={setCatA} label="Part one category" /></div>
           </div>

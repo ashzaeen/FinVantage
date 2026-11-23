@@ -8,7 +8,7 @@ import { nextPath, saveSession } from "@/lib/session";
 type Mode = "signin" | "signup";
 
 const inputCls =
-  "mt-1.5 w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-colors focus:border-accent-ink";
+  "mt-1.5 w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-colors focus:border-accent-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink";
 const inputStyle = { borderColor: "var(--border)", background: "var(--surface-inset)", color: "var(--ink)" };
 
 function messageFor(error: unknown, mode: Mode): string {

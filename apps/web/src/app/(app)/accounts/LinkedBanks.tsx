@@ -146,7 +146,7 @@ export function LinkedBanks({ initialItems }: { initialItems: BankItemSummary[] 
         {signedIn === false ? (
           <Link
             href="/login?next=/accounts"
-            className="self-start rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-accent-ink hover:bg-accent-soft sm:self-auto"
+            className={buttonClass({ variant: "secondary" }, "self-start text-accent-ink sm:self-auto")}
           >
             Sign In to Connect a Bank
           </Link>

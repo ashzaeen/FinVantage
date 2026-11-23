@@ -303,7 +303,7 @@ export function ReportsClient({ initialReports }: { initialReports: QuarterlyRep
                     ))}
                   </ul>
                 )}
-                <Link href="/subscriptions" className="inline-block font-semibold text-accent-ink hover:underline">
+                <Link href="/subscriptions" className="inline-flex min-h-6 items-center font-semibold text-accent-ink hover:underline max-lg:min-h-11">
                   See Subscriptions
                 </Link>
               </div>

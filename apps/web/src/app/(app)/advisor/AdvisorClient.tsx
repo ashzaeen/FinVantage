@@ -395,7 +395,7 @@ export function AdvisorClient({ initialConversationId, situation, personalPrompt
                 maxLength={4000}
                 placeholder={speech.listening ? "Listening…" : "Ask your Advisor…"}
                 aria-label="Message your Advisor"
-                className="max-h-32 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-sm text-ink rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink placeholder:text-muted"
+                className="max-h-32 min-h-10 max-lg:min-h-11 flex-1 resize-none bg-transparent px-2 py-2 text-sm text-ink rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink placeholder:text-muted"
               />
               {speech.supported && (
                 <button

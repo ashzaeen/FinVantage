@@ -27,7 +27,7 @@ export function PageHeader({
             <input
               type="search"
               placeholder="Search for anything...."
-              className="w-full rounded-2xl border border-line bg-raised py-2.5 pl-4 pr-10 font-roboto text-xs font-normal text-ink placeholder-muted outline-none shadow-sm focus:border-accent-ink"
+              className="w-full rounded-2xl border border-line bg-raised py-2.5 pl-4 pr-10 font-roboto text-xs font-normal text-ink placeholder-muted outline-none shadow-sm focus:border-accent-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
             />
             <svg
               width="15"

@@ -22,7 +22,7 @@ import { longDate } from "@/lib/format";
 
 /* ─── Shared pieces ──────────────────────────────────────────────────────── */
 
-const inputCls = "rounded-xl border px-3 py-2 text-sm outline-none focus:border-[var(--accent-ink)]";
+const inputCls = "rounded-xl border px-3 py-2 text-sm outline-none focus:border-[var(--accent-ink)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink";
 const inputStyle = { borderColor: "var(--border)", background: "var(--surface-inset)", color: "var(--ink)" };
 const primaryCls = "rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50";
 const quietCls = "rounded-lg px-2 py-1 text-xs font-medium hover:bg-[var(--surface-inset)]";

@@ -8,7 +8,7 @@ import { MockedBadge } from "@/components/ui/MockedBadge";
 import { api } from "@/lib/api";
 import { longDate } from "@/lib/format";
 
-const field = "mt-2 h-11 w-full rounded-xl border border-line bg-surface px-3 text-base tabular-nums text-ink outline-none focus:border-accent-ink";
+const field = "mt-2 h-11 w-full rounded-xl border border-line bg-surface px-3 text-base tabular-nums text-ink outline-none focus:border-accent-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink";
 
 /** A range for a retirement balance at the age you choose. A stated simplification, not a forecast. */
 export function RetirementFanCard() {

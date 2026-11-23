@@ -183,6 +183,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-dvh bg-surface">
+      {/* The first Tab stop on every page: jump past the sidebar to the content. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[70] focus:rounded-xl focus:bg-raised focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-ink focus:[box-shadow:var(--shadow-float)] focus:outline-2 focus:outline-offset-2 focus:outline-accent-ink"
+      >
+        Skip to Main Content
+      </a>
       {/* ── Sidebar (Desktop, from 1024px) ───────────────────────────── */}
       <aside
         className="hidden lg:flex lg:w-[260px] lg:flex-col lg:shrink-0 justify-between select-none"
@@ -269,8 +276,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* ── Main Content Area ────────────────────────────────────────── */}
       <main
+        id="main-content"
+        tabIndex={-1}
         inert={menuOpen}
-        className={`flex-1 min-w-0 lg:pt-0 max-lg:pt-[calc(56px+env(safe-area-inset-top))] ${pathname === "/advisor" ? "h-dvh min-h-0 overflow-hidden" : ""}`}
+        className={`flex-1 min-w-0 outline-none lg:pt-0 max-lg:pt-[calc(56px+env(safe-area-inset-top))] ${pathname === "/advisor" ? "h-dvh min-h-0 overflow-hidden" : ""}`}
         style={{
           paddingLeft: "env(safe-area-inset-left)",
           paddingRight: "env(safe-area-inset-right)",

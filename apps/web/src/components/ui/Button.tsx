@@ -4,7 +4,8 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
 /**
  * The one button vocabulary. Every filled, outlined or quiet button in the dashboard is one of these, so
  * the same action looks the same on every page: one shape (rounded-xl), three sizes, one focus ring.
- * Touch screens get 44px from the rule at the end of globals.css, so sizes here are the mouse sizes.
+ * Sizes here are the mouse sizes. Below 1024px every size is at least 44px tall, for links as well as buttons
+ * (the rule at the end of globals.css only covers real <button> elements).
  */
 export type ButtonVariant = "primary" | "secondary" | "quiet";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -22,8 +23,8 @@ const VARIANT: Record<ButtonVariant, string> = {
 };
 
 const SIZE: Record<ButtonSize, string> = {
-  sm: "min-h-8 px-3 py-1.5 text-xs",
-  md: "min-h-10 px-4 py-2 text-sm",
+  sm: "min-h-8 px-3 py-1.5 text-xs max-lg:min-h-11",
+  md: "min-h-10 px-4 py-2 text-sm max-lg:min-h-11",
   lg: "min-h-12 px-5 py-3 text-sm",
 };
 
