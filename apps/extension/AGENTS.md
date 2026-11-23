@@ -37,6 +37,7 @@ page -> content/detect.ts -> content/index.ts -> background.ts -> API
 - Keep the overlay keyboard-navigable with readable contrast.
 - Keep `host_permissions` and `matches` to the listed domains. Add production URLs only when deployed.
 - Everything baked into the bundle is public, so no real secrets.
+- Dark mode: the card and popup follow the device's `prefers-color-scheme`, inside the Shadow DOM. It is on by default, and `EXTENSION_DARK_MODE=0` builds without it (the web build passes `NEXT_PUBLIC_DARK_MODE` through). Keep `DARK_STYLES` in `overlay.ts` equal to the dashboard's dark tokens: `apps/web/src/lib/theme-tokens.test.ts` checks it.
 
 ## Installing it
 
