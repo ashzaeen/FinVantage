@@ -1,7 +1,7 @@
 "use client";
 
 import { OTHER_COLOR, seriesColor } from "@/lib/chartColors";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { formatPercent, formatUsd, parentCategoryId, type SpendingBreakdownRow, type SpendingCategory } from "@finvantage/contracts";
 import { CategoryIcon } from "@/components/spending/CategoryIcon";
 import { Card } from "@/components/ui/Card";
@@ -94,7 +94,10 @@ export function CategoryPie({
   emptyText,
   categories,
   breakdown,
+  footer,
 }: {
+  /** A line under the chart, such as what was saved. */
+  footer?: ReactNode;
   title: string;
   /** Shown before the total: a month, or "Last Six Months". */
   period: string;
@@ -164,13 +167,13 @@ export function CategoryPie({
   return (
     <Card title={title} subtitle={`${period} · ${formatUsd(total)} ${path.length ? `in ${labelOf.get(current!) ?? current}` : totalNote}`}>
       <nav aria-label="Category level" className="mb-3 flex min-h-7 flex-wrap items-center gap-1 text-xs" style={{ color: "var(--ink-muted)" }}>
-        <button type="button" onClick={() => setPath([])} disabled={path.length === 0} className="rounded-md px-1.5 py-1 font-medium disabled:cursor-default" style={{ color: path.length ? "var(--accent)" : "var(--ink)" }}>
+        <button type="button" onClick={() => setPath([])} disabled={path.length === 0} className="rounded-md px-1.5 py-1 font-medium disabled:cursor-default" style={{ color: path.length ? "var(--accent-ink)" : "var(--ink)" }}>
           {rootLabel}
         </button>
         {path.map((id, i) => (
           <span key={id} className="flex items-center gap-1">
             <span aria-hidden="true">›</span>
-            <button type="button" onClick={() => setPath(path.slice(0, i + 1))} disabled={i === path.length - 1} className="rounded-md px-1.5 py-1 font-medium disabled:cursor-default" style={{ color: i === path.length - 1 ? "var(--ink)" : "var(--accent)" }}>
+            <button type="button" onClick={() => setPath(path.slice(0, i + 1))} disabled={i === path.length - 1} className="rounded-md px-1.5 py-1 font-medium disabled:cursor-default" style={{ color: i === path.length - 1 ? "var(--ink)" : "var(--accent-ink)" }}>
               {labelOf.get(id) ?? id}
             </button>
           </span>
@@ -200,11 +203,11 @@ export function CategoryPie({
                     style={{
                       transform: lifted ? `translate(${Math.sin(mid) * LIFT}px, ${-Math.cos(mid) * LIFT}px)` : "translate(0, 0)",
                       transition: "transform 160ms ease-out, filter 160ms ease-out, opacity 160ms ease-out",
-                      filter: lifted ? "drop-shadow(0 4px 6px rgba(22, 25, 44, 0.25))" : "none",
+                      filter: lifted ? "drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3))" : "none", // theme-ok: a shadow is black in both themes
                       opacity: hovered && !lifted ? 0.55 : 1,
                     }}
                   >
-                    <path d={arcPath(start, shownEnd)} fill={color} fillRule="evenodd" stroke="#ffffff" strokeWidth={2} />
+                    <path d={arcPath(start, shownEnd)} fill={color} fillRule="evenodd" stroke="var(--surface-raised)" strokeWidth={2} />
                   </g>
                 );
               })}
@@ -257,6 +260,7 @@ export function CategoryPie({
         </div>
         </div>
       )}
+      {footer && <div className="mt-4 border-t pt-3 text-sm" style={{ borderColor: "var(--border)", color: "var(--ink-secondary)" }}>{footer}</div>}
     </Card>
   );
 }

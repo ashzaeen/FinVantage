@@ -1,12 +1,15 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useRef, useState, type ReactNode } from "react";
 import { Calculator, Globe, ShieldCheck, Sparkles } from "lucide-react";
 import type { AdvisorAttachment, AdvisorMessage as Message } from "@finvantage/contracts";
 import { MockedBadge } from "@/components/ui/MockedBadge";
 import { GoalDraftCard } from "./GoalDraftCard";
 import { LifeEventDraftCard } from "./LifeEventDraftCard";
 import { AdvisorVisual } from "./visuals/AdvisorVisual";
+import { MathDrawer } from "./MathDrawer";
+import { splitFigures } from "@/lib/figureLinks";
+import { longDate } from "@/lib/format";
 
 type Calculation = Extract<AdvisorAttachment, { kind: "calculation" }>;
 type WebSources = Extract<AdvisorAttachment, { kind: "web_sources" }>;
@@ -16,7 +19,7 @@ function Workings({ items }: { items: Calculation[] }) {
   return (
     <details className="rounded-2xl border border-line bg-card px-4 py-3 text-sm">
       <summary className="flex cursor-pointer list-none items-center gap-2 font-medium text-ink">
-        <Calculator size={15} className="text-accent" aria-hidden /> How These Numbers Were Worked Out
+        <Calculator size={15} className="text-accent-ink" aria-hidden /> How These Numbers Were Worked Out
       </summary>
       <ul className="mt-3 space-y-2">
         {items.map((c, i) => (
@@ -36,13 +39,13 @@ function Sources({ items }: { items: WebSources[] }) {
   return (
     <div className="rounded-2xl border border-line bg-card px-4 py-3 text-sm">
       <p className="flex items-center gap-2 font-medium text-ink">
-        <Globe size={15} className="text-accent" aria-hidden /> From the Web
+        <Globe size={15} className="text-accent-ink" aria-hidden /> From the Web
       </p>
       <p className="mt-1 text-xs text-muted">Published terms change. Confirm them with the provider before you decide.</p>
       <ul className="mt-2 space-y-1">
         {sources.map((s) => (
           <li key={s.url} className="truncate">
-            <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline">{s.title}</a>
+            <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-xs text-accent-ink hover:underline">{s.title}</a>
           </li>
         ))}
       </ul>
@@ -51,30 +54,49 @@ function Sources({ items }: { items: WebSources[] }) {
 }
 
 /** **bold** spans inside a line. */
-function inline(text: string): ReactNode[] {
+type Open = (figure: string, calc: Calculation, trigger: HTMLElement) => void;
+
+/** A figure with a working behind it is a button that opens the drawer. */
+function figures(text: string, calcs: Calculation[], open: Open): ReactNode {
+  return splitFigures(text, calcs).map((seg, i) =>
+    seg.calc
+      ? (
+        <button key={i} type="button" onClick={(e) => open(seg.text, seg.calc!, e.currentTarget)} title="Tap to see how this was worked out" className="tap-auto inline cursor-pointer border-b border-dotted border-accent-ink font-semibold text-accent-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink">
+          {seg.text}
+        </button>
+      )
+      : <Fragment key={i}>{seg.text}</Fragment>,
+  );
+}
+
+function inline(text: string, calcs: Calculation[], open: Open): ReactNode[] {
   return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
     part.startsWith("**") && part.endsWith("**")
-      ? <strong key={i} className="font-semibold text-ink">{part.slice(2, -2)}</strong>
-      : <Fragment key={i}>{part}</Fragment>,
+      ? <strong key={i} className="font-semibold text-ink">{figures(part.slice(2, -2), calcs, open)}</strong>
+      : <Fragment key={i}>{figures(part, calcs, open)}</Fragment>,
   );
 }
 
 /** Paragraphs and "- " bullet lists: all the formatting the Advisor is asked to use. */
-function RichText({ text }: { text: string }) {
+function RichText({ text, calcs, asOf, sources }: { text: string; calcs: Calculation[]; asOf: string; sources: string[] }) {
+  const [shown, setShown] = useState<{ figure: string; calc: Calculation } | null>(null);
+  const trigger = useRef<HTMLElement | null>(null);
+  const open: Open = (figure, calc, el) => { trigger.current = el; setShown({ figure, calc }); };
   const blocks = text.split(/\n{2,}/);
   return (
     <div className="space-y-3">
+      {shown && <MathDrawer figure={shown.figure} calc={shown.calc} dataDate={asOf} sources={sources} returnTo={trigger.current} onClose={() => setShown(null)} />}
       {blocks.map((block, i) => {
         const lines = block.split("\n").filter((l) => l.trim());
         const bullets = lines.every((l) => /^\s*[-*•]\s+/.test(l));
         if (bullets) {
           return (
             <ul key={i} className="list-disc space-y-1 pl-5 marker:text-subtle">
-              {lines.map((l, j) => <li key={j}>{inline(l.replace(/^\s*[-*•]\s+/, ""))}</li>)}
+              {lines.map((l, j) => <li key={j}>{inline(l.replace(/^\s*[-*•]\s+/, ""), calcs, open)}</li>)}
             </ul>
           );
         }
-        return <p key={i}>{lines.map((l, j) => <Fragment key={j}>{j > 0 && <br />}{inline(l)}</Fragment>)}</p>;
+        return <p key={i}>{lines.map((l, j) => <Fragment key={j}>{j > 0 && <br />}{inline(l, calcs, open)}</Fragment>)}</p>;
       })}
     </div>
   );
@@ -92,7 +114,7 @@ export function AdvisorMessage({ message }: { message: Message }) {
   }
   return (
     <div className="flex items-start justify-start gap-3">
-      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent" aria-hidden>
+      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-ink" aria-hidden>
         <Sparkles size={15} />
       </span>
       <div className={`min-w-0 w-full space-y-3 ${message.attachments.some((a) => a.kind === "visual") ? "max-w-full sm:max-w-[56rem]" : "max-w-[95%] sm:max-w-[80%]"}`}>
@@ -102,7 +124,7 @@ export function AdvisorMessage({ message }: { message: Message }) {
               <ShieldCheck size={13} aria-hidden /> Safe Answer
             </p>
           )}
-          <RichText text={message.content} />
+          <RichText text={message.content} calcs={message.attachments.filter((a): a is Calculation => a.kind === "calculation")} asOf={longDate(message.createdAt.slice(0, 10))} sources={message.citations.map((c) => c.label)} />
         </div>
         {message.attachments.map((attachment, i) =>
           attachment.kind === "life_event_draft"

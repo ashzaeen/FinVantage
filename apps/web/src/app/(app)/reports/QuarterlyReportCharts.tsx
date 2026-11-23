@@ -21,11 +21,12 @@ import {
 } from "recharts";
 import type { ReactNode } from "react";
 import { MockedBadge } from "@/components/ui/MockedBadge";
+import { compactUsd, longDate, humanize } from "@/lib/format";
 
 
 function ChartPanel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-3xl border border-line bg-white p-5 sm:p-6 capitalize">
+    <section className="rounded-3xl border border-line bg-raised p-5 sm:p-6">
       <h2 className="font-poppins text-lg font-bold tracking-tight text-ink">{title}</h2>
       {children}
     </section>
@@ -74,7 +75,7 @@ export function QuarterlyReportCharts({
         amountCents: 0,
       })),
     );
-  const axisFormatter = (value: number) => `$${Math.round(value / 100_000)}k`;
+  const axisFormatter = compactUsd;
   const latest = reports[0];
   const hasMonthlyData = data.some((point) => point.incomeCents !== 0 || point.spendingCents !== 0);
   const snapshotData = latest ? [
@@ -96,10 +97,15 @@ export function QuarterlyReportCharts({
     .map(([category, cents]) => ({ category, cents }))
     .sort((left, right) => right.cents - left.cents);
   const categoryLabels = new Map((currentSpending?.categories ?? []).map((item) => [item.id, item.label]));
+  const savingsCategoryIds = new Set((currentSpending?.categories ?? []).filter((item) => item.bucket === "savings").map((item) => item.id));
   const usingCurrentMonthCategories = categoryData.length === 0 && !!currentSpending?.summary.categories.some((item) => item.spentCents > 0);
   const displayCategories = categoryData.length > 0
     ? categoryData
-    : (currentSpending?.summary.categories ?? []).map((item) => ({ category: categoryLabels.get(item.category) ?? item.category, cents: item.spentCents })).filter((item) => item.cents > 0).sort((a, b) => b.cents - a.cents);
+    : (currentSpending?.summary.categories ?? [])
+        .filter((item) => !savingsCategoryIds.has(item.category))
+        .map((item) => ({ category: categoryLabels.get(item.category) ?? humanize(item.category), cents: item.spentCents }))
+        .filter((item) => item.cents > 0)
+        .sort((a, b) => b.cents - a.cents);
   const topCategories = displayCategories.slice(0, 6);
   const otherCategoryCents = displayCategories.slice(6).reduce((sum, item) => sum + item.cents, 0);
   const spendingCategories = otherCategoryCents > 0 ? [...topCategories, { category: "Other categories", cents: otherCategoryCents }] : topCategories;
@@ -113,7 +119,7 @@ export function QuarterlyReportCharts({
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
       <div className="order-1 min-w-0">
-        <ChartPanel title={hasMonthlyData ? "Income and spending by month" : "Quarter financial snapshot"}>
+        <ChartPanel title={hasMonthlyData ? "Income and Spending by Month" : "Quarter Financial Snapshot"}>
         <p className="mb-3 text-sm text-muted">
           {hasMonthlyData
             ? `Recorded monthly activity for ${latest?.quarter}.`
@@ -125,15 +131,15 @@ export function QuarterlyReportCharts({
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 5" vertical={false} />
               <XAxis dataKey={hasMonthlyData ? "period" : "metric"} tickLine={false} axisLine={{ stroke: "var(--border)" }} tick={{ fill: "var(--ink-muted)", fontSize: 12 }} />
               <YAxis tickFormatter={axisFormatter} tickLine={false} axisLine={false} tick={{ fill: "var(--ink-muted)", fontSize: 12 }} width={48} />
-              <Tooltip formatter={(value) => typeof value === "number" ? formatUsd(value) : "-"} contentStyle={{ borderColor: "var(--border)", borderRadius: 12, boxShadow: "0 8px 24px rgba(22,25,44,0.12)" }} />
-              {hasMonthlyData && <Legend verticalAlign="top" align="right" height={34} iconType="circle" wrapperStyle={{ fontSize: 12, color: "var(--ink-muted)" }} />}
+              <Tooltip formatter={(value) => typeof value === "number" ? formatUsd(value) : "-"} contentStyle={{ borderColor: "var(--border)", borderRadius: 12, boxShadow: "var(--shadow-float)" }} />
+              {hasMonthlyData && <Legend verticalAlign="top" align="right" height={34} iconType="circle" formatter={(value) => <span style={{ color: "var(--ink-chart)" }}>{value}</span>} wrapperStyle={{ fontSize: 12 }} />}
               {hasMonthlyData ? (
                 <>
-                  <Bar dataKey="incomeCents" name="Income" fill="var(--accent)" radius={[5, 5, 0, 0]} maxBarSize={34} />
-                  <Bar dataKey="spendingCents" name="Spending" fill="var(--series-2)" radius={[5, 5, 0, 0]} maxBarSize={34} />
+                  <Bar dataKey="incomeCents" name="Income" fill="var(--flow-in)" radius={[5, 5, 0, 0]} maxBarSize={34} />
+                  <Bar dataKey="spendingCents" name="Spending" fill="var(--flow-out)" radius={[5, 5, 0, 0]} maxBarSize={34} />
                 </>
               ) : (
-                <Bar dataKey="amountCents" name="Monthly amount" fill="var(--accent)" radius={[6, 6, 0, 0]} maxBarSize={56} />
+                <Bar dataKey="amountCents" name="Monthly amount" fill="var(--series-1)" radius={[6, 6, 0, 0]} maxBarSize={56} />
               )}
             </BarChart>
           </ResponsiveContainer>
@@ -142,7 +148,7 @@ export function QuarterlyReportCharts({
       </div>
 
       <div className="order-3 min-w-0 xl:col-span-2">
-        <ChartPanel title={hasMonthlyData ? "Monthly savings trend" : "Quarterly spending trend"}>
+        <ChartPanel title={hasMonthlyData ? "Monthly Savings Trend" : "Quarterly Spending Trend"}>
         <p className="mb-3 text-sm text-muted">
           {hasMonthlyData ? "Income minus recorded spending for each month." : "Saved monthly spending assumptions across report quarters."}
         </p>
@@ -152,7 +158,7 @@ export function QuarterlyReportCharts({
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 5" vertical={false} />
               <XAxis dataKey="period" tickLine={false} axisLine={{ stroke: "var(--border)" }} tick={{ fill: "var(--ink-muted)", fontSize: 12 }} />
               <YAxis tickFormatter={axisFormatter} tickLine={false} axisLine={false} tick={{ fill: "var(--ink-muted)", fontSize: 12 }} width={48} />
-              <Tooltip formatter={(value) => typeof value === "number" ? formatUsd(value) : "-"} contentStyle={{ borderColor: "var(--border)", borderRadius: 12, boxShadow: "0 8px 24px rgba(22,25,44,0.12)" }} />
+              <Tooltip formatter={(value) => typeof value === "number" ? formatUsd(value) : "-"} contentStyle={{ borderColor: "var(--border)", borderRadius: 12, boxShadow: "var(--shadow-float)" }} />
               <Line
                 type="monotone"
                 dataKey={hasMonthlyData ? "savingsCents" : "spendingCents"}
@@ -183,8 +189,8 @@ export function QuarterlyReportCharts({
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 5" horizontal={false} />
                 <XAxis type="number" hide />
                 <YAxis type="category" dataKey="category" width={112} tickLine={false} axisLine={false} tick={{ fill: "var(--ink-secondary)", fontSize: 12 }} />
-                <Tooltip formatter={(value) => typeof value === "number" ? formatUsd(value) : "-"} cursor={{ fill: "var(--surface-inset)" }} contentStyle={{ borderColor: "var(--border)", borderRadius: 12, boxShadow: "0 8px 24px rgba(22,25,44,0.12)" }} />
-                <Bar dataKey="cents" name="Spent" fill="var(--accent)" radius={[0, 6, 6, 0]} maxBarSize={23}>
+                <Tooltip formatter={(value) => typeof value === "number" ? formatUsd(value) : "-"} cursor={{ fill: "var(--surface-inset)" }} contentStyle={{ borderColor: "var(--border)", borderRadius: 12, boxShadow: "var(--shadow-float)" }} />
+                <Bar dataKey="cents" name="Spent" fill="var(--series-1)" radius={[0, 6, 6, 0]} maxBarSize={23}>
                   <LabelList dataKey="cents" position="right" formatter={(value) => typeof value === "number" ? formatUsd(value) : ""} style={{ fill: "var(--ink-secondary)", fontSize: 12, fontWeight: 600 }} />
                 </Bar>
               </BarChart>
@@ -203,15 +209,15 @@ export function QuarterlyReportCharts({
           ) : (
             <>
               <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs text-muted">Current portfolio and trailing three-month performance, as of {investments.pricesAsOf}.</p>
+                <p className="text-xs text-muted">Current portfolio and trailing three-month performance, as of {longDate(investments.pricesAsOf)}.</p>
                 <MockedBadge />
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {[
-                  { label: "Portfolio value", value: formatUsd(investmentView.totalValueCents), detail: `Across ${investmentView.accountCount} accounts`, tone: "text-ink" },
-                  { label: "Total return", value: formatUsd(investmentView.totalReturnCents), detail: `${(investmentView.totalReturnRate * 100).toFixed(1)}% overall`, tone: investmentView.totalReturnCents >= 0 ? "text-gain" : "text-loss" },
-                  { label: "Three-month return", value: `${(investmentView.performance["3M"].changeRate * 100).toFixed(1)}%`, detail: `Benchmark ${(investmentView.performance["3M"].benchmarkChangeRate * 100).toFixed(1)}%`, tone: investmentView.performance["3M"].changeRate >= 0 ? "text-gain" : "text-loss" },
-                  { label: "Cash and dividends", value: formatUsd(investmentView.cashCents), detail: `${formatUsd(investmentView.dividendsYtdCents)} dividends YTD`, tone: "text-ink" },
+                  { label: "Portfolio Value", value: formatUsd(investmentView.totalValueCents), detail: `Across ${investmentView.accountCount} accounts`, tone: "text-ink" },
+                  { label: "Total Return", value: formatUsd(investmentView.totalReturnCents), detail: `${(investmentView.totalReturnRate * 100).toFixed(1)}% overall`, tone: investmentView.totalReturnCents >= 0 ? "text-gain" : "text-loss" },
+                  { label: "Three-Month Return", value: `${(investmentView.performance["3M"].changeRate * 100).toFixed(1)}%`, detail: `Benchmark ${(investmentView.performance["3M"].benchmarkChangeRate * 100).toFixed(1)}%`, tone: investmentView.performance["3M"].changeRate >= 0 ? "text-gain" : "text-loss" },
+                  { label: "Cash and Dividends", value: formatUsd(investmentView.cashCents), detail: `${formatUsd(investmentView.dividendsYtdCents)} dividends YTD`, tone: "text-ink" },
                 ].map((stat) => (
                   <div key={stat.label} className="rounded-xl border border-line p-4">
                     <p className="text-xs text-muted">{stat.label}</p>
@@ -230,9 +236,9 @@ export function QuarterlyReportCharts({
                         <CartesianGrid stroke="var(--border)" strokeDasharray="3 5" vertical={false} />
                         <XAxis dataKey="date" tickLine={false} axisLine={{ stroke: "var(--border)" }} tick={{ fill: "var(--ink-muted)", fontSize: 12 }} />
                         <YAxis tickFormatter={(value) => `${(Number(value) * 100).toFixed(0)}%`} tickLine={false} axisLine={false} tick={{ fill: "var(--ink-muted)", fontSize: 12 }} width={42} />
-                        <Tooltip formatter={(value) => typeof value === "number" ? `${(value * 100).toFixed(2)}%` : "-"} contentStyle={{ borderColor: "var(--border)", borderRadius: 12, boxShadow: "0 8px 24px rgba(22,25,44,0.12)" }} />
+                        <Tooltip formatter={(value) => typeof value === "number" ? `${(value * 100).toFixed(2)}%` : "-"} contentStyle={{ borderColor: "var(--border)", borderRadius: 12, boxShadow: "var(--shadow-float)" }} />
                         <ReferenceLine y={0} stroke="var(--ink-muted)" strokeDasharray="4 4" />
-                        <Legend verticalAlign="top" align="right" height={30} iconType="plainline" wrapperStyle={{ fontSize: 12, color: "var(--ink-muted)" }} />
+                        <Legend verticalAlign="top" align="right" height={30} iconType="plainline" formatter={(value) => <span style={{ color: "var(--ink-chart)" }}>{value}</span>} wrapperStyle={{ fontSize: 12 }} />
                         <Line type="monotone" dataKey="portfolio" name="Portfolio" stroke={investmentView.performance["3M"].changeRate >= 0 ? "var(--good)" : "var(--critical)"} strokeWidth={3} dot={{ fill: investmentView.performance["3M"].changeRate >= 0 ? "var(--good)" : "var(--critical)", stroke: "white", strokeWidth: 2, r: 3 }} activeDot={{ r: 5 }} />
                         <Line type="monotone" dataKey="benchmark" name="Benchmark" stroke="var(--ink-muted)" strokeWidth={2} strokeDasharray="5 4" dot={false} activeDot={{ r: 4 }} />
                       </LineChart>

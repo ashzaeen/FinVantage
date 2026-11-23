@@ -13,6 +13,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { api } from "@/lib/api";
 import { LifeSimulatorCharts } from "./LifeSimulatorCharts";
+import { CashForecastCard } from "./CashForecastCard";
+import { CompareEvents } from "./CompareEvents";
+import { EventsTimeline } from "./EventsTimeline";
 import {
   EVENT_LABEL,
   EventForm,
@@ -20,6 +23,7 @@ import {
   GoalTimeline,
   autoSplit,
   defaultForm,
+  formForCurrentContext,
   nextMonthAfter,
   type FieldError,
   type ScenarioForm,
@@ -27,17 +31,6 @@ import {
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof ApiError || error instanceof Error ? error.message : fallback;
-}
-
-function formForCurrentContext(form: ScenarioForm, current: LifeSimulatorContext): ScenarioForm {
-  const goalIds = current.goals.map((goal) => goal.id);
-  const sourceGoalId = goalIds.includes(form.oneTimeSourceGoalId) ? form.oneTimeSourceGoalId : goalIds[0] ?? "";
-  return {
-    ...form,
-    oneTimeSourceGoalId: sourceGoalId,
-    selectedGoalIds: goalIds,
-    split: autoSplit(current.goals, current.freeCashCents - form.monthlyCostCents),
-  };
 }
 
 function eventNameFor(scenario: Pick<LifeScenario, "eventType" | "customEventName">) {
@@ -137,6 +130,8 @@ export function LifeSimulatorClient() {
   const [saving, setSaving] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  /** The result on screen was drawn for the starting form, not asked for. Nothing is saved. */
+  const [isExample, setIsExample] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -205,6 +200,7 @@ export function LifeSimulatorClient() {
       setCurrentScenarioId(null);
       setShowSavedChanges(false);
       setSaved(false);
+      setIsExample(false);
       const url = new URL(window.location.href);
       url.searchParams.delete("copilotEvent");
       window.history.replaceState({}, "", url);
@@ -215,6 +211,26 @@ export function LifeSimulatorClient() {
     });
     return () => { cancelled = true; };
   }, [context]);
+
+  // A first visit should show what the page produces, not a blank result: analyse the starting
+  // form once (analysis never saves) and label it an example. Skipped when a Copilot purchase is
+  // being imported, when the user has saved events, or when they have already generated.
+  useEffect(() => {
+    if (!context || !form || analysis || savedScenariosLoading || savedScenarios.length > 0 || context.goals.length === 0) return;
+    if (new URLSearchParams(window.location.search).get("copilotEvent")) return;
+    let cancelled = false;
+    api.analyzeLifeScenario({ body: form }).then((result) => {
+      if (cancelled) return;
+      setAnalysis(result);
+      setGeneratedForm({ ...form, split: { ...form.split }, selectedGoalIds: [...form.selectedGoalIds] });
+      setIsExample(true);
+    }).catch(() => {
+      // The example is a courtesy: on failure the page keeps its plain empty state.
+    });
+    return () => { cancelled = true; };
+    // Runs once, when the page has what it needs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context, savedScenariosLoading]);
 
   useEffect(() => {
     if (!saved) return;
@@ -259,6 +275,7 @@ export function LifeSimulatorClient() {
       setCurrentScenarioId(savedScenario.id);
       setSavedScenarios((items) => [savedScenario, ...items.filter((item) => item.id !== savedScenario.id)]);
       setSaved(true);
+      setIsExample(false);
     } catch (error) {
       setGenericError(errorMessage(error, "Could not save these changes."));
     } finally {
@@ -310,6 +327,7 @@ export function LifeSimulatorClient() {
       setForm(nextForm);
       setGeneratedForm({ ...nextForm, split: { ...nextForm.split }, selectedGoalIds: [...nextForm.selectedGoalIds] });
       setFieldError(null);
+      setIsExample(false);
     } catch (error) {
       if (error instanceof ApiError && error.status === 400) setFieldError({ code: error.code, message: error.message });
       else setGenericError(errorMessage(error, "Could not generate this comparison."));
@@ -320,6 +338,7 @@ export function LifeSimulatorClient() {
 
   async function openSavedEvent(id: string) {
     if (!context) return;
+    setIsExample(false);
     setAnalysisLoading(true);
     setGenericError("");
     try {
@@ -369,10 +388,10 @@ export function LifeSimulatorClient() {
 
   return <>
     <PageHeader title="Life Events" action={<div className="flex items-center gap-3">
-      <button type="button" onClick={() => setShowSavedChanges((showing) => !showing)} className="min-h-11 rounded-xl border px-4 text-sm font-semibold transition-colors hover:bg-[var(--surface-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>{showSavedChanges ? "Model Changes" : "Saved Changes"}</button>
-      {saved && <span role="status" aria-live="polite" className="text-xs font-medium" style={{ color: "var(--gain)" }}>Saved ✓</span>}
-      <button type="button" onClick={() => void downloadPdf()} disabled={pdfLoading || !generatedForm || hasUnappliedEdits} className="min-h-11 rounded-xl border px-4 text-sm font-semibold transition-colors hover:bg-[var(--surface-inset)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>{pdfLoading ? "Preparing PDF…" : "Download PDF"}</button>
-      <button type="button" onClick={() => void saveChanges()} disabled={saving || !generatedForm || hasUnappliedEdits} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>{saving ? "Saving…" : "Save Changes"}</button>
+      <button type="button" onClick={() => setShowSavedChanges((showing) => !showing)} className="min-h-11 rounded-xl border px-4 text-sm font-semibold transition-colors hover:bg-[var(--surface-inset)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink focus-visible:ring-offset-2" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>{showSavedChanges ? "Back to Model" : "Saved Models"}</button>
+      {saved && <span role="status" aria-live="polite" className="text-xs font-medium" style={{ color: "var(--gain)" }}>Saved</span>}
+      <button type="button" onClick={() => void downloadPdf()} disabled={pdfLoading || !generatedForm || hasUnappliedEdits} className="min-h-11 rounded-xl border px-4 text-sm font-semibold transition-colors hover:bg-[var(--surface-inset)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink focus-visible:ring-offset-2" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>{pdfLoading ? "Preparing PDF…" : "Download PDF"}</button>
+      <button type="button" onClick={() => void saveChanges()} disabled={saving || !generatedForm || hasUnappliedEdits} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>{saving ? "Saving…" : "Save Changes"}</button>
     </div>} />
     <div className="space-y-5">
       <p className="-mt-3 text-sm" style={{ color: "var(--ink-muted)" }}>Model an event and compare its effect across all of your goals. As of {formatDate(context.asOf)}.</p>
@@ -389,7 +408,7 @@ export function LifeSimulatorClient() {
                   : savedScenarios.length
                     ? <div className="divide-y" style={{ borderColor: "var(--border)" }}>{savedScenarios.map((scenario) => <div key={scenario.id} className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
                         <div className="min-w-0"><p className="truncate text-sm font-semibold" style={{ color: "var(--ink)" }}>{scenarioLabels.get(scenario.id) ?? eventNameFor(scenario)}</p><p className="mt-0.5 text-xs" style={{ color: "var(--ink-muted)" }}>Updated {formatDate(scenario.updatedAt)}</p></div>
-                        <button type="button" onClick={() => void openSavedEvent(scenario.id)} disabled={analysisLoading} className="min-h-10 shrink-0 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50" style={{ color: "var(--accent)" }}>{analysisLoading && currentScenarioId === scenario.id ? "Opening…" : currentScenarioId === scenario.id ? "Currently Viewing" : "View Charts"}</button>
+                        <button type="button" onClick={() => void openSavedEvent(scenario.id)} disabled={analysisLoading} className="min-h-10 shrink-0 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink disabled:opacity-50" style={{ color: "var(--accent-ink)" }}>{analysisLoading && currentScenarioId === scenario.id ? "Opening…" : currentScenarioId === scenario.id ? "Currently Viewing" : "View Charts"}</button>
                       </div>)}</div>
                     : <p className="py-8 text-center text-sm" style={{ color: "var(--ink-muted)" }}>No saved models yet. Generate an event, then choose Save Changes.</p>}
                 {currentScenarioId && analysis && generatedForm && <div className="mt-4 border-t pt-4" style={{ borderColor: "var(--border)" }}>
@@ -400,7 +419,7 @@ export function LifeSimulatorClient() {
             : <>
                 <EventForm context={context} form={form} onChange={updateForm} error={fieldError} />
                 <div className="mt-5 border-t pt-4" style={{ borderColor: "var(--border)" }}>
-                  <button type="button" onClick={() => void generate()} disabled={analysisLoading} className="min-h-12 w-full rounded-xl px-6 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>{analysisLoading ? "Generating…" : "Generate"}</button>
+                  <button type="button" onClick={() => void generate()} disabled={analysisLoading} className="min-h-12 w-full rounded-xl px-6 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>{analysisLoading ? "Generating…" : "Generate"}</button>
                 </div>
                 {analysis && generatedForm && <ScenarioInsight analysis={analysis} />}
               </>}
@@ -410,7 +429,7 @@ export function LifeSimulatorClient() {
           {analysis && generatedForm && <LifeSimulatorCharts context={context} analysis={analysis} />}
 
           <section aria-labelledby="funded-heading" className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 id="funded-heading" className="font-poppins text-lg font-bold" style={{ color: "var(--ink)" }}>Goal Funding Dates</h2><p className="mt-1 text-xs" style={{ color: "var(--ink-muted)" }}>{generatedForm ? `Generated for ${generatedEventName}` : "Results appear after Generate"}</p></div><span className="rounded-full px-3 py-1.5 text-xs font-semibold tabular-nums" style={{ color: "#176b5a", background: "#e5f3ed" }}>{analysis ? `${analysis.goals.filter((goal) => goal.included).length} goals compared` : `${context.goals.length} goals`}</span></div>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 id="funded-heading" className="font-poppins text-lg font-bold" style={{ color: "var(--ink)" }}>Goal Funding Dates</h2><p className="mt-1 text-xs" style={{ color: "var(--ink-muted)" }}>{generatedForm ? (isExample ? `Example for ${generatedEventName}. Change the details and press Generate to model your own.` : `Generated for ${generatedEventName}`) : "Results appear after Generate"}</p></div><span className="rounded-full px-3 py-1.5 text-xs font-semibold tabular-nums" style={{ color: "var(--gain)", background: "var(--good-bg)" }}>{analysis ? `${analysis.goals.filter((goal) => goal.included).length} goals compared` : `${context.goals.length} goals`}</span></div>
             {analysis && generatedForm
               ? <GoalTimeline goals={analysis.goals} />
               : <div className="flex min-h-56 items-center justify-center px-5 text-center" style={{ background: "var(--surface-inset)" }}><p className="max-w-xs text-sm leading-6" style={{ color: "var(--ink-muted)" }}>Your goal funding dates will appear here after you generate a comparison.</p></div>}
@@ -419,6 +438,10 @@ export function LifeSimulatorClient() {
 
         </div>
       </div>
+
+      <CashForecastCard />
+      <EventsTimeline asOf={context.asOf} />
+      <CompareEvents />
 
       <p className="border-t pt-3 text-xs leading-5" style={{ borderColor: "var(--border)", color: "var(--ink-muted)" }}>Projections are estimates, not guarantees.</p>
     </div>
@@ -430,24 +453,24 @@ function ScenarioInsight({ analysis }: { analysis: LifeScenarioAnalysis }) {
   const insight = scenarioInsight(analysis);
   const colors = {
     low: { text: "var(--gain)", background: "var(--good-bg)" },
-    medium: { text: "#915600", background: "var(--warning-bg)" },
+    medium: { text: "var(--warning-text)", background: "var(--warning-bg)" },
     high: { text: "var(--loss)", background: "var(--critical-bg)" },
   }[insight.tone];
   return <section aria-live="polite" aria-label="Event insight" className="mt-4 rounded-xl border p-4 sm:p-5" style={{ borderColor: "var(--border)", background: "var(--surface-raised)" }}>
     <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3" style={{ borderColor: "var(--border)" }}>
-      <h3 className="text-sm font-bold" style={{ color: "var(--accent)" }}>Decision Insight</h3>
+      <h3 className="text-sm font-bold" style={{ color: "var(--accent-ink)" }}>Decision Insight</h3>
       <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={{ color: colors.text, background: colors.background }}>{insight.priority}</span>
     </div>
     <p className="mt-3 text-sm font-semibold leading-5" style={{ color: "var(--ink)" }}>{insight.headline}</p>
     <div className="mt-3 rounded-lg p-3" style={{ background: "var(--surface-inset)" }}>
-      <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--ink-muted)" }}>Current Picture</p>
+      <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--ink-muted)" }}>Current Picture</p>
       <p className="mt-1 text-sm leading-5" style={{ color: "var(--ink-secondary)" }}>{insight.evidence}</p>
     </div>
     <ul className="mt-3 divide-y border-y" style={{ borderColor: "var(--border)" }} aria-label="Priority by goal">
       {insight.goalRows.map(({ goal, tone, priority, progress, change }) => {
         const goalColors = {
           low: { text: "var(--gain)", background: "var(--good-bg)" },
-          medium: { text: "#915600", background: "var(--warning-bg)" },
+          medium: { text: "var(--warning-text)", background: "var(--warning-bg)" },
           high: { text: "var(--loss)", background: "var(--critical-bg)" },
         }[tone]!;
         return <li key={goal.goalId} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-xs" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>
@@ -456,8 +479,8 @@ function ScenarioInsight({ analysis }: { analysis: LifeScenarioAnalysis }) {
         </li>;
       })}
     </ul>
-    <div className="mt-3 rounded-lg border px-3 py-2.5" style={{ borderColor: "#e3e0ff", background: "#f7f6ff" }}>
-      <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--accent)" }}>Decision to Make</p>
+    <div className="mt-3 rounded-lg border px-3 py-2.5" style={{ borderColor: "var(--border-accent)", background: "var(--accent-soft)" }}>
+      <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--accent-ink)" }}>Decision to Make</p>
       <p className="mt-1 text-sm leading-5" style={{ color: "var(--ink)" }}>{insight.decision}</p>
     </div>
   </section>;

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ApiError, type BankItemSummary } from "@finvantage/contracts";
 import { api } from "@/lib/api";
 import { readClaims, readCookie, TOKEN_COOKIE, usableToken } from "@/lib/token";
+import { buttonClass } from "@/components/ui/Button";
 
 /** The subset of Plaid Link's browser API used here. https://plaid.com/docs/link/web/ */
 interface PlaidLinkHandler {
@@ -134,10 +135,10 @@ export function LinkedBanks({ initialItems }: { initialItems: BankItemSummary[] 
   }
 
   return (
-    <section className="mb-6 rounded-3xl border border-line bg-white p-5 shadow-[0_2px_12px_rgba(22,25,44,0.03)] sm:p-6">
+    <section className="mb-6 rounded-3xl border border-line bg-raised p-5 [box-shadow:var(--shadow-resting)] sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="font-poppins text-base font-bold text-ink">Linked Banks</h3>
+          <h2 className="font-poppins text-base font-bold text-ink">Linked Banks</h2>
           <p className="mt-1 text-xs text-muted">
             Connected securely through Plaid. FinVantage reads balances and transactions; it never moves money.
           </p>
@@ -145,7 +146,7 @@ export function LinkedBanks({ initialItems }: { initialItems: BankItemSummary[] 
         {signedIn === false ? (
           <Link
             href="/login?next=/accounts"
-            className="self-start rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-accent hover:bg-accent-soft sm:self-auto"
+            className="self-start rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-accent-ink hover:bg-accent-soft sm:self-auto"
           >
             Sign In to Connect a Bank
           </Link>
@@ -154,14 +155,14 @@ export function LinkedBanks({ initialItems }: { initialItems: BankItemSummary[] 
             type="button"
             onClick={connect}
             disabled={signedIn !== true || busy !== null}
-            className="self-start rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#453bc9] disabled:cursor-not-allowed disabled:opacity-50 sm:self-auto"
+            className={buttonClass({}, "self-start sm:self-auto")}
           >
             {busy === "connect" ? "Opening Plaid…" : "+ Connect a Bank"}
           </button>
         )}
       </div>
 
-      {notice && <p aria-live="polite" className="mt-4 rounded-xl bg-accent-soft px-3 py-2.5 text-sm text-accent">{notice}</p>}
+      {notice && <p aria-live="polite" className="mt-4 rounded-xl bg-accent-soft px-3 py-2.5 text-sm text-accent-ink">{notice}</p>}
       {error && <p role="alert" className="mt-4 rounded-xl bg-critical-bg px-3 py-2.5 text-sm text-loss">{error}</p>}
 
       {items.length > 0 && (
@@ -180,7 +181,7 @@ export function LinkedBanks({ initialItems }: { initialItems: BankItemSummary[] 
                   type="button"
                   onClick={() => refresh(item.itemId)}
                   disabled={busy !== null}
-                  className="rounded-lg px-3 py-1.5 text-sm font-semibold text-accent hover:bg-accent-soft disabled:opacity-50"
+                  className="rounded-lg px-3 py-1.5 text-sm font-semibold text-accent-ink hover:bg-accent-soft disabled:opacity-50"
                 >
                   {busy === item.itemId ? "Working…" : "Refresh"}
                 </button>

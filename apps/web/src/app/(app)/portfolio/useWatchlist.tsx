@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { WatchlistItem } from "@finvantage/contracts";
 
@@ -69,10 +70,10 @@ export function WatchToggle({ symbol, watchlist }: { symbol: string; watchlist: 
       aria-pressed={watching}
       onClick={() => (watching ? watchlist.remove(symbol) : watchlist.add(symbol))}
       className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
-        watching ? "bg-good-bg text-gain hover:bg-critical-bg hover:text-loss" : "bg-accent-soft text-accent hover:bg-accent hover:text-white"
+        watching ? "bg-good-bg text-gain hover:bg-critical-bg hover:text-loss" : "bg-accent-soft text-accent-ink hover:bg-accent hover:text-white"
       }`}
     >
-      {watching ? "✓ On Watchlist" : "+ Add to Watchlist"}
+      {watching ? <><Check size={14} strokeWidth={3} aria-hidden="true" className="mr-1 inline align-[-2px]" />On Watchlist</> : "+ Add to Watchlist"}
     </button>
   );
 }

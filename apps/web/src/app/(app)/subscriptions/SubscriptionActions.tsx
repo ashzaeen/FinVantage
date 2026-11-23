@@ -17,8 +17,8 @@ type Step =
 /** Today in UTC, which is the day the server counts, so a date picked here is never in its future. */
 const todayUtc = () => new Date().toISOString().slice(0, 10);
 
-const buttonStyle = { background: "var(--accent-soft)", color: "var(--accent)" } as const;
-const primaryStyle = { background: "var(--accent)", color: "#fff" } as const;
+const buttonStyle = { background: "var(--accent-soft)", color: "var(--accent-ink)" } as const;
+const primaryStyle = { background: "var(--accent)", color: "white" } as const;
 
 const DRAFT_LABEL: Record<SubscriptionDraftAction, string> = {
   cancel: "Write a Cancellation Message",
@@ -271,8 +271,8 @@ export function SubscriptionActions({ item }: { item: Subscription }) {
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => (open ? close() : setOpen(true))}
-        className="text-xs font-medium underline-offset-2 hover:underline"
-        style={{ color: "var(--accent)" }}
+        className="inline-flex min-h-6 items-center py-1 text-xs font-medium underline-offset-2 hover:underline"
+        style={{ color: "var(--accent-ink)" }}
       >
         {open ? "Close" : "Manage"}
       </button>

@@ -52,15 +52,15 @@ export { LifeScenarioEventType, LifeScenarioOption };
 /** The dataviz skill's validated categorical order, same series Spending's pie chart uses. */
 export { seriesColor as seriesColor } from "@/lib/chartColors";
 
-export const fieldClass = "mt-1.5 h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-sm tabular-nums text-ink outline-none transition focus:border-accent focus:bg-white focus:ring-4 focus:ring-accent/10";
+export const fieldClass = "mt-1.5 h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-sm tabular-nums text-ink outline-none transition focus:border-accent-ink focus:bg-raised focus:ring-4 focus:ring-accent-ink/10";
 
 const GOAL_TIMELINE_COLORS = [
-  { accent: "#287a78", tint: "#e2f2f0" },
-  { accent: "#4e69b1", tint: "var(--border)" },
-  { accent: "#b66831", tint: "#f9ebdd" },
-  { accent: "#8d5b8d", tint: "#f3eaf3" },
-  { accent: "#3e7d48", tint: "#e8f2e7" },
-  { accent: "#b34d62", tint: "#f8e9ec" },
+  { accent: "var(--timeline-1)", tint: "color-mix(in srgb, var(--timeline-1) 14%, var(--surface-raised))" },
+  { accent: "var(--timeline-2)", tint: "color-mix(in srgb, var(--timeline-2) 14%, var(--surface-raised))" },
+  { accent: "var(--timeline-3)", tint: "color-mix(in srgb, var(--timeline-3) 14%, var(--surface-raised))" },
+  { accent: "var(--timeline-4)", tint: "color-mix(in srgb, var(--timeline-4) 14%, var(--surface-raised))" },
+  { accent: "var(--timeline-5)", tint: "color-mix(in srgb, var(--timeline-5) 14%, var(--surface-raised))" },
+  { accent: "var(--timeline-6)", tint: "color-mix(in srgb, var(--timeline-6) 14%, var(--surface-raised))" },
 ] as const;
 
 export function toMonth(date: string): number {
@@ -139,6 +139,17 @@ export function defaultForm(context: LifeSimulatorContext, startMonth: string): 
 }
 
 /** A start month a few months after `asOf`, since the engine rejects an event in the current month. */
+export function formForCurrentContext(form: ScenarioForm, current: LifeSimulatorContext): ScenarioForm {
+  const goalIds = current.goals.map((goal) => goal.id);
+  const sourceGoalId = goalIds.includes(form.oneTimeSourceGoalId) ? form.oneTimeSourceGoalId : goalIds[0] ?? "";
+  return {
+    ...form,
+    oneTimeSourceGoalId: sourceGoalId,
+    selectedGoalIds: goalIds,
+    split: autoSplit(current.goals, current.freeCashCents - form.monthlyCostCents),
+  };
+}
+
 export function nextMonthAfter(asOf: string): string {
   return monthToDate(toMonth(asOf) + 4);
 }
@@ -156,12 +167,12 @@ export function InputField({
   const id = label.toLowerCase().replaceAll(" ", "-");
   return <label htmlFor={id} className="block text-sm font-medium" style={{ color: "var(--ink-secondary)" }}>
     {label}
-    <span className="mt-1.5 flex h-11 items-center rounded-xl border border-line bg-surface px-3.5 transition focus-within:border-accent focus-within:bg-white focus-within:ring-4 focus-within:ring-accent/10">
+    <span className="mt-1.5 flex h-11 items-center rounded-xl border border-line bg-surface px-3.5 transition focus-within:border-accent-ink focus-within:bg-raised focus-within:ring-4 focus-within:ring-accent-ink/10">
       <span className="text-sm" style={{ color: "var(--ink-muted)" }}>$</span>
       <input id={id} aria-label={label} type="number" min={0} step={step / 100} value={(valueCents / 100).toFixed(0)} onChange={(event) => {
         const amount = Number(event.target.value);
         if (Number.isFinite(amount) && amount >= 0) onChange(Math.round(amount * 100));
-      }} className="h-full w-full bg-transparent px-2 text-sm tabular-nums outline-none" style={{ color: "var(--ink)" }} />
+      }} className="h-full w-full bg-transparent px-2 text-sm tabular-nums rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink" style={{ color: "var(--ink)" }} />
     </span>
   </label>;
 }
@@ -195,13 +206,13 @@ export function EventForm({
     <div>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div><p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>Choose a Life Event</p></div>
-        <button type="button" onClick={() => onChange({ ...form, eventType: "custom" })} className="min-h-11 rounded-xl px-3.5 text-sm font-semibold text-white transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>Add Event</button>
+        <button type="button" onClick={() => onChange({ ...form, eventType: "custom" })} className="min-h-11 rounded-xl px-3.5 text-sm font-semibold text-white transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink focus-visible:ring-offset-2" style={{ background: "var(--accent)" }}>Add Event</button>
       </div>
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--ink-muted)" }}>Built-In Templates</p>
-      <div className="no-scrollbar -mx-1 flex snap-x gap-2 overflow-x-auto pb-1 pl-1 pr-12" style={{ maskImage: "linear-gradient(to right, #000 calc(100% - 48px), transparent)", WebkitMaskImage: "linear-gradient(to right, #000 calc(100% - 48px), transparent)" }}>{LifeScenarioEventType.options.filter((type): type is Exclude<EventType, "custom"> => type !== "custom").map((type) => {
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--ink-muted)" }}>Built-In Templates</p>
+      <div className="no-scrollbar -mx-1 flex snap-x gap-2 overflow-x-auto pb-1 pl-1 pr-12" style={{ maskImage: "linear-gradient(to right, black calc(100% - 48px), transparent)", WebkitMaskImage: "linear-gradient(to right, black calc(100% - 48px), transparent)" }}>{LifeScenarioEventType.options.filter((type): type is Exclude<EventType, "custom"> => type !== "custom").map((type) => {
         const selected = form.eventType === type;
-        return <button key={type} type="button" aria-pressed={selected} onClick={() => onChange({ ...form, eventType: type })} className="min-h-[68px] w-56 shrink-0 snap-start rounded-xl border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" style={{ borderColor: selected ? "var(--accent)" : "var(--border)", background: selected ? "var(--accent-soft, #eceeff)" : "var(--surface-raised)" }}>
-          <span className="block text-sm font-semibold" style={{ color: selected ? "var(--accent)" : "var(--ink)" }}>{EVENT_LABEL[type]}</span>
+        return <button key={type} type="button" aria-pressed={selected} onClick={() => onChange({ ...form, eventType: type })} className="min-h-[68px] w-56 shrink-0 snap-start rounded-xl border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink" style={{ borderColor: selected ? "var(--accent-ink)" : "var(--border)", background: selected ? "var(--accent-soft)" : "var(--surface-raised)" }}>
+          <span className="block text-sm font-semibold" style={{ color: selected ? "var(--accent-ink)" : "var(--ink)" }}>{EVENT_LABEL[type]}</span>
           <span className="mt-0.5 block text-xs leading-4" style={{ color: "var(--ink-muted)" }}>{EVENT_TEMPLATE_DESCRIPTION[type]}</span>
         </button>;
       })}</div>
@@ -244,7 +255,7 @@ export function GoalTimeline({ goals }: { goals: LifeScenarioGoalResult[] }) {
 
   return <div>
     <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" aria-label="Timeline legend">
-      <span className="inline-flex items-center gap-2" style={{ color: "var(--ink-secondary)" }}><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#7d8984" }} />Current plan</span>
+      <span className="inline-flex items-center gap-2" style={{ color: "var(--ink-secondary)" }}><span className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--chart-benchmark)" }} />Current plan</span>
       <span className="inline-flex items-center gap-2" style={{ color: "var(--ink-secondary)" }}><span className="h-2.5 w-2.5 rounded-full" style={{ background: GOAL_TIMELINE_COLORS[0].accent }} />After event (color varies by goal)</span>
     </div>
     <div className="space-y-2">{visible.map((goal, index) => {
@@ -253,17 +264,17 @@ export function GoalTimeline({ goals }: { goals: LifeScenarioGoalResult[] }) {
       const afterPosition = getPosition(goal.displayDate, startMonth, spanMonths);
       const barLeft = Math.min(beforePosition, afterPosition);
       const barWidth = Math.max(0.7, Math.abs(afterPosition - beforePosition));
-      const delayColor = goal.delayMonths !== null && goal.delayMonths > 0 ? "#a34f18" : goal.delayMonths !== null && goal.delayMonths < 0 ? "#16745f" : "#53605b";
-      const delayBackground = goal.delayMonths !== null && goal.delayMonths > 0 ? "#fff0df" : goal.delayMonths !== null && goal.delayMonths < 0 ? "#e3f3ec" : "#edf0ee";
-      return <article key={goal.goalId} className="flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center sm:gap-4" style={{ background: palette.tint, borderColor: `${palette.accent}35`, borderLeft: `4px solid ${palette.accent}` }}>
+      const delayColor = goal.delayMonths !== null && goal.delayMonths > 0 ? "var(--warning-text)" : goal.delayMonths !== null && goal.delayMonths < 0 ? "var(--gain)" : "var(--ink-secondary)";
+      const delayBackground = goal.delayMonths !== null && goal.delayMonths > 0 ? "var(--warning-bg)" : goal.delayMonths !== null && goal.delayMonths < 0 ? "var(--good-bg)" : "var(--surface-inset)";
+      return <article key={goal.goalId} className="flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center sm:gap-4" style={{ background: palette.tint, borderColor: `color-mix(in srgb, ${palette.accent} 21%, transparent)`, borderLeft: `4px solid ${palette.accent}` }}>
         <div className="min-w-0 sm:w-40 sm:shrink-0"><p className="truncate text-sm font-semibold" style={{ color: "var(--ink)" }}>{goal.name}</p><p className="mt-0.5 text-xs tabular-nums" style={{ color: "var(--ink-muted)" }}>{formatUsd(goal.targetCents)} target</p></div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium tabular-nums" style={{ color: "var(--ink-secondary)" }}><span>{formatDate(goal.beforeDisplayDate)}</span> <span className="px-1" aria-hidden="true" style={{ color: palette.accent }}>→</span> <span>{formatDate(goal.displayDate)}</span></p>
+          <p className="text-xs font-medium tabular-nums" style={{ color: "var(--ink-secondary)" }}><span>{formatDate(goal.beforeDisplayDate)}</span> <span className="px-1" aria-hidden="true" style={{ color: "var(--ink-secondary)" }}>→</span> <span>{formatDate(goal.displayDate)}</span></p>
           <div className="relative mt-2 h-5" aria-label={`${goal.name}: ${formatDate(goal.beforeDisplayDate)} before, ${formatDate(goal.displayDate)} with the plan`}>
             <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2" style={{ background: "var(--border)" }} />
             {goal.beforeDisplayDate && goal.displayDate && <div className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full" style={{ left: `${barLeft}%`, width: `${barWidth}%`, background: palette.accent, opacity: 0.36 }} />}
-            {goal.beforeDisplayDate && <span aria-hidden="true" className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white" style={{ left: `${beforePosition}%`, background: "#7d8984" }} />}
-            {goal.displayDate && <span aria-hidden="true" className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white" style={{ left: `${afterPosition}%`, background: palette.accent }} />}
+            {goal.beforeDisplayDate && <span aria-hidden="true" className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[color:var(--surface-raised)]" style={{ left: `${beforePosition}%`, background: "var(--chart-benchmark)" }} />}
+            {goal.displayDate && <span aria-hidden="true" className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[color:var(--surface-raised)]" style={{ left: `${afterPosition}%`, background: palette.accent }} />}
           </div>
         </div>
         <div className="sm:w-28 sm:shrink-0 sm:text-right">
@@ -273,7 +284,7 @@ export function GoalTimeline({ goals }: { goals: LifeScenarioGoalResult[] }) {
       </article>;
     })}</div>
     <div className="relative mt-3 h-7 border-t pt-1 sm:ml-40" style={{ borderColor: "var(--border)" }} aria-label="Shared date axis">
-      {axisTicks.map((tick, index) => <span key={`${tick.month}-${index}`} className={`absolute top-1 whitespace-nowrap text-xs tabular-nums ${index === 0 ? "translate-x-0" : index === axisTicks.length - 1 ? "-translate-x-full" : "-translate-x-1/2"}`} style={{ left: `${tick.left}%`, color: "var(--ink-muted)" }}>{formatDate(tick.date)}</span>)}
+      {axisTicks.map((tick, index) => <span key={`${tick.month}-${index}`} className={`absolute top-1 whitespace-nowrap text-xs tabular-nums ${index % 2 === 1 ? "hidden 2xl:inline" : ""} ${index === 0 ? "translate-x-0" : index === axisTicks.length - 1 ? "-translate-x-full" : "-translate-x-1/2"}`} style={{ left: `${tick.left}%`, color: "var(--ink-muted)" }}>{formatDate(tick.date)}</span>)}
     </div>
     <p className="mt-2 text-xs" style={{ color: "var(--ink-muted)" }}>Dates and delay labels show the timing change in text. Row color also identifies each goal.</p>
   </div>;

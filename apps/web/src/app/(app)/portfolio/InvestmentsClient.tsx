@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ALL_ACCOUNTS_VIEW, formatUsd, type InvestmentsOverview } from "@finvantage/contracts";
+import { ALL_ACCOUNTS_VIEW, formatUsd, type AllocationDrift, type InvestmentsOverview } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
 import { MockedBadge } from "@/components/ui/MockedBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AllocationCard } from "./AllocationCard";
 import { HoldingsCard } from "./HoldingsCard";
+import { HoldingsMix } from "./HoldingsMix";
+import { AllocationDriftCard } from "./AllocationDriftCard";
+import { RetirementFanCard } from "./RetirementFanCard";
 import { MarketTiles } from "./MarketTiles";
 import { PerformanceCard } from "./PerformanceCard";
 import { useWatchlist } from "./useWatchlist";
@@ -29,14 +32,14 @@ function Tile({ label, value, valueClass = "text-ink", detail, badge, order, cla
           <p className="text-xs text-muted">{label}</p>
           {badge}
         </div>
-        <p className={`truncate font-poppins text-xl font-bold leading-8 tabular-nums sm:text-[22px] ${valueClass}`}>{value}</p>
+        <p className={`truncate font-poppins text-xl font-bold leading-8 tabular-nums sm:text-2xl ${valueClass}`}>{value}</p>
         <p className="text-xs text-muted">{detail}</p>
       </div>
     </Card>
   );
 }
 
-export function InvestmentsClient({ data }: { data: InvestmentsOverview }) {
+export function InvestmentsClient({ data, drift }: { data: InvestmentsOverview; drift: AllocationDrift | null }) {
   const [viewId, setViewId] = useState(ALL_ACCOUNTS_VIEW);
   const watchlist = useWatchlist(data.watchlistOptions, data.defaultWatchlist);
   const view = data.views.find((candidate) => candidate.id === viewId) ?? data.views[0]!;
@@ -94,6 +97,12 @@ export function InvestmentsClient({ data }: { data: InvestmentsOverview }) {
           <PerformanceCard view={view} />
           <AllocationCard view={view} />
         </div>
+
+        <HoldingsMix view={view} mix={data.accountMix} />
+
+        {drift && <AllocationDriftCard initial={drift} />}
+
+        <RetirementFanCard />
 
         <HoldingsCard view={view} dates={data.sparklineDates} watchlist={watchlist} />
         <WatchlistCard watchlist={watchlist} dates={data.sparklineDates} live={data.priceSource === "live"} />

@@ -40,10 +40,10 @@ function ChartTooltip({ point, range }: { point: PerformancePoint | undefined; r
   if (!point) return null;
   return (
     <div className="rounded-xl bg-ink px-3 py-2 text-xs text-white shadow-lg">
-      <p className="text-subtle">{fullLabel(point.at, range)}</p>
+      <p className="text-muted">{fullLabel(point.at, range)}</p>
       <p className="mt-0.5 font-poppins text-sm font-bold tabular-nums">{formatUsd(point.valueCents)}</p>
-      <p className="mt-1 flex justify-between gap-4 tabular-nums"><span className="text-subtle">Portfolio</span>{signedPercent(point.portfolioChangeRate)}</p>
-      <p className="flex justify-between gap-4 tabular-nums"><span className="text-subtle">S&amp;P 500</span>{signedPercent(point.benchmarkChangeRate)}</p>
+      <p className="mt-1 flex justify-between gap-4 tabular-nums"><span className="text-muted">Portfolio</span>{signedPercent(point.portfolioChangeRate)}</p>
+      <p className="flex justify-between gap-4 tabular-nums"><span className="text-muted">S&amp;P 500</span>{signedPercent(point.benchmarkChangeRate)}</p>
     </div>
   );
 }

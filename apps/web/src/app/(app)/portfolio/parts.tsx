@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronUp } from "lucide-react";
 import { formatUsd } from "@finvantage/contracts";
 
 /* ── Display formats. The figures themselves come from the API. ───────── */
@@ -26,7 +27,7 @@ export const directionClass = (value: number) => (value > 0 ? "text-gain" : valu
 export function Change({ rate, className = "" }: { rate: number; className?: string }) {
   return (
     <span className={`inline-flex items-center gap-1 font-semibold tabular-nums ${directionClass(rate)} ${className}`}>
-      {rate !== 0 && <span aria-hidden="true" className="text-[0.7em] max-lg:text-xs">{rate > 0 ? "▲" : "▼"}</span>}
+      {rate !== 0 && (rate > 0 ? <ArrowUpRight size={14} strokeWidth={2.6} aria-hidden="true" /> : <ArrowDownRight size={14} strokeWidth={2.6} aria-hidden="true" />)}
       {signedPercent(rate)}
     </span>
   );
@@ -69,9 +70,9 @@ export function SortHeader<K extends string>({ label, column, sort, onSort, clas
   const active = sort.key === column;
   return (
     <th aria-sort={active ? (sort.desc ? "descending" : "ascending") : "none"} className={`pb-2 font-medium ${className}`}>
-      <button type="button" onClick={() => onSort(column)} className={`inline-flex items-center gap-1 transition-colors hover:text-ink max-lg:min-h-10 ${active ? "text-ink-secondary" : ""}`}>
+      <button type="button" onClick={() => onSort(column)} className={`inline-flex min-h-6 items-center gap-1 py-1 transition-colors hover:text-ink max-lg:min-h-10 ${active ? "text-ink-secondary" : ""}`}>
         {label}
-        <span aria-hidden="true" className={`w-2 text-[9px] ${active ? "" : "opacity-0"}`}>{sort.desc ? "▼" : "▲"}</span>
+        <span aria-hidden="true" className={`flex w-3 justify-center ${active ? "" : "opacity-0"}`}>{sort.desc ? <ChevronDown size={14} /> : <ChevronUp size={14} />}</span>
       </button>
     </th>
   );
@@ -80,7 +81,7 @@ export function SortHeader<K extends string>({ label, column, sort, onSort, clas
 /* ── Expanding rows ───────────────────────────────────────────────────── */
 
 export function Chevron({ open }: { open: boolean }) {
-  return <span aria-hidden="true" className={`inline-block text-[9px] text-muted transition-transform duration-200 motion-reduce:transition-none ${open ? "rotate-90" : ""}`}>▶</span>;
+  return <span aria-hidden="true" className={`inline-block text-xs text-muted transition-transform duration-200 motion-reduce:transition-none ${open ? "rotate-90" : ""}`}>▶</span>;
 }
 
 export function ExpandPanel({ open, children }: { open: boolean; children: ReactNode }) {
@@ -150,7 +151,7 @@ export function MiniChart({ prices, dates, name, open }: { prices: number[]; dat
 export function DetailStat({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] text-muted">{label}</p>
+      <p className="text-xs text-muted">{label}</p>
       <p className="mt-0.5 text-sm font-semibold tabular-nums text-ink">{children}</p>
     </div>
   );
@@ -242,7 +243,7 @@ export function Pills<T extends string>({
           onClick={() => onChange(option.value)}
           className={`relative z-10 whitespace-nowrap rounded-full font-semibold transition-colors duration-200 ${
             compact ? "px-3 py-1 text-xs max-lg:min-h-9" : "px-4 py-1.5 text-sm max-lg:min-h-10"
-          } ${option.value === value ? "text-accent" : "text-ink-secondary hover:text-ink"}`}
+          } ${option.value === value ? "text-accent-ink" : "text-ink-secondary hover:text-ink"}`}
         >
           {option.label}
         </button>

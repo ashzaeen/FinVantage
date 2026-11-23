@@ -1,21 +1,26 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { formatUsd } from "@finvantage/contracts";
+import { DotCalendar, type CalendarEvent } from "@/components/charts/DotCalendar";
 import { CategoryIcon } from "@/components/spending/CategoryIcon";
+import { CategoryPie } from "@/components/spending/CategoryPie";
 import { Card } from "@/components/ui/Card";
 import { CountUp } from "@/components/ui/CountUp";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { api } from "@/lib/api";
-import { flagDetail, needsLook, shortDate, upcomingWithin } from "@/lib/subscriptions";
+import { flagDetail, needsLook, shortDate, upcomingWithin, worthActingOn } from "@/lib/subscriptions";
+import { FlaggedSavings } from "./FlaggedSavings";
 import { FlagChip } from "./SubscriptionRow";
 import { SubscriptionsClient } from "./SubscriptionsClient";
 
 /** How far ahead the Upcoming Charges card looks. */
 const UPCOMING_DAYS = 30;
+/** The calendar shows five weeks, a little more than the list. */
+const CALENDAR_DAYS = 35;
 
 function Tile({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
-    <div className="tile-lift rounded-2xl border bg-white p-5" style={{ borderColor: "var(--border)" }}>
+    <div className="tile-lift rounded-2xl border bg-raised p-5" style={{ borderColor: "var(--border)" }}>
       <p className="text-xs font-medium" style={{ color: "var(--ink-muted)" }}>{label}</p>
       <p className="font-poppins mt-1 text-2xl font-bold tabular-nums" style={{ color: "var(--ink)" }}>{children}</p>
       {hint && <p className="mt-1 text-xs" style={{ color: "var(--ink-muted)" }}>{hint}</p>}
@@ -30,9 +35,20 @@ export default async function SubscriptionsPage() {
   const all = [...overview.subscriptions, ...overview.bills];
   // A cancelled subscription that charged again needs a look too, so it joins the ones still active.
   const flagged = needsLook([...all, ...overview.cancelled]);
-  const today = new Date().toISOString().slice(0, 10);
+  // The API's date, not the browser's: the demo's clock is not the visitor's.
+  const today = overview.asOf;
+  const acting = worthActingOn(all);
+  const recurringByCategory = overview.subscriptions
+    .filter((s) => (s.monthlyCents ?? 0) > 0)
+    .map((s) => ({ categoryId: s.category ?? "other", spentCents: s.monthlyCents! }));
   const upcoming = upcomingWithin(all, today, UPCOMING_DAYS);
   const { subscriptionTotals: totals } = overview;
+  const calendarEvents: CalendarEvent[] = all.map((item) => ({
+    date: item.nextDate,
+    tone: item.flags.some((f) => f.type === "annual_coming") ? "warn" : item.kind === "bill" ? "info" : "out",
+    label: item.merchant,
+    amountCents: item.amountCents,
+  }));
 
   if (all.length === 0) {
     return (
@@ -103,6 +119,23 @@ export default async function SubscriptionsPage() {
           )}
         </Card>
 
+        {(acting.length > 0 || recurringByCategory.length > 0) && (
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <FlaggedSavings items={acting} totalCents={overview.flaggedAnnualCents} />
+            {recurringByCategory.length > 0 && (
+              <CategoryPie
+                title="Where Subscriptions Go"
+                period="Per Month"
+                totalNote="in subscriptions"
+                centerLabel="Subscriptions"
+                emptyText="No subscriptions yet."
+                categories={categories}
+                breakdown={recurringByCategory}
+              />
+            )}
+          </div>
+        )}
+
         <SubscriptionsClient
           subscriptions={overview.subscriptions}
           bills={overview.bills}
@@ -113,6 +146,12 @@ export default async function SubscriptionsPage() {
         />
 
         <Card title="Upcoming Charges" subtitle={`The next ${UPCOMING_DAYS} days, soonest first`} lift={false}>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]">
+            <div>
+              <DotCalendar from={today} days={CALENDAR_DAYS} events={calendarEvents} label={`Charges due in the next ${CALENDAR_DAYS} days`} />
+              <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted"><span><i className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--flow-out)" }} />Subscription</span><span><i className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--series-5)" }} />Bill</span><span><i className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--warning)" }} />Annual renewal</span></p>
+            </div>
+            <div className="min-w-0">
           {upcoming.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--ink-muted)" }}>Nothing is due in the next {UPCOMING_DAYS} days.</p>
           ) : (
@@ -120,7 +159,7 @@ export default async function SubscriptionsPage() {
               {upcoming.map((item, i) => (
                 <li key={item.id} className="row-cascade tile-lift flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "var(--surface-inset)", "--i": i } as CSSProperties}>
                   <span className="flex min-w-0 items-center gap-3">
-                    <span className="w-14 shrink-0 text-xs font-semibold tabular-nums" style={{ color: "var(--accent)" }}>{shortDate(item.nextDate)}</span>
+                    <span className="w-14 shrink-0 text-xs font-semibold tabular-nums" style={{ color: "var(--accent-ink)" }}>{shortDate(item.nextDate)}</span>
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium" style={{ color: "var(--ink)" }}>{item.merchant}</span>
                       <span className="text-xs" style={{ color: "var(--ink-muted)" }}>{labelOf(item.category)} · {item.kind === "bill" ? "Bill" : "Subscription"}</span>
@@ -131,6 +170,8 @@ export default async function SubscriptionsPage() {
               ))}
             </ul>
           )}
+            </div>
+          </div>
         </Card>
       </div>
     </>

@@ -67,7 +67,7 @@ export function SubscriptionsClient({
         lift={false}
         action={
           <label className="flex items-center gap-2 text-xs" style={{ color: "var(--ink-muted)" }}>
-            Sort by
+            Sort By
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SubscriptionSort)}
@@ -89,7 +89,7 @@ export function SubscriptionsClient({
               aria-pressed={filter === f.id}
               onClick={() => setFilter(f.id)}
               className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
-              style={filter === f.id ? { background: "var(--accent)", color: "#fff" } : { background: "var(--accent-soft)", color: "var(--accent)" }}
+              style={filter === f.id ? { background: "var(--accent)", color: "white" } : { background: "var(--accent-soft)", color: "var(--accent-ink)" }}
             >
               {f.label}
             </button>

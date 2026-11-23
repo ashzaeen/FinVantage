@@ -24,10 +24,10 @@ function monthsAfter(iso: string, months: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function GoalPlanner({ initial, id }: { initial: GoalPlanVisual; id: string }) {
-  const { visual: v, update, pending, failed } = useVisual(initial);
+export function GoalPlanner({ initial, id, onVisual }: { initial: GoalPlanVisual; id: string; onVisual?: (v: GoalPlanVisual) => void }) {
+  const { visual: v, update, pending, failed } = useVisual(initial, onVisual);
   const { inputs } = v;
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveState, setSaveState] = useState<"idle" | "preview" | "saving" | "saved" | "error">("idle");
   const [budgetMax] = useState(() => Math.max(50_000, Math.ceil((initial.inputs.targetCents * 3) / 5_000) * 5_000));
 
   useEffect(() => {
@@ -98,8 +98,8 @@ export function GoalPlanner({ initial, id }: { initial: GoalPlanVisual; id: stri
         </div>
         <button
           type="button"
-          onClick={save}
-          disabled={saveState === "saving" || saveState === "saved"}
+          onClick={() => setSaveState("preview")}
+          disabled={saveState === "preview" || saveState === "saving" || saveState === "saved"}
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition ${
             saveState === "saved" ? "bg-good-bg text-gain" : "bg-accent text-white hover:opacity-90"
           } disabled:cursor-default`}
@@ -108,6 +108,19 @@ export function GoalPlanner({ initial, id }: { initial: GoalPlanVisual; id: stri
           {saveState === "saved" ? "Saved as Goal" : saveState === "saving" ? "Saving…" : "Save as Goal"}
         </button>
       </div>
+      {(saveState === "preview" || saveState === "saving") && (
+        <div role="group" aria-label="Preview of the goal to save" className="mt-3 rounded-xl border border-line bg-inset p-3 text-sm text-ink">
+          <p className="font-semibold">Save this goal?</p>
+          <p className="mt-1 text-xs text-muted">
+            {inputs.name}: {formatUsd(inputs.targetCents)} by {long(inputs.targetDate)}, with {formatUsd(inputs.savedCents)} saved already.{" "}
+            {fundFirst ? "It goes to the top of your goals, and the others move down one." : "It goes after your other goals."} Nothing is saved until you confirm.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" onClick={save} disabled={saveState === "saving"} className="min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold text-white disabled:opacity-50">{saveState === "saving" ? "Saving…" : "Confirm"}</button>
+            <button type="button" onClick={() => setSaveState("idle")} disabled={saveState === "saving"} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-muted">Not Now</button>
+          </div>
+        </div>
+      )}
       {saveState === "error" && <p role="alert" className="mt-1 text-xs text-loss">That didn&apos;t save. Please try again.</p>}
 
       <div className="mt-4">
@@ -118,7 +131,7 @@ export function GoalPlanner({ initial, id }: { initial: GoalPlanVisual; id: stri
           onChange={(o) => update({ ...inputs, fundFirst: o === "first" })}
           render={(o) => (o === "first" ? "Fund It First" : "After My Other Goals")}
         />
-        <p className="mt-1.5 text-[11px] text-muted">
+        <p className="mt-1.5 text-xs text-muted">
           {fundFirst
             ? "Your savings go here before your other goals, so they may slow down."
             : "Your other goals are funded first, and this gets what's left."}
@@ -148,7 +161,7 @@ export function GoalPlanner({ initial, id }: { initial: GoalPlanVisual; id: stri
 
       {fan.length > 1 && (
         <div className="relative">
-          <div className="pointer-events-none absolute right-0 top-9 flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent">
+          <div className="pointer-events-none absolute right-0 top-9 flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-ink">
             <Plane size={12} aria-hidden /> {formatUsd(inputs.targetCents)}
           </div>
           <FanArea
@@ -206,7 +219,7 @@ export function GoalPlanner({ initial, id }: { initial: GoalPlanVisual; id: stri
                 onClick={() => toggle(c.categoryId)}
                 aria-pressed={c.selected}
                 className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm transition-all ${
-                  c.selected ? "border-accent bg-accent-soft font-medium text-accent" : "border-line bg-card text-[var(--ink-secondary)] hover:border-[var(--ink-light)]"
+                  c.selected ? "border-accent-ink bg-accent-soft font-medium text-accent-ink" : "border-line bg-card text-[var(--ink-secondary)] hover:border-[var(--ink-light)]"
                 }`}
               >
                 {c.selected && <Check size={14} aria-hidden />}
@@ -225,7 +238,7 @@ export function GoalPlanner({ initial, id }: { initial: GoalPlanVisual; id: stri
               </p>
             </div>
           )}
-          <p className="mt-2 text-[11px] text-muted">
+          <p className="mt-2 text-xs text-muted">
             Suggested from your {v.cutsBasis === "full_months" ? "last three months" : "spending so far this month"} on flexible categories, never more than half of a category.
           </p>
         </div>

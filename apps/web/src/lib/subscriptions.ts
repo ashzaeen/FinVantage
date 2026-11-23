@@ -1,4 +1,4 @@
-import { formatUsd, type Subscription, type SubscriptionFlag } from "@finvantage/contracts";
+import { FLAGS_WORTH_ACTING_ON, formatUsd, type Subscription, type SubscriptionFlag } from "@finvantage/contracts";
 
 /*
  * Words and ordering for the Subscriptions page. Every figure arrives from the API; this only
@@ -45,10 +45,17 @@ export function shortDate(iso: string): string {
 export function flagDetail(flag: SubscriptionFlag, subscription: Pick<Subscription, "amountCents" | "nextDate">): string {
   const cost = formatUsd(Math.abs(subscription.amountCents));
   switch (flag.type) {
-    case "price_up":
-      return flag.previousCents !== null && flag.changedOn
-        ? `Was ${formatUsd(flag.previousCents)}, now ${flag.currentCents !== null ? formatUsd(flag.currentCents) : cost} since ${shortDate(flag.changedOn)}.`
-        : `The price went up to ${cost}.`;
+    case "price_up": {
+      if (flag.previousCents === null || !flag.changedOn) return `The price went up to ${cost}.`;
+      const was = formatUsd(flag.previousCents);
+      const now = flag.currentCents !== null ? formatUsd(flag.currentCents) : cost;
+      // A bill that varies is listed at the bank's usual amount, which can differ from the charges
+      // being compared. Say so, or the sentence and the row look like they disagree.
+      const rowDiffers = flag.currentCents !== null && flag.currentCents !== Math.abs(subscription.amountCents);
+      return rowDiffers
+        ? `The latest charge was ${now}, up from ${was} since ${shortDate(flag.changedOn)}. The ${cost} shown is the bank's usual amount.`
+        : `Was ${was}, now ${now} since ${shortDate(flag.changedOn)}.`;
+    }
     case "possible_duplicate":
       return flag.group ? `You pay for more than one ${flag.group} service.` : "You may pay for the same thing twice.";
     case "started_recently":
@@ -80,6 +87,14 @@ export function sortSubscriptions<T extends Pick<Subscription, "merchant" | "mon
 /** The ones with something to look at, most costly first. */
 export function needsLook<T extends Pick<Subscription, "flags" | "merchant" | "monthlyCents" | "nextDate">>(items: readonly T[]): T[] {
   return sortSubscriptions(items.filter((item) => item.flags.length > 0), "cost");
+}
+
+/** Subscriptions (not bills) still running with a flag worth acting on, dearest first. Same rule as the API's yearly total. */
+export function worthActingOn<T extends Pick<Subscription, "kind" | "status" | "flags" | "merchant" | "monthlyCents" | "nextDate">>(items: readonly T[]): T[] {
+  return sortSubscriptions(
+    items.filter((i) => i.kind === "subscription" && i.status !== "cancelled" && i.flags.some((f) => FLAGS_WORTH_ACTING_ON.includes(f.type))),
+    "cost",
+  );
 }
 
 function addDays(iso: string, days: number): string {

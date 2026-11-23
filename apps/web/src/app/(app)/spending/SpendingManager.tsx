@@ -18,10 +18,11 @@ import {
 import { CategoryIcon } from "@/components/spending/CategoryIcon";
 import { Card } from "@/components/ui/Card";
 import { api } from "@/lib/api";
+import { longDate } from "@/lib/format";
 
 /* ─── Shared pieces ──────────────────────────────────────────────────────── */
 
-const inputCls = "rounded-xl border px-3 py-2 text-sm outline-none focus:border-[var(--accent)]";
+const inputCls = "rounded-xl border px-3 py-2 text-sm outline-none focus:border-[var(--accent-ink)]";
 const inputStyle = { borderColor: "var(--border)", background: "var(--surface-inset)", color: "var(--ink)" };
 const primaryCls = "rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50";
 const quietCls = "rounded-lg px-2 py-1 text-xs font-medium hover:bg-[var(--surface-inset)]";
@@ -76,7 +77,7 @@ function Status({ status }: { status: Budget["status"] }) {
     over: { label: "Over", color: "var(--loss)", bg: "var(--critical-bg)" },
   }[status];
   return (
-    <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: look.color, background: look.bg }}>
+    <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ color: look.color, background: look.bg }}>
       {look.label}
     </span>
   );
@@ -138,7 +139,7 @@ export function BudgetsPanel({ budgets, categories }: { budgets: Budget[]; categ
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="Monthly limit"
-          className="w-28 bg-transparent text-sm outline-none"
+          className="w-28 bg-transparent text-sm rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
         />
       </span>
       <button disabled={busy} className={primaryCls} style={{ background: "var(--accent)" }}>
@@ -165,7 +166,7 @@ export function BudgetsPanel({ budgets, categories }: { budgets: Budget[]; categ
       {adding && <div className="mb-4">{limitForm("", true)}<ErrorLine>{error}</ErrorLine></div>}
       {budgets.length > 0 && (
         <p className="mb-3 flex items-center gap-4 text-xs" style={{ color: "var(--ink-muted)" }}>
-          <span className="flex items-center gap-1.5"><i className="h-2 w-4 rounded-full" style={{ background: "var(--accent)" }} /> Spent</span>
+          <span className="flex items-center gap-1.5"><i className="h-2 w-4 rounded-full" style={{ background: "var(--series-1)" }} /> Spent</span>
           <span className="flex items-center gap-1.5"><i className="h-2 w-4 rounded-full" style={{ background: "var(--budget-projected)" }} /> Projected by Month End</span>
         </p>
       )}
@@ -174,7 +175,7 @@ export function BudgetsPanel({ budgets, categories }: { budgets: Budget[]; categ
         {budgets.map((b) => {
           const width = Math.min(100, (b.spentCents / b.limitCents) * 100);
           const projectedWidth = Math.min(100, (b.projectedCents / b.limitCents) * 100);
-          const color = b.status === "over" ? "var(--critical)" : b.status === "at_risk" ? "var(--warning)" : "var(--accent)";
+          const color = b.status === "over" ? "var(--critical)" : b.status === "at_risk" ? "var(--warning)" : "var(--series-1)";
           const projectedColor = b.projectedCents > b.limitCents ? "var(--budget-projected-over)" : "var(--budget-projected)";
           return (
             <li key={b.category}>
@@ -202,7 +203,7 @@ export function BudgetsPanel({ budgets, categories }: { budgets: Budget[]; categ
                   {b.suggestedLimitCents !== null && ` · Usually ${formatUsd(b.suggestedLimitCents)}`}
                 </span>
                 <span>
-                  <button type="button" onClick={() => { setEditing(b.category); setAmount(String(b.limitCents / 100)); }} className={quietCls} style={{ color: "var(--accent)" }}>Edit</button>
+                  <button type="button" onClick={() => { setEditing(b.category); setAmount(String(b.limitCents / 100)); }} className={quietCls} style={{ color: "var(--accent-ink)" }}>Edit</button>
                   <button type="button" disabled={busy} onClick={() => remove(b.category)} className={quietCls} style={{ color: "var(--ink-muted)" }}>Remove</button>
                 </span>
               </div>
@@ -277,8 +278,8 @@ export function CategoryManager({ categories }: { categories: SpendingCategory[]
           <span className="flex flex-1 items-center gap-2 text-sm" style={{ color: c.hidden ? "var(--ink-light)" : "var(--ink)" }}>
             <CategoryIcon id={c.id} size={depth === 1 ? 16 : 14} bare />
             {c.label}
-            {c.custom && <span className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>Custom</span>}
-            {c.hidden && <span className="ml-2 text-[11px]" style={{ color: "var(--ink-muted)" }}>Hidden</span>}
+            {c.custom && <span className="ml-2 rounded-full px-1.5 py-0.5 text-xs font-semibold" style={{ background: "var(--accent-soft)", color: "var(--accent-ink)" }}>Custom</span>}
+            {c.hidden && <span className="ml-2 text-xs" style={{ color: "var(--ink-muted)" }}>Hidden</span>}
           </span>
           {c.bucket === "excluded" ? (
             <span className="text-xs" style={{ color: "var(--ink-muted)" }}>{SPENDING_BUCKET_LABEL.excluded}</span>
@@ -295,7 +296,7 @@ export function CategoryManager({ categories }: { categories: SpendingCategory[]
             </select>
           )}
           {depth < MAX_CATEGORY_DEPTH && (
-            <button type="button" onClick={() => { setAction({ kind: "add", id: c.id }); setName(""); }} className={quietCls} style={{ color: "var(--accent)" }}>Add Subcategory</button>
+            <button type="button" onClick={() => { setAction({ kind: "add", id: c.id }); setName(""); }} className={quietCls} style={{ color: "var(--accent-ink)" }}>Add Subcategory</button>
           )}
           <button type="button" onClick={() => { setAction({ kind: "rename", id: c.id }); setName(c.label); }} className={quietCls} style={{ color: "var(--ink-secondary)" }}>Rename</button>
           <button type="button" disabled={busy} onClick={() => run(() => api.updateSpendingCategory({ params: { id: c.id }, body: { hidden: !c.hidden } }), "Could not change the category.")} className={quietCls} style={{ color: "var(--ink-secondary)" }}>
@@ -446,11 +447,11 @@ export function RecentTransactions({ transactions, categories }: { transactions:
             <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium" style={{ color: "var(--ink)" }}>{t.merchant}</span>
-                <span className="text-xs tabular-nums" style={{ color: "var(--ink-muted)" }}>{t.date} · {formatUsd(t.amountCents)}</span>
+                <span className="text-xs tabular-nums" style={{ color: "var(--ink-muted)" }}>{longDate(t.date)} · {formatUsd(t.amountCents)}</span>
               </span>
               <span className="flex items-center gap-2">
                 <CategorySelect ariaLabel={`Category for ${t.merchant}`} categories={categories} value={current} includeNone onChange={(id) => move(t, id, false)} />
-                <button type="button" disabled={busy === t.id || !current} onClick={() => move(t, current, true)} className={quietCls} style={{ color: "var(--accent)" }} title={`Always put ${t.merchant} here`}>
+                <button type="button" disabled={busy === t.id || !current} onClick={() => move(t, current, true)} className={quietCls} style={{ color: "var(--accent-ink)" }} title={`Always put ${t.merchant} here`}>
                   Always
                 </button>
               </span>

@@ -1,5 +1,7 @@
 "use client";
 
+// theme-ok-file: the card face is artwork, the same in both themes.
+
 import { useState } from "react";
 import { formatUsd, formatPercent, type Account } from "@finvantage/contracts";
 
@@ -79,12 +81,12 @@ export function VisualCard({ account, index }: { account: Account; index: number
 
           <div className="mt-4 flex items-end justify-between">
             <div>
-              <p className="font-roboto text-[10px] uppercase tracking-wider text-white/60">Balance</p>
+              <p className="font-roboto text-xs uppercase tracking-wider text-white/60">Balance</p>
               <p className="font-poppins text-lg font-bold tabular-nums">{formatUsd(balance)}</p>
             </div>
             {limit > 0 && (
               <div className="text-right">
-                <p className="font-roboto text-[10px] uppercase tracking-wider text-white/60">Utilization</p>
+                <p className="font-roboto text-xs uppercase tracking-wider text-white/60">Utilization</p>
                 <p className="font-poppins text-sm font-bold tabular-nums">{utilPct}%</p>
               </div>
             )}
@@ -146,7 +148,7 @@ export function VisualCard({ account, index }: { account: Account; index: number
             )}
           </div>
 
-          <p className="mt-3 text-center font-roboto text-[10px] text-white/60">Click to flip back</p>
+          <p className="mt-3 text-center font-roboto text-xs text-white/60">Click to flip back</p>
         </div>
       </div>
     </div>

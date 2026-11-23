@@ -13,8 +13,8 @@ export function GoalCard({ goal, outcome }: { goal: Goal; outcome?: GoalOutcome 
         <span
           className="rounded-full px-2 py-0.5 text-xs font-medium shrink-0"
           style={{
-            background: isFlexible ? "var(--good-bg)" : "#eceeff",
-            color: isFlexible ? "var(--gain)" : "var(--accent)",
+            background: isFlexible ? "var(--good-bg)" : "var(--accent-soft)",
+            color: isFlexible ? "var(--gain)" : "var(--accent-ink)",
           }}
         >
           {isFlexible ? "Flexible" : "Fixed"}
@@ -34,14 +34,14 @@ export function GoalCard({ goal, outcome }: { goal: Goal; outcome?: GoalOutcome 
           className="h-2.5 rounded-full"
           style={{
             width: `${progress}%`,
-            background: "linear-gradient(90deg, var(--accent) 0%, #818cf8 100%)",
+            background: "linear-gradient(90deg, var(--series-1) 0%, var(--progress-end) 100%)",
           }}
         />
       </div>
 
       <div className="mt-2 flex items-center justify-between gap-2">
         <p className="text-xs" style={{ color: "var(--ink-muted)" }}>By {goal.targetDate}</p>
-        <span className="text-xs font-bold" style={{ color: "var(--accent)" }}>
+        <span className="text-xs font-bold" style={{ color: "var(--accent-ink)" }}>
           {Math.round(progress)}%
         </span>
       </div>
