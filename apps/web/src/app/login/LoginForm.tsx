@@ -8,7 +8,7 @@ import { nextPath, saveSession } from "@/lib/session";
 type Mode = "signin" | "signup";
 
 const inputCls =
-  "mt-1.5 w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-colors focus:border-accent";
+  "mt-1.5 w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-colors focus:border-accent-ink";
 const inputStyle = { borderColor: "var(--border)", background: "var(--surface-inset)", color: "var(--ink)" };
 
 function messageFor(error: unknown, mode: Mode): string {
@@ -78,7 +78,7 @@ export function LoginForm({ embedded = false, footer }: LoginFormProps = {}) {
       className="flex-1 rounded-xl py-2 text-sm font-semibold transition-colors"
       style={
         mode === value
-          ? { background: "var(--surface-raised)", color: "var(--accent)", boxShadow: "var(--shadow-sm)" }
+          ? { background: "var(--surface-raised)", color: "var(--accent-ink)", boxShadow: "var(--shadow-sm)" }
           : { color: "var(--ink-muted)" }
       }
     >
@@ -89,7 +89,7 @@ export function LoginForm({ embedded = false, footer }: LoginFormProps = {}) {
   return (
     <div className={embedded ? "w-full" : "mx-auto mt-6 w-full max-w-md md:mt-16"}>
       <section
-        className={`rounded-3xl border bg-white ${embedded ? "p-6" : "p-7"}`}
+        className={`rounded-3xl border bg-raised ${embedded ? "p-6" : "p-6"}`}
         style={{ borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
       >
         <Heading

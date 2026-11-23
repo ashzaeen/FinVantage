@@ -13,7 +13,7 @@ export default function PrivacyPage() {
       <p className="mt-4 text-base leading-7" style={{ color: "var(--landing-text-secondary)" }}>
         FinVantage is a hackathon build and does not yet have a published privacy policy. Everything you see in the demo runs on sandbox or synthetic data, not a real bank account.
       </p>
-      <Link href="/" className="mt-6 inline-flex min-h-11 items-center text-sm font-semibold" style={{ color: "var(--landing-primary)" }}>
+      <Link href="/" className="mt-6 inline-flex min-h-11 items-center text-sm font-semibold" style={{ color: "var(--landing-primary-ink)" }}>
         Back to FinVantage
       </Link>
     </main>

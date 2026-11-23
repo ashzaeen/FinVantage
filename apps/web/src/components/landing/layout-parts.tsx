@@ -16,7 +16,7 @@ export function Section({
   className?: string;
 }) {
   const tones = {
-    white: "bg-white",
+    white: "bg-lp-surface",
     tint: "bg-lp-bg",
     dark: "lp-dark bg-lp-dark text-white",
     brand: "lp-dark bg-lp-primary text-white",

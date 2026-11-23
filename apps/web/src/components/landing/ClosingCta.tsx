@@ -1,3 +1,4 @@
+// theme-ok-file: the whole section is a dark band, the same in both themes.
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Section } from "./layout-parts";
@@ -14,7 +15,7 @@ export function ClosingCta() {
             Set your goals once, then check any decision against them in seconds.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/login?mode=signup" className="lp-lift flex min-h-12 items-center justify-center rounded-xl bg-white px-7 text-sm font-semibold text-lp-primary-dark">
+            <Link href="/login?mode=signup" className="lp-lift flex min-h-12 items-center justify-center rounded-xl bg-white px-7 text-sm font-semibold text-[#3730a3]">
               Create Your Account
             </Link>
             <Link

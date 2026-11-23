@@ -63,7 +63,7 @@ export function UseCases() {
             <Reveal className={i % 2 === 1 ? "lg:order-2" : ""}>
               <h3 className="text-balance text-[26px] font-semibold leading-[1.15] tracking-[-0.02em] text-lp-text sm:text-[34px]">{title}</h3>
               <p className="mt-4 max-w-[44ch] text-pretty text-base leading-7 text-lp-text-2 sm:text-lg sm:leading-8">{body}</p>
-              <Link href={href} className="group mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-lp-primary-dark hover:text-lp-primary">
+              <Link href={href} className="group mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-lp-primary-dark hover:text-lp-ink">
                 {cta}
                 <ArrowRight size={16} aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1" />
               </Link>

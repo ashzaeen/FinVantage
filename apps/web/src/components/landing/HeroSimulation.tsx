@@ -22,7 +22,7 @@ export function HeroSimulation() {
 
   return (
     <div className="lp-rise mx-auto w-full max-w-[540px]" style={{ "--d": "180ms" } as React.CSSProperties} role="group" aria-label="Example of a purchase check">
-      <div className="rounded-[28px] border border-lp-line bg-white p-5 shadow-lp-float sm:p-7">
+      <div className="rounded-[28px] border border-lp-line bg-lp-surface p-5 shadow-lp-float sm:p-7">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold text-lp-text">Before You Buy</h2>
@@ -44,7 +44,7 @@ export function HeroSimulation() {
 
         <div className="lp-pop mt-5 flex items-center justify-between gap-4 rounded-2xl bg-lp-bg p-4" data-on={stage >= 1}>
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-lp-primary shadow-sm">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lp-surface text-lp-ink shadow-sm">
               <Sofa size={21} aria-hidden="true" />
             </span>
             <div className="min-w-0">

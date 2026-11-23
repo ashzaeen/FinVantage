@@ -1,5 +1,7 @@
 "use client";
 
+// theme-ok-file: the shop mock (stars, Add to Cart, browser chrome) is a fixed picture of a store.
+
 import {
   ArrowUpRight,
   BellRing,
@@ -42,7 +44,7 @@ function Stage({ children, forwardRef }: { children: ReactNode; forwardRef: Reac
 /** A desktop app window: title bar with the Example tag, then the content. */
 function AppWindow({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-lp-line bg-white shadow-lp-float" role="group" aria-label={`Example: ${title}`}>
+    <div className="relative w-full overflow-hidden rounded-2xl border border-lp-line bg-lp-surface shadow-lp-float" role="group" aria-label={`Example: ${title}`}>
       <div className="flex h-10 items-center gap-2 border-b border-lp-line-soft bg-lp-bg px-3.5">
         <span className="flex w-10 gap-1 sm:w-14 sm:gap-1.5" aria-hidden="true">
           <span className="h-2.5 w-2.5 rounded-full bg-lp-line" />
@@ -63,7 +65,7 @@ function Satellite({ on, className, children }: { on: boolean; className: string
     <div
       aria-hidden="true"
       data-on={on}
-      className={`lp-pop absolute z-10 rounded-2xl border border-lp-line bg-white px-3.5 py-3 shadow-lp-float ${className}`}
+      className={`lp-pop absolute z-10 rounded-2xl border border-lp-line bg-lp-surface px-3.5 py-3 shadow-lp-float ${className}`}
       style={{ transitionDuration: "700ms" } as CSSProperties}
     >
       {children}
@@ -137,16 +139,16 @@ export function DashboardPreview() {
         <svg viewBox="0 0 420 118" className="mt-1 h-auto w-full" role="img" aria-label="Net worth rising steadily over the last six months">
           <defs>
             <linearGradient id="dash-area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="var(--landing-primary)" stopOpacity="0.2" />
-              <stop offset="1" stopColor="var(--landing-primary)" stopOpacity="0" />
+              <stop offset="0" stopColor="var(--landing-primary-ink)" stopOpacity="0.2" />
+              <stop offset="1" stopColor="var(--landing-primary-ink)" stopOpacity="0" />
             </linearGradient>
           </defs>
           <g stroke="var(--landing-border-subtle)" strokeWidth="1">{[20, 52, 84].map((y) => <line key={y} x1="30" x2="412" y1={y} y2={y} />)}</g>
           {[["$165k", 24], ["$155k", 56], ["$145k", 88]].map(([t, y]) => <text key={t} x="0" y={y} fontSize="9" fill="var(--landing-text-muted)">{t}</text>)}
           <path d={`${smooth(TREND)} L388,100 L40,100 Z`} fill="url(#dash-area)" className="lp-fade" data-on={stage >= 2} />
-          <path d={smooth(TREND)} fill="none" stroke="var(--landing-primary)" strokeWidth="2.5" strokeLinecap="round" pathLength={1} className="lp-draw" data-on={stage >= 1} />
+          <path d={smooth(TREND)} fill="none" stroke="var(--landing-primary-ink)" strokeWidth="2.5" strokeLinecap="round" pathLength={1} className="lp-draw" data-on={stage >= 1} />
           <g className="lp-fade" data-on={stage >= 3}>
-            <circle cx="388" cy="24" r="4.5" fill="#fff" stroke="var(--landing-primary)" strokeWidth="2.5" />
+            <circle cx="388" cy="24" r="4.5" fill="var(--landing-surface)" stroke="var(--landing-primary-ink)" strokeWidth="2.5" />
           </g>
           {MONTHS.map((m, i) => <text key={m} x={40 + i * 69.6} y="114" fontSize="9" textAnchor="middle" fill="var(--landing-text-muted)">{m}</text>)}
         </svg>
@@ -159,7 +161,7 @@ export function DashboardPreview() {
               { Icon: TrendingUp, name: "Roth IRA", v: "$142,900" },
             ].map(({ Icon, name, v }, i) => (
               <li key={name} className="lp-pop flex items-center gap-2.5 text-xs" data-on={stage >= i + 3}>
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-lp-tint-50 text-lp-primary"><Icon size={14} aria-hidden="true" /></span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-lp-tint-50 text-lp-ink"><Icon size={14} aria-hidden="true" /></span>
                 <span className="min-w-0 flex-1 truncate font-medium text-lp-text-2">{name}</span>
                 <span className="font-semibold tabular-nums text-lp-text">{v}</span>
               </li>
@@ -174,10 +176,10 @@ export function DashboardPreview() {
       </AppWindow>
       <Satellite on={stage >= 6} className="max-lg:hidden -right-10 -top-12">
         <p className="text-[11px] text-lp-muted">Cash Flow, November</p>
-        <p className="mt-0.5 flex items-center gap-1 text-lg font-semibold tabular-nums text-flow-in"><ArrowUpRight size={16} aria-hidden="true" /> +$1,240</p>
+        <p className="mt-0.5 flex items-center gap-1 text-lg font-semibold tabular-nums text-gain"><ArrowUpRight size={16} aria-hidden="true" /> +$1,240</p>
       </Satellite>
       <Satellite on={stage >= 6} className="max-lg:hidden -bottom-5 -left-10">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-lp-text"><Landmark size={14} className="text-lp-primary" aria-hidden="true" /> 4 Accounts Linked</p>
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-lp-text"><Landmark size={14} className="text-lp-ink" aria-hidden="true" /> 4 Accounts Linked</p>
         <p className="mt-0.5 text-[11px] text-lp-text-2">Updated a few minutes ago.</p>
       </Satellite>
     </Stage>
@@ -269,7 +271,7 @@ export function GoalsPreview() {
         </div>
       </AppWindow>
       <Satellite on={stage >= 4} className="max-lg:hidden -bottom-5 -right-10">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-lp-text"><Target size={14} className="text-lp-primary" aria-hidden="true" /> One Shared Pool</p>
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-lp-text"><Target size={14} className="text-lp-ink" aria-hidden="true" /> One Shared Pool</p>
         <p className="mt-0.5 text-[11px] text-lp-text-2">The same savings also fund your Japan Trip.</p>
       </Satellite>
     </Stage>
@@ -373,7 +375,7 @@ export function AdvisorPreview() {
               type="button"
               onClick={() => pick(i)}
               aria-pressed={i === qa}
-              className={`min-h-8 rounded-full border px-3 text-[11px] font-medium transition-colors ${i === qa ? "border-lp-primary bg-lp-tint-50 text-lp-primary-dark" : "border-lp-line bg-white text-lp-text-2 hover:border-lp-tint-200 hover:bg-lp-tint-50"}`}
+              className={`min-h-8 rounded-full border px-3 text-[11px] font-medium transition-colors ${i === qa ? "border-lp-ink bg-lp-tint-50 text-lp-primary-dark" : "border-lp-line bg-lp-surface text-lp-text-2 hover:border-lp-tint-200 hover:bg-lp-tint-50"}`}
             >
               {item.chip}
             </button>
@@ -480,15 +482,15 @@ export function CopilotRowPreview() {
   const stage = useStages(seen, [500, 800, 600]);
   return (
     <Stage forwardRef={ref}>
-      <div aria-hidden="true" className="relative w-full overflow-hidden rounded-2xl border border-lp-line bg-white shadow-lp-float">
+      <div aria-hidden="true" className="relative w-full overflow-hidden rounded-2xl border border-lp-line bg-lp-surface shadow-lp-float">
         <div className="flex h-11 items-center gap-2 border-b border-lp-line-soft bg-lp-bg px-3">
           <span className="flex gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-lp-line" /><span className="h-2.5 w-2.5 rounded-full bg-lp-line" /><span className="h-2.5 w-2.5 rounded-full bg-lp-line" /></span>
           <ChevronLeft size={15} className="ml-1 hidden text-lp-muted min-[400px]:block" />
           <ChevronRight size={15} className="hidden text-lp-line min-[400px]:block" />
           <RotateCw size={13} className="hidden text-lp-muted min-[400px]:block" />
-          <span className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-full bg-white px-3 text-[11px] text-lp-muted"><Lock size={10} className="shrink-0" /> <span className="truncate">shop.example.com/laptop-16</span></span>
-          <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-lp-muted"><Puzzle size={14} />
-            <span className="lp-pop absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-lp-primary" data-on={stage >= 1} />
+          <span className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-full bg-lp-surface px-3 text-[11px] text-lp-muted"><Lock size={10} className="shrink-0" /> <span className="truncate">shop.example.com/laptop-16</span></span>
+          <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-lp-surface text-lp-muted"><Puzzle size={14} />
+            <span className="lp-pop absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-lp-surface bg-lp-primary" data-on={stage >= 1} />
           </span>
         </div>
         <div className="flex h-9 items-center gap-3 bg-lp-dark px-4">
@@ -508,7 +510,7 @@ export function CopilotRowPreview() {
             <p className="mt-3 text-[24px] font-semibold leading-none tabular-nums text-lp-text sm:text-[26px]">$2,499</p>
             <p className="mt-1 text-[11px] text-gain">In stock · Free delivery</p>
             <div className="mt-3 flex gap-2">
-              <div className="flex h-9 flex-1 items-center justify-center rounded-lg bg-[#F5B63A] text-[11px] font-semibold text-lp-text sm:text-xs">Add to Cart</div>
+              <div className="flex h-9 flex-1 items-center justify-center rounded-lg bg-[#F5B63A] text-[11px] font-semibold text-[#111827] sm:text-xs">Add to Cart</div>
               <div className="hidden h-9 flex-1 items-center justify-center rounded-lg border border-lp-line text-xs font-semibold text-lp-text-2 min-[420px]:flex">Buy Now</div>
             </div>
           </div>
