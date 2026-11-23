@@ -1,190 +1,41 @@
 "use client";
 
+// theme-ok-file: white text and tints on the chrome, which is dark in both themes.
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { NAV_GROUPS, NAV_ITEMS, OVERVIEW_ITEM, SETTINGS_ITEM, type NavItem } from "@/lib/nav";
 import { BrandMark } from "@/components/ui/BrandMark";
+import { ArrowDownToLine, ArrowLeftRight, CalendarCheck, ChartColumn, CreditCard, DollarSign, FileText, LayoutGrid, Menu, MessageSquare, Repeat, Settings, Target, Wallet, X, Zap, type LucideIcon } from "lucide-react";
+import { SidebarTheme } from "@/components/theme/AppearanceCard";
 import { AccountCard } from "./AccountCard";
 
-/* ─── Navigation SVG Icons (Clean, Consistent 20x20 Stroke) ─────────────────── */
-function OverviewIcon({ active }: { active: boolean }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7" rx="1.5" />
-      <rect x="14" y="3" width="7" height="7" rx="1.5" />
-      <rect x="14" y="14" width="7" height="7" rx="1.5" />
-      <rect x="3" y="14" width="7" height="7" rx="1.5" />
-    </svg>
-  );
+/* One icon set for the whole app: Lucide, drawn at the same size and stroke as the rest of the dashboard. */
+const NAV_ICONS: Record<string, LucideIcon> = {
+  "/app": LayoutGrid,
+  "/accounts": Wallet,
+  "/transactions": ArrowLeftRight,
+  "/goals": Target,
+  "/life-events": CalendarCheck,
+  "/copilot": Zap,
+  "/advisor": MessageSquare,
+  "/income": ArrowDownToLine,
+  "/spending": DollarSign,
+  "/portfolio": ChartColumn,
+  "/credit": CreditCard,
+  "/subscriptions": Repeat,
+  "/reports": FileText,
+  "/settings": Settings,
+};
+
+function getNavIcon(href: string) {
+  const Icon = NAV_ICONS[href] ?? LayoutGrid;
+  return <Icon size={18} strokeWidth={2.2} aria-hidden="true" />;
 }
 
-function AccountsIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="5" width="20" height="15" rx="3" />
-      <line x1="2" y1="10" x2="22" y2="10" />
-      <circle cx="16" cy="15" r="1.5" fill="currentColor" />
-    </svg>
-  );
-}
-
-function TransactionsIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="7" y1="4" x2="7" y2="20" />
-      <polyline points="3 8 7 4 11 8" />
-      <line x1="17" y1="20" x2="17" y2="4" />
-      <polyline points="13 16 17 20 21 16" />
-    </svg>
-  );
-}
-
-function GoalsIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
-      <circle cx="12" cy="12" r="2" />
-    </svg>
-  );
-}
-
-function LifeEventsIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-      <line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="8" y1="2" x2="8" y2="6" />
-      <line x1="3" y1="10" x2="21" y2="10" />
-      <path d="m9 16 2 2 4-4" />
-    </svg>
-  );
-}
-
-function CopilotIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </svg>
-  );
-}
-
-function AdvisorIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      <circle cx="9" cy="10" r="1" fill="currentColor" />
-      <circle cx="12" cy="10" r="1" fill="currentColor" />
-      <circle cx="15" cy="10" r="1" fill="currentColor" />
-    </svg>
-  );
-}
-
-function SpendingIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="1" x2="12" y2="23" />
-      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-    </svg>
-  );
-}
-
-function IncomeIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3v12" />
-      <polyline points="7 10 12 15 17 10" />
-      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
-    </svg>
-  );
-}
-
-function PortfolioIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="18" y1="20" x2="18" y2="10" />
-      <line x1="12" y1="20" x2="12" y2="4" />
-      <line x1="6" y1="20" x2="6" y2="14" />
-    </svg>
-  );
-}
-
-function CreditIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="1" y="4" width="22" height="16" rx="3" ry="3" />
-      <line x1="1" y1="10" x2="23" y2="10" />
-      <line x1="5" y1="15" x2="9" y2="15" />
-    </svg>
-  );
-}
-
-function ReportsIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="16" y1="13" x2="8" y2="13" />
-      <line x1="16" y1="17" x2="8" y2="17" />
-    </svg>
-  );
-}
-
-function SubscriptionsIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 2l4 4-4 4" />
-      <path d="M3 11V9a3 3 0 0 1 3-3h15" />
-      <path d="M7 22l-4-4 4-4" />
-      <path d="M21 13v2a3 3 0 0 1-3 3H3" />
-    </svg>
-  );
-}
-
-function SettingsIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  );
-}
-
-function getNavIcon(href: string, active: boolean) {
-  switch (href) {
-    case "/app":
-      return <OverviewIcon active={active} />;
-    case "/accounts":
-      return <AccountsIcon />;
-    case "/transactions":
-      return <TransactionsIcon />;
-    case "/goals":
-      return <GoalsIcon />;
-    case "/life-events":
-      return <LifeEventsIcon />;
-    case "/copilot":
-      return <CopilotIcon />;
-    case "/advisor":
-      return <AdvisorIcon />;
-    case "/income":
-      return <IncomeIcon />;
-    case "/spending":
-      return <SpendingIcon />;
-    case "/portfolio":
-      return <PortfolioIcon />;
-    case "/credit":
-      return <CreditIcon />;
-    case "/subscriptions":
-      return <SubscriptionsIcon />;
-    case "/reports":
-      return <ReportsIcon />;
-    case "/settings":
-      return <SettingsIcon />;
-    default:
-      return <OverviewIcon active={active} />;
-  }
-}
+/** The hint under an Intelligence link: white at 86%, which is 4.5:1 or better on the indigo and on the dark navy. */
+const HINT_COLOR = "rgba(255, 255, 255, 0.86)"; // theme-ok
 
 /** One row in the sidebar. Intelligence rows are taller and carry a hint under the label.
  *  Below `lg` the same rows live in the phone drawer, so they keep a 44px tap height there. */
@@ -194,37 +45,39 @@ function SidebarLink({ item, pathname, hero = false }: { item: NavItem; pathname
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`flex items-center gap-3 rounded-2xl px-3.5 font-roboto text-sm transition-all duration-150 max-lg:min-h-11 ${hero ? "py-2" : "py-2.5"}`}
+      className={`flex items-center gap-3 rounded-2xl px-3.5 font-roboto text-sm transition-all duration-150 max-lg:min-h-11 ${hero ? "py-2" : "py-2"}`}
       style={{
-        backgroundColor: active ? "#ffffff" : "transparent",
-        color: active ? "var(--accent)" : "rgba(255, 255, 255, 0.72)",
-        boxShadow: active ? "0 4px 14px 0 rgba(0, 0, 0, 0.08)" : "none",
+        backgroundColor: active ? "var(--chrome-active-bg)" : "transparent",
+        color: active ? "var(--chrome-active-ink)" : "rgba(255, 255, 255, 0.92)", // theme-ok: text on the chrome (4.5:1 or better on the indigo)
+        boxShadow: active ? "0 4px 14px 0 rgba(0, 0, 0, 0.08)" : "none", // theme-ok
         fontWeight: active ? 600 : 400,
       }}
     >
       <span
         className={`flex shrink-0 items-center justify-center ${hero ? "h-8 w-8 rounded-xl" : ""}`}
-        style={hero ? { backgroundColor: active ? "rgba(84, 74, 247, 0.12)" : "rgba(255, 255, 255, 0.14)" } : undefined}
+        style={hero ? { backgroundColor: active ? "var(--chrome-active-chip)" : "rgba(255, 255, 255, 0.14)" } : undefined} // theme-ok
       >
-        {getNavIcon(item.href, active)}
+        {getNavIcon(item.href)}
       </span>
       <span className="min-w-0">
         <span className="block truncate">{item.label}</span>
         {hero && item.hint && (
-          <span className="block truncate text-[11px] font-normal max-lg:text-xs" style={{ opacity: active ? 0.7 : 0.55 }}>{item.hint}</span>
+          <span className="block truncate text-xs font-normal" style={active ? undefined : { color: HINT_COLOR }}>{item.hint}</span>
         )}
       </span>
     </Link>
   );
 }
 
-/** Brand, navigation and account card. The desktop sidebar and the phone drawer both render this. */
+/** Brand, navigation and account card. The desktop sidebar and the phone drawer both render this.
+ *  The brand and the footer (Settings, theme, account) stay put; only the links scroll, with a shadow
+ *  that shows there is more above or below. */
 function SidebarContent({ pathname }: { pathname: string }) {
   return (
     <>
-      <div className="flex flex-col flex-1 overflow-y-auto no-scrollbar pr-0.5">
+      <div className="flex min-h-0 flex-1 flex-col">
         {/* Logo / Brand Header */}
-        <Link href="/app" className="flex min-h-11 items-center gap-3 px-3 mb-6">
+        <Link href="/app" className="mb-2 flex min-h-11 shrink-0 items-center gap-3 px-3">
           <BrandMark size={40} tone="onBrand" />
           <div className="flex items-baseline">
             <span className="font-poppins text-2xl font-bold tracking-tight text-white">
@@ -233,23 +86,30 @@ function SidebarContent({ pathname }: { pathname: string }) {
           </div>
         </Link>
 
-        {/* Dashboard navigation: Overview, then Intelligence, then Finances, with Settings last */}
-        <nav aria-label="Main Navigation" className="flex flex-col gap-1">
-          <SidebarLink item={OVERVIEW_ITEM} pathname={pathname} />
-          {NAV_GROUPS.map((group) => (
-            <div key={group.label} className="mt-4 flex flex-col gap-1">
-              <p className="px-3.5 pb-1 font-roboto text-xs font-semibold uppercase tracking-[0.14em] text-white/50 lg:text-[11px]">
-                {group.label}
-              </p>
-              {group.items.map((item) => (
-                <SidebarLink key={item.href} item={item} pathname={pathname} hero={group.label === "Intelligence"} />
-              ))}
-            </div>
-          ))}
-          <div className="mt-4 border-t border-white/10 pt-3">
-            <SidebarLink item={SETTINGS_ITEM} pathname={pathname} />
-          </div>
+        {/* Dashboard navigation: Overview, then Intelligence, then Finances */}
+        <div className="nav-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain no-scrollbar pr-0.5">
+          <nav aria-label="Main Navigation" className="flex flex-col gap-1">
+            <SidebarLink item={OVERVIEW_ITEM} pathname={pathname} />
+            {NAV_GROUPS.map((group) => (
+              <div key={group.label} className="mt-3 flex flex-col gap-1">
+                <p className="px-3.5 pb-1 font-roboto text-xs font-semibold uppercase tracking-[0.14em] text-white/85">
+                  {group.label}
+                </p>
+                {group.items.map((item) => (
+                  <SidebarLink key={item.href} item={item} pathname={pathname} hero={group.label === "Intelligence"} />
+                ))}
+              </div>
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Pinned: Settings is never below the fold. The theme switch (hidden while dark mode is behind its flag) shares the row. */}
+      <div className="mt-2 flex shrink-0 items-center gap-1 border-t border-white/10 pt-2">
+        <nav aria-label="Account Navigation" className="min-w-0 flex-1">
+          <SidebarLink item={SETTINGS_ITEM} pathname={pathname} />
         </nav>
+        <SidebarTheme />
       </div>
 
       {/* User Profile Card at Bottom: who is signed in, with sign-in and sign-out */}
@@ -259,22 +119,11 @@ function SidebarContent({ pathname }: { pathname: string }) {
 }
 
 function MenuIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-      <line x1="4" y1="7" x2="20" y2="7" />
-      <line x1="4" y1="12" x2="20" y2="12" />
-      <line x1="4" y1="17" x2="20" y2="17" />
-    </svg>
-  );
+  return <Menu size={22} strokeWidth={2.2} aria-hidden="true" />;
 }
 
 function CloseIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-      <line x1="6" y1="6" x2="18" y2="18" />
-      <line x1="18" y1="6" x2="6" y2="18" />
-    </svg>
-  );
+  return <X size={22} strokeWidth={2.2} aria-hidden="true" />;
 }
 
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -338,7 +187,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside
         className="hidden lg:flex lg:w-[260px] lg:flex-col lg:shrink-0 justify-between select-none"
         style={{
-          backgroundColor: "var(--accent)",
+          backgroundColor: "var(--chrome)",
           position: "sticky",
           top: 0,
           height: "100dvh",
@@ -354,7 +203,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         inert={menuOpen}
         className="lg:hidden fixed inset-x-0 top-0 z-50 flex items-center gap-1 px-2 text-white"
         style={{
-          backgroundColor: "var(--accent)",
+          backgroundColor: "var(--chrome)",
           height: "calc(56px + env(safe-area-inset-top))",
           paddingTop: "env(safe-area-inset-top)",
           paddingLeft: "max(0.5rem, env(safe-area-inset-left))",
@@ -377,7 +226,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           FinVantage
         </Link>
         {current && (
-          <span className="ml-auto min-w-0 truncate pr-2 font-roboto text-sm font-medium text-white/80" aria-hidden="true">
+          <span className="ml-auto min-w-0 truncate pr-2 font-roboto text-sm font-medium text-white/90" aria-hidden="true">
             {current.label}
           </span>
         )}
@@ -387,7 +236,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {menuOpen && (
         <div className="lg:hidden fixed inset-0 z-[60]">
           <div
-            className="nav-backdrop absolute inset-0 bg-ink/50"
+            className="nav-backdrop absolute inset-0 bg-[color:var(--scrim)]"
             onClick={() => setMenuOpen(false)}
             aria-hidden="true"
           />
@@ -398,7 +247,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label="Main Menu"
             className="nav-drawer absolute inset-y-0 left-0 flex w-[min(320px,86vw)] flex-col justify-between overscroll-contain text-white shadow-2xl select-none"
             style={{
-              backgroundColor: "var(--accent)",
+              backgroundColor: "var(--chrome)",
               padding:
                 "calc(16px + env(safe-area-inset-top)) 14px calc(16px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left))",
             }}

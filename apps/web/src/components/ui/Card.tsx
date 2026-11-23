@@ -20,9 +20,9 @@ export function Card({
 }) {
   return (
     <section
-      className={`min-w-0 rounded-3xl bg-white border border-line ${noPad ? "" : "p-4 sm:p-6"} ${lift ? "card-lift" : ""} ${className}`}
+      className={`min-w-0 rounded-3xl bg-raised border border-line ${noPad ? "" : "p-4 sm:p-6"} ${lift ? "card-lift" : ""} ${className}`}
       style={{
-        boxShadow: "0 2px 12px 0 rgba(22, 25, 44, 0.03)",
+        boxShadow: "var(--shadow-resting)",
       }}
     >
       {(title || action) && (

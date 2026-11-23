@@ -1,5 +1,7 @@
 "use client";
 
+// theme-ok-file: white tints on the chrome, which is dark in both themes.
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -9,8 +11,8 @@ import { readClaims, readCookie, TOKEN_COOKIE, usableToken } from "@/lib/token";
 type Viewer = { kind: "loading" } | { kind: "demo" } | { kind: "user"; name: string; detail: string };
 
 const buttonCls =
-  "flex shrink-0 items-center rounded-xl px-2.5 py-1.5 font-roboto text-xs font-medium text-white transition-colors hover:bg-white/20 max-lg:min-h-11 max-lg:px-3.5 max-lg:text-sm";
-const buttonStyle = { background: "rgba(255, 255, 255, 0.16)" };
+  "flex shrink-0 items-center rounded-xl px-2.5 py-1.5 font-roboto text-xs font-semibold transition-opacity hover:opacity-90 max-lg:min-h-11 max-lg:px-3.5 max-lg:text-sm";
+const buttonStyle = { background: "var(--chrome-active-bg)", color: "var(--chrome-active-ink)" };
 
 /** The sidebar's profile card: who is signed in, with sign-in and sign-out. */
 export function AccountCard() {
@@ -38,7 +40,7 @@ export function AccountCard() {
 
   return (
     <div
-      className="mt-4 flex items-center justify-between gap-2 rounded-2xl p-2.5 shrink-0"
+      className="mt-2 flex items-center justify-between gap-2 rounded-2xl p-2.5 shrink-0"
       style={{ background: "rgba(255, 255, 255, 0.12)" }}
     >
       <div className="flex items-center gap-3 min-w-0">
@@ -47,7 +49,7 @@ export function AccountCard() {
         </div>
         <div className="min-w-0">
           <p className="font-poppins truncate text-sm font-semibold text-white leading-tight">{name}</p>
-          <p className="font-roboto truncate text-xs text-white/60">{detail}</p>
+          <p className="font-roboto truncate text-xs text-white/85">{detail}</p>
         </div>
       </div>
       {viewer.kind === "user" && (
