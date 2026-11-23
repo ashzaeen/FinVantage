@@ -25,13 +25,14 @@ function icon(tone: Tone): HTMLElement {
 
 /*
  * Colors mirror the dashboard tokens in apps/web/src/app/globals.css, so the card reads as
- * part of FinVantage. If design changes those tokens, change them here too.
+ * part of FinVantage. If design changes those tokens, change them here too: the light values below
+ * and DARK_STYLES, which apps/web/src/lib/theme-tokens.test.ts checks against the dark tokens.
  */
 const STYLES = `
   :host { all: initial; }
   .wrap {
     --surface: #f8f9fe; --raised: #ffffff; --border: #edf0f7; --ink: #16192c; --muted: #626981;
-    --accent: #544af7; --good: #008f68; --warn: #a85d00; --danger: #d63857; --track: #e9ebf3;
+    --accent: #544af7; --accent-ink: #544af7; --good: #008f68; --warn: #a85d00; --danger: #d63857; --track: #e9ebf3;
     position: fixed; right: 16px; bottom: 16px; z-index: 2147483647;
     color: var(--ink); font: 15px/1.5 "Roboto", "Segoe UI", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -40,7 +41,7 @@ const STYLES = `
   .wrap[data-tone="danger"] { --tone: var(--danger); }
   .wrap[data-tone="warn"] { --tone: var(--warn); }
   .wrap[data-tone="ok"] { --tone: var(--good); }
-  .wrap[data-tone="info"] { --tone: var(--accent); }
+  .wrap[data-tone="info"] { --tone: var(--accent-ink); }
 
   /* Icon plus word, so the verdict never rests on color alone. */
   .icon {
@@ -87,8 +88,8 @@ const STYLES = `
 
   .section { padding: 14px 18px 0; }
   .label { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
-  .move { margin: 14px 18px 0; padding: 10px 14px; border-left: 4px solid var(--accent); background: var(--surface); border-radius: 0 10px 10px 0; }
-  .move .label { color: var(--accent); }
+  .move { margin: 14px 18px 0; padding: 10px 14px; border-left: 4px solid var(--accent-ink); background: var(--surface); border-radius: 0 10px 10px 0; }
+  .move .label { color: var(--accent-ink); }
 
   dl { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 14px 18px 0; padding-top: 12px; border-top: 1px solid var(--border); font-size: 14px; }
   dt { color: var(--muted); }
@@ -103,12 +104,28 @@ const STYLES = `
   .link:hover { color: var(--ink); }
   .note { padding: 0 18px 14px; font-size: 12px; color: var(--muted); }
 
-  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  :focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 2px; }
   .card:focus { outline: none; }
 
   @keyframes rise { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
   @keyframes open { from { transform: translateY(8px) scale(0.98); opacity: 0; } to { transform: none; opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { .badge, .card { animation: none; } }
+`;
+
+/*
+ * The dark values, from the dashboard's dark tokens. The card sits on pages whose theme it cannot know,
+ * so it follows the device setting. Only added when the build has dark mode on (EXTENSION_DARK_MODE).
+ */
+const DARK_STYLES = `
+  @media (prefers-color-scheme: dark) {
+    .wrap {
+      color-scheme: dark;
+      --surface: #101328; --raised: #171a33; --border: #262a4a; --ink: #e8eaf6; --muted: #a6acca;
+      --accent-ink: #a29cff; --good: #4fd1c0; --warn: #f6bd69; --danger: #ff8aa1; --track: #2a2e52;
+    }
+    .card { box-shadow: 0 8px 28px rgb(0 0 0 / 0.5); }
+    .badge { box-shadow: 0 4px 18px rgb(0 0 0 / 0.45); }
+  }
 `;
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -139,7 +156,7 @@ function mountShadow(tone: Tone): { host: HTMLElement; wrap: HTMLElement } {
   const host = el("div");
   host.id = HOST_ID;
   const shadow = host.attachShadow({ mode: "open" });
-  shadow.append(Object.assign(el("style"), { textContent: STYLES }));
+  shadow.append(Object.assign(el("style"), { textContent: __DARK_MODE__ ? STYLES + DARK_STYLES : STYLES }));
   const wrap = el("div", undefined, "wrap");
   wrap.dataset.tone = tone;
   shadow.append(wrap);

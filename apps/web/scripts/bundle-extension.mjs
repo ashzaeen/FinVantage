@@ -28,6 +28,8 @@ const target = {
   EXTENSION_API_URL: process.env.EXTENSION_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000",
   EXTENSION_WEB_URL: process.env.EXTENSION_WEB_URL || (productionHost ? `https://${productionHost}` : "http://localhost:3000"),
   EXTENSION_API_TOKEN: process.env.EXTENSION_API_TOKEN || process.env.NEXT_PUBLIC_DEMO_TOKEN || "demo-token",
+  // The extension's dark mode ships with the dashboard's: the same kill switch (0 turns it off).
+  EXTENSION_DARK_MODE: process.env.EXTENSION_DARK_MODE || process.env.NEXT_PUBLIC_DARK_MODE || "",
 };
 
 try {
