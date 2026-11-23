@@ -5,8 +5,15 @@ import { formatUsd, type LifeScenario, type LifeScenarioAnalysis } from "@finvan
 import { Card } from "@/components/ui/Card";
 import { api } from "@/lib/api";
 import { EVENT_LABEL, formatDate, formForCurrentContext } from "./lifeSimulatorShared";
+import { buttonClass } from "@/components/ui/Button";
 
 const nameOf = (s: LifeScenario) => s.name || (s.eventType === "custom" ? s.customEventName || "Your Event" : EVENT_LABEL[s.eventType]);
+
+/** The goal an event hits hardest, in the API's own words. */
+function hardest(a: LifeScenarioAnalysis): string {
+  const x = a.analysis;
+  return x.mostAffectedGoalName ? `hits ${x.mostAffectedGoalName} hardest (${x.mostAffectedDelayLabel})` : "does not delay any goal";
+}
 
 function Column({ title, a }: { title: string; a: LifeScenarioAnalysis }) {
   const x = a.analysis;
@@ -18,7 +25,6 @@ function Column({ title, a }: { title: string; a: LifeScenarioAnalysis }) {
         <div className="flex justify-between gap-3"><dt className="text-muted">One-time cost</dt><dd className="font-semibold tabular-nums text-ink">{formatUsd(x.oneTimeCostsCents)}</dd></div>
         <div className="flex justify-between gap-3"><dt className="text-muted">Free cash a month</dt><dd className="font-semibold tabular-nums text-ink">{formatUsd(x.freeCashBeforeCents)} to {formatUsd(x.freeCashAfterCents)}</dd></div>
         <div className="flex justify-between gap-3"><dt className="text-muted">Goals delayed</dt><dd className="font-semibold tabular-nums text-ink">{x.goalsDelayed} of {x.goalsDelayed + x.goalsUnchanged}</dd></div>
-        <div className="flex justify-between gap-3"><dt className="text-muted">Most affected</dt><dd className="text-right font-semibold text-ink">{x.mostAffectedGoalName ? `${x.mostAffectedGoalName}, ${x.mostAffectedDelayLabel}` : "None"}</dd></div>
       </dl>
       <h4 className="mt-4 text-xs font-semibold text-muted">Goal Funding Dates</h4>
       <ul className="mt-1 space-y-1 text-xs text-ink">
@@ -91,14 +97,19 @@ export function CompareEvents() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         {select("First Event", left, setLeft)}
         {select("Second Event", right, setRight)}
-        <button type="button" disabled={busy || left === right} onClick={() => void compare()} className="min-h-11 rounded-xl px-5 text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--accent)" }}>{busy ? "Comparing…" : "Compare"}</button>
+        <button type="button" disabled={busy || left === right} onClick={() => void compare()} className={buttonClass({ variant: "primary" })}>{busy ? "Comparing…" : "Compare"}</button>
       </div>
       {left === right && <p className="mt-2 text-xs text-muted">Pick two different events.</p>}
       {error && <p role="alert" className="mt-3 text-sm" style={{ color: "var(--critical)" }}>{error}</p>}
       {results && (
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2" aria-live="polite">
+        <div className="mt-4 space-y-4" aria-live="polite">
+          <p className="rounded-xl p-3 text-sm text-ink" style={{ background: "var(--accent-soft)" }}>
+            <strong>The Difference:</strong> {nameFor(left)} {hardest(results.a)}. {nameFor(right)} {hardest(results.b)}.
+          </p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Column title={nameFor(left)} a={results.a} />
           <Column title={nameFor(right)} a={results.b} />
+        </div>
         </div>
       )}
       <p className="mt-3 text-xs text-muted">Projections are estimates, not guarantees. Nothing here is saved.</p>

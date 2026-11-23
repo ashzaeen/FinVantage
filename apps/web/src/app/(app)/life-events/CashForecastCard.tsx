@@ -71,18 +71,18 @@ export function CashForecastCard() {
           ? <>Savings would change by <strong>{formatUsd(result.monthlyChangeCents)}</strong> a month. In month one free cash is likely between {formatUsd(first.p10Cents)} and {formatUsd(first.p90Cents)}.</>
           : <>In month one free cash is likely between {formatUsd(first.p10Cents)} and {formatUsd(first.p90Cents)}. By {monthYear(last.date)} it is likely between {formatUsd(last.p10Cents)} and {formatUsd(last.p90Cents)}.</>}
       </p>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`Free cash a month, ${monthYear(first.date)} to ${monthYear(last.date)}: likely range ${formatUsd(last.p10Cents)} to ${formatUsd(last.p90Cents)} at the end.`}>
+      <div className="overflow-x-auto"><svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[30rem] max-w-[44rem]" role="img" aria-label={`Free cash a month, ${monthYear(first.date)} to ${monthYear(last.date)}: likely range ${formatUsd(last.p10Cents)} to ${formatUsd(last.p90Cents)} at the end.`}>
         {[hi, 0, lo].filter((v, i, a) => a.indexOf(v) === i).map((v) => (
           <g key={v}>
             <line x1={PAD.left} x2={W - PAD.right} y1={y(v)} y2={y(v)} stroke="var(--border)" />
-            <text x={PAD.left - 6} y={y(v) + 4} textAnchor="end" fontSize={11} fill="var(--ink-muted)">{compactUsd(v)}</text>
+            <text x={PAD.left - 6} y={y(v) + 4} textAnchor="end" fontSize={12} fill="var(--ink-muted)">{compactUsd(v)}</text>
           </g>
         ))}
         {stressed && <Band f={result.baselineCash} color="var(--ink-muted)" dashed x={x} y={y} />}
-        <Band f={shown} color={stressed ? "var(--flow-out)" : "var(--series-1)"} x={x} y={y} />
-        <text x={PAD.left} y={H - 5} fontSize={11} fill="var(--ink-muted)">{monthYear(first.date)}</text>
-        <text x={W - PAD.right} y={H - 5} textAnchor="end" fontSize={11} fill="var(--ink-muted)">{monthYear(last.date)}</text>
-      </svg>
+        <Band f={shown} color={stressed ? "var(--warning)" : "var(--series-1)"} x={x} y={y} />
+        <text x={PAD.left} y={H - 5} fontSize={12} fill="var(--ink-muted)">{monthYear(first.date)}</text>
+        <text x={W - PAD.right} y={H - 5} textAnchor="end" fontSize={12} fill="var(--ink-muted)">{monthYear(last.date)}</text>
+      </svg></div>
       <p className="mt-1 text-xs text-muted">The line is the middle case; the band runs from a weak case to a strong one.{stressed ? " The dashed outline is today's plan." : ""}</p>
 
       {stressed && (
@@ -92,8 +92,8 @@ export function CashForecastCard() {
             {result.goals.map((g) => (
               <li key={g.goalId} className="grid grid-cols-1 gap-2 rounded-xl p-3 sm:grid-cols-[1fr_1fr_1fr] sm:items-center" style={{ background: "var(--surface-inset)" }}>
                 <span className="truncate text-sm font-medium text-ink">{g.name}</span>
-                <div><p className="text-[11px] text-muted">Today</p><ProbabilityRange low={g.before.low} high={g.before.high} note={false} /></div>
-                <div><p className="text-[11px] text-muted">Under stress</p><ProbabilityRange low={g.after.low} high={g.after.high} /></div>
+                <div><p className="text-xs text-muted">Today</p><ProbabilityRange low={g.before.low} high={g.before.high} note={false} /></div>
+                <div><p className="text-xs text-muted">Under stress</p><ProbabilityRange low={g.after.low} high={g.after.high} /></div>
               </li>
             ))}
           </ul>

@@ -1,12 +1,11 @@
 import { formatPercent, formatUsd, type CreditCardsOverview } from "@finvantage/contracts";
 import { BulletBar } from "@/components/charts/BulletBar";
-import { DotCalendar, type CalendarEvent } from "@/components/charts/DotCalendar";
+import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { plural, shortDate } from "@/lib/format";
 
 /** Credit-scoring guidance usually names 30% as the line to stay under. A rule of thumb, not advice. */
 const UTILIZATION_LINE = 0.3;
-const CALENDAR_DAYS = 35;
 
 function dueText(days: number | null, date: string | null): string {
   if (days === null || !date) return "No due date on file";
@@ -17,21 +16,15 @@ function dueText(days: number | null, date: string | null): string {
 
 /**
  * Each card on one line of facts: how much of its limit is used, what the balance costs each
- * month, when the next payment is due, and, for a 0% card, what to pay to clear it in time. A
- * calendar marks the due dates. Every figure comes from `GET /v1/credit/cards`.
+ * month, when the next payment is due, and, for a 0% card, what to pay to clear it in time. The
+ * dates are on the Overview's Money Calendar, which is the one calendar. Every figure comes from `GET /v1/credit/cards`.
  */
 export function CardsAtAGlance({ overview }: { overview: CreditCardsOverview }) {
   const { cards, totals } = overview;
   if (cards.length === 0) return null;
-  const events: CalendarEvent[] = cards.flatMap((c) =>
-    c.nextPaymentDueOn
-      ? [{ date: c.nextPaymentDueOn, tone: c.daysUntilDue !== null && c.daysUntilDue <= 7 ? ("warn" as const) : ("info" as const), label: `${c.name} payment due`, amountCents: c.minimumPaymentCents ?? undefined }]
-      : [],
-  );
-
   return (
     <Card title="Cards at a Glance" subtitle="Use, interest cost and due dates for each card">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
+      <div>
         <ul className="space-y-5">
           {cards.map((c, i) => (
             <li key={c.id} className="min-w-0">
@@ -66,13 +59,9 @@ export function CardsAtAGlance({ overview }: { overview: CreditCardsOverview }) 
             </li>
           ))}
         </ul>
-        <div>
-          <p className="mb-2 text-xs font-semibold text-ink">Payment Due Dates</p>
-          <DotCalendar from={overview.asOf} days={CALENDAR_DAYS} events={events} label={`Card payments due in the next ${CALENDAR_DAYS} days`} />
-        </div>
       </div>
       <p className="mt-5 border-t border-line pt-3 text-xs text-muted">
-        Together your cards use {totals.utilization === null ? "an unknown share of their limits" : `${formatPercent(totals.utilization)} of their limits`}
+        All due dates are on the <Link href="/app" className="font-semibold text-accent-ink underline-offset-2 hover:underline">Money Calendar</Link>. Together your cards use {totals.utilization === null ? "an unknown share of their limits" : `${formatPercent(totals.utilization)} of their limits`}
         {totals.monthlyInterestCents > 0 ? ` and cost about ${formatUsd(totals.monthlyInterestCents)} a month in interest` : ""}. The line on each bar marks 30%, a common guideline.
       </p>
     </Card>

@@ -2,39 +2,36 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type DragEvent, type FormEvent } from "react";
-import { formatPercent, formatUsd, type Account, type Goal, type GoalAllocation, type GoalFunding, type GoalFundingRow, type GoalMilestones, type GoalOutcome, type GoalStatus, type NewGoal } from "@finvantage/contracts";
+import { formatPercent, formatUsd, type Account, type Goal, type GoalAllocation, type GoalAllocationRow, type GoalFunding, type GoalFundingRow, type GoalMilestones, type GoalOutcome, type GoalStatus, type NewGoal } from "@finvantage/contracts";
 import { api } from "@/lib/api";
 import { ProbabilityRange } from "@/components/finance/ProbabilityRange";
 import { Card } from "@/components/ui/Card";
 import { GoalsAnalysisChart } from "./GoalsAnalysisChart";
 import { CountUp } from "@/components/ui/CountUp";
 import { monthYear, plural, longDate } from "@/lib/format";
+import { BulletBar } from "@/components/charts/BulletBar";
 import { GoalAllocationCard } from "./GoalAllocationCard";
 
-function FundingLines({ row }: { row: GoalFundingRow }) {
+function FundingLines({ row, alloc }: { row: GoalFundingRow; alloc?: GoalAllocationRow }) {
   if (row.remainingCents <= 0) return null;
   return (
-    <div className="mt-1 space-y-1 text-xs" style={{ color: "var(--ink-muted)" }}>
-      <p>
-        {row.pastDue
-          ? <>The target date has passed. Needs about <strong style={{ color: "var(--ink)" }}>{formatUsd(row.neededPerMonthCents)}</strong> to finish.</>
-          : <>Needs about <strong style={{ color: "var(--ink)" }}>{formatUsd(row.neededPerMonthCents)}</strong> a month for {plural(row.monthsLeft, "month")}</>}
-      </p>
+    <div className="mt-2 space-y-2 text-xs" style={{ color: "var(--ink-muted)" }}>
+      {row.pastDue && <p>The target date has passed.</p>}
+      {alloc && alloc.neededCents > 0 ? (
+        <BulletBar
+          label="Monthly Savings"
+          valueText={`${formatUsd(alloc.allocatedCents)} of ${formatUsd(alloc.neededCents)}`}
+          fill={alloc.allocatedCents / alloc.neededCents}
+          target={1}
+          targetText="what it needs"
+          tone={alloc.shortCents > 0 ? "warn" : "accent"}
+          note={alloc.shortCents > 0 ? `Short by about ${formatUsd(alloc.shortCents)} a month` : `Needs about ${formatUsd(alloc.neededCents)} a month for ${plural(row.monthsLeft, "month")}`}
+        />
+      ) : (
+        <p>Needs about <strong style={{ color: "var(--ink)" }}>{formatUsd(row.neededPerMonthCents)}</strong> a month for {plural(row.monthsLeft, "month")}</p>
+      )}
       {row.medianCompletionDate && <p>Median finish: <strong style={{ color: "var(--ink)" }}>{monthYear(row.medianCompletionDate)}</strong></p>}
     </div>
-  );
-}
-
-function FundingSummary({ funding }: { funding: GoalFunding }) {
-  if (funding.neededPerMonthCents <= 0) return null;
-  return (
-    <Card lift={false}>
-      <h2 className="font-semibold text-ink">Monthly Funding</h2>
-      <p className="mt-1 text-sm text-ink-secondary">
-        Together your goals need about <strong>{formatUsd(funding.neededPerMonthCents)}</strong> a month at a steady pace. You set aside about <strong>{formatUsd(funding.monthlySavingsCents)}</strong> a month.
-      </p>
-      <p className="mt-1 text-xs text-muted">The simulated odds also count interest and growth, so they can read higher than this simple division suggests.</p>
-    </Card>
   );
 }
 
@@ -59,7 +56,7 @@ const GOAL_STATUSES: { id: VisibleGoalStatus; label: string; hint: string; accen
   { id: "achieved", label: "Achieved", hint: "Target reached", accent: "var(--gain)" },
 ];
 
-function GoalCard({ goal, outcome, marks, funding, onOpen, draggable = false, onDragStart, onDragEnd, onMove, moving = false }: { goal: Goal; outcome?: GoalOutcome; marks?: GoalMilestones; funding?: GoalFundingRow; onOpen: () => void; draggable?: boolean; onDragStart?: (event: DragEvent<HTMLDivElement>) => void; onDragEnd?: () => void; onMove?: (status: VisibleGoalStatus) => void; moving?: boolean }) {
+function GoalCard({ goal, outcome, marks, funding, alloc, onOpen, draggable = false, onDragStart, onDragEnd, onMove, moving = false }: { goal: Goal; outcome?: GoalOutcome; marks?: GoalMilestones; funding?: GoalFundingRow; alloc?: GoalAllocationRow; onOpen: () => void; draggable?: boolean; onDragStart?: (event: DragEvent<HTMLDivElement>) => void; onDragEnd?: () => void; onMove?: (status: VisibleGoalStatus) => void; moving?: boolean }) {
   const progress = Math.min(100, (goal.currentCents / goal.targetCents) * 100);
   const isFlexible = goal.flexibility === "flexible";
 
@@ -93,7 +90,7 @@ function GoalCard({ goal, outcome, marks, funding, onOpen, draggable = false, on
             : "Every mark reached"}
         </p>
       )}
-      {funding && <FundingLines row={funding} />}
+      {funding && <FundingLines row={funding} alloc={alloc} />}
       <p className="mt-2.5 text-xs" style={{ color: "var(--ink-muted)" }}>
         Target date: <strong style={{ color: "var(--ink)" }}>{longDate(goal.targetDate)}</strong>
       </p>
@@ -115,6 +112,7 @@ function GoalCard({ goal, outcome, marks, funding, onOpen, draggable = false, on
 
 export function GoalsClient({ goals, outcomes, milestones, funding, allocation, accounts }: { goals: Goal[]; outcomes: GoalOutcome[]; milestones: GoalMilestones[]; funding: GoalFunding | null; allocation: GoalAllocation | null; accounts: Account[] }) {
   const fundingFor = (goalId: string) => funding?.goals.find((row) => row.goalId === goalId);
+  const allocFor = (goalId: string) => allocation?.rows.find((row) => row.goalId === goalId);
   const router = useRouter();
   const [view, setView] = useState<"board" | "cards" | "analysis">("board");
   const [showForm, setShowForm] = useState(false);
@@ -239,8 +237,6 @@ export function GoalsClient({ goals, outcomes, milestones, funding, allocation, 
     {error && !selectedGoal && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
     <p role="status" aria-live="polite" className="sr-only">{feedback}</p>
 
-    {funding && view !== "analysis" && <div className="mb-4"><FundingSummary funding={funding} /></div>}
-
     {allocation && view !== "analysis" && <div className="mb-4"><GoalAllocationCard allocation={allocation} goals={goals} /></div>}
 
     {view === "analysis" ? <GoalsAnalysisChart data={analysisData} /> : view === "board" ? <>
@@ -255,7 +251,7 @@ export function GoalsClient({ goals, outcomes, milestones, funding, allocation, 
             <div className="flex items-center gap-2"><span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-raised px-2 text-xs font-semibold text-ink-chart">{columnGoals.length}</span><button type="button" onClick={() => openCreateGoal(column.id)} aria-label={`Add a goal to ${column.label}`} className="rounded-lg px-2 py-1 text-sm font-semibold text-accent-ink hover:bg-raised">+ Add</button></div>
           </header>
           <div className="page-cascade space-y-3">
-            {columnGoals.map((goal) => <GoalCard key={goal.id} goal={goal} outcome={outcomes.find((outcome) => outcome.goalId === goal.id)} marks={milestones.find((m) => m.goalId === goal.id)} funding={fundingFor(goal.id)} draggable moving={movingGoalId === goal.id} onMove={(status) => { void moveGoal(goal.id, status); }} onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", goal.id); }} onDragEnd={() => setDragOverColumn(null)} onOpen={() => { setError(""); setFeedback(""); setConfirmDelete(false); setSelectedGoal(goal); }} />)}
+            {columnGoals.map((goal) => <GoalCard key={goal.id} goal={goal} outcome={outcomes.find((outcome) => outcome.goalId === goal.id)} marks={milestones.find((m) => m.goalId === goal.id)} funding={fundingFor(goal.id)} alloc={allocFor(goal.id)} draggable moving={movingGoalId === goal.id} onMove={(status) => { void moveGoal(goal.id, status); }} onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", goal.id); }} onDragEnd={() => setDragOverColumn(null)} onOpen={() => { setError(""); setFeedback(""); setConfirmDelete(false); setSelectedGoal(goal); }} />)}
             {!columnGoals.length && <p className="rounded-xl border border-dashed border-line-strong bg-raised/70 px-3 py-6 text-center text-xs text-muted">Drop a goal here or use + Add in this column.</p>}
           </div>
         </section>;
@@ -267,7 +263,7 @@ export function GoalsClient({ goals, outcomes, milestones, funding, allocation, 
         <span className="mt-3 font-semibold text-ink">Add a goal</span>
         <span className="mt-1 text-sm text-muted">Create another savings goal</span>
       </button>
-      {goals.map((goal) => <GoalCard key={goal.id} goal={goal} outcome={outcomes.find((outcome) => outcome.goalId === goal.id)} marks={milestones.find((m) => m.goalId === goal.id)} funding={fundingFor(goal.id)} onOpen={() => { setError(""); setConfirmDelete(false); setSelectedGoal(goal); }} />)}
+      {goals.map((goal) => <GoalCard key={goal.id} goal={goal} outcome={outcomes.find((outcome) => outcome.goalId === goal.id)} marks={milestones.find((m) => m.goalId === goal.id)} funding={fundingFor(goal.id)} alloc={allocFor(goal.id)} onOpen={() => { setError(""); setConfirmDelete(false); setSelectedGoal(goal); }} />)}
     </div>}
 
     {(showForm || selectedGoal) && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) { setShowForm(false); setSelectedGoal(null); setConfirmDelete(false); } }} className="fixed inset-0 z-[100] flex justify-center overflow-y-auto bg-ink/45 [&>*]:my-auto p-3 backdrop-blur-[2px] sm:p-6">

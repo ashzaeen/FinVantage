@@ -344,13 +344,8 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
                               )}
                               {tx.pending && <span className="shrink-0 rounded-full bg-warning-bg px-1.5 py-px text-xs font-medium text-warning-text">Pending</span>}
                               {unusual[tx.id] && (
-                                <span
-                                  title={`Usual here: ${formatUsd(unusual[tx.id]!.usualCents)}`}
-                                  className="shrink-0 rounded-full px-1.5 py-px text-xs font-medium text-ink-secondary"
-                                  style={{ border: "1px solid var(--flow-out)" }}
-                                >
-                                  {unusual[tx.id]!.ratio.toFixed(1)}x usual here
-                                  <span className="sr-only">. A usual charge at {tx.merchant} is about {formatUsd(unusual[tx.id]!.usualCents)}.</span>
+                                <span className="shrink-0 rounded-full px-1.5 py-px text-xs font-medium text-ink-secondary" style={{ border: "1px solid var(--warning)" }}>
+                                  {unusual[tx.id]!.ratio.toFixed(1)}x usual here <span className="font-normal text-muted">(usual {formatUsd(unusual[tx.id]!.usualCents)})</span>
                                 </span>
                               )}
                             </span>

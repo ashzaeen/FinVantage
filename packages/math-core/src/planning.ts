@@ -449,6 +449,7 @@ export function debtPayoff(accounts: readonly Account[], extraCents: number, asO
     debts: debts.map(({ id, name, balanceCents, annualRate, minimumPaymentCents }) => ({ id, name, balanceCents, annualRate, minimumPaymentCents })),
     plans,
     avalancheSavesCents: avalanche && snowball ? Math.max(0, snowball.totalInterestCents - avalanche.totalInterestCents) : 0,
+    avalancheFinishesSoonerMonths: avalanche?.months != null && snowball?.months != null ? Math.max(0, snowball.months - avalanche.months) : 0,
   };
 }
 
@@ -529,20 +530,34 @@ export function incomeVariability(sourcesByMonth: readonly { month: string; cate
 
 /* ─── Copilot impact ─────────────────────────────────────────────────────── */
 
-export function copilotImpact(events: readonly Pick<CopilotEvent, "extractedPriceCents" | "metrics">[]): CopilotImpact {
+/** The Monday on or before a date. */
+function mondayOf(iso: string): string {
+  const day = (new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7;
+  return addDays(iso, -day);
+}
+
+/** The weekly chart on the Copilot page looks back this many weeks, this one included. */
+export const COPILOT_IMPACT_WEEKS = 8;
+
+export function copilotImpact(events: readonly Pick<CopilotEvent, "extractedPriceCents" | "metrics" | "createdAt">[], today: string): CopilotImpact {
+  const thisWeek = mondayOf(today);
+  const weeks = Array.from({ length: COPILOT_IMPACT_WEEKS }, (_, i) => ({ weekStart: addDays(thisWeek, -7 * (COPILOT_IMPACT_WEEKS - 1 - i)), checked: 0, flagged: 0 }));
   let flagged = 0;
   let flaggedCents = 0;
   let goalMonthsAtStake = 0;
   for (const e of events) {
     const worstDelay = Math.max(0, ...e.metrics.goalImpacts.map((g) => g.delayMonths ?? 0));
     const belowCushion = e.metrics.liquidBufferAfterCents !== null && e.metrics.liquidBufferAfterCents < e.metrics.bufferTargetCents;
+    const week = weeks.find((w) => w.weekStart === mondayOf(e.createdAt.slice(0, 10)));
+    if (week) week.checked += 1;
     if (worstDelay > 0 || belowCushion) {
+      if (week) week.flagged += 1;
       flagged += 1;
       flaggedCents += e.extractedPriceCents;
       goalMonthsAtStake += Math.round(worstDelay);
     }
   }
-  return { checked: events.length, flagged, flaggedCents, goalMonthsAtStake };
+  return { checked: events.length, flagged, flaggedCents, goalMonthsAtStake, weeks };
 }
 
 /* ─── Money calendar ─────────────────────────────────────────────────────── */

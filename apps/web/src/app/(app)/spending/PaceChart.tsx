@@ -27,7 +27,7 @@ export function PaceChart({ pace }: { pace: SpendingPace }) {
   return (
     <Card title="Spending Pace" subtitle={`${monthYear(pace.month)} · money out, added up day by day`}>
       <p className="mb-2 text-sm font-medium text-ink">{paceSentence(pace)}</p>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`${paceSentence(pace)} At this pace the month ends near ${formatUsd(pace.projectedCents)}.`}>
+      <div className="overflow-x-auto"><svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[30rem] max-w-[44rem]" role="img" aria-label={`${paceSentence(pace)} At this pace the month ends near ${formatUsd(pace.projectedCents)}.`}>
         {ticks.map((t) => (
           <g key={t}>
             <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--border)" strokeWidth={1} />
@@ -35,18 +35,18 @@ export function PaceChart({ pace }: { pace: SpendingPace }) {
           </g>
         ))}
         {pace.budgetCents !== null && (
-          <line x1={PAD.left} x2={W - PAD.right} y1={y(pace.budgetCents)} y2={y(pace.budgetCents)} stroke="var(--flow-out)" strokeWidth={1.5} />
+          <line x1={PAD.left} x2={W - PAD.right} y1={y(pace.budgetCents)} y2={y(pace.budgetCents)} stroke="var(--warning)" strokeWidth={1.5} />
         )}
         <polyline points={line(pace.lastMonthCents)} fill="none" stroke="var(--ink-muted)" strokeWidth={2} strokeDasharray="5 4" strokeLinecap="round" />
         <polyline points={line(pace.thisMonthCents)} fill="none" stroke="var(--series-1)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
         {lastIndex >= 0 && <circle cx={x(lastIndex)} cy={y(pace.thisMonthCents[lastIndex]!)} r={3.5} fill="var(--series-1)" />}
         <text x={PAD.left} y={H - 6} fontSize={12} fill="var(--ink-muted)">Day 1</text>
         <text x={W - PAD.right} y={H - 6} textAnchor="end" fontSize={12} fill="var(--ink-muted)">Day {days}</text>
-      </svg>
+      </svg></div>
       <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted">
         <li className="flex items-center gap-1.5"><span aria-hidden="true" className="inline-block h-0.5 w-5" style={{ background: "var(--series-1)" }} />This month</li>
         <li className="flex items-center gap-1.5"><span aria-hidden="true" className="inline-block w-5 border-t-2 border-dashed" style={{ borderColor: "var(--ink-muted)" }} />Last month</li>
-        {pace.budgetCents !== null && <li className="flex items-center gap-1.5"><span aria-hidden="true" className="inline-block h-0.5 w-5" style={{ background: "var(--flow-out)" }} />Budgets total {formatUsd(pace.budgetCents)}</li>}
+        {pace.budgetCents !== null && <li className="flex items-center gap-1.5"><span aria-hidden="true" className="inline-block h-0.5 w-5" style={{ background: "var(--warning)" }} />Budgets total {formatUsd(pace.budgetCents)}</li>}
       </ul>
       <p className="mt-2 text-xs text-muted">At this pace the month ends near {formatUsd(pace.projectedCents)}. That is a projection, not a promise.</p>
       <table className="sr-only">

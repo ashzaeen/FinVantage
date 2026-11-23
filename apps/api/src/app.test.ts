@@ -718,11 +718,15 @@ test("allocation targets start unset, save only on request, and then drive the d
 
 test("the Copilot impact counts what it has checked", async () => {
   const { client } = setup();
-  assert.deepEqual(await client.getCopilotImpact(), { checked: 0, flagged: 0, flaggedCents: 0, goalMonthsAtStake: 0 });
+  const empty = await client.getCopilotImpact();
+  assert.deepEqual({ ...empty, weeks: [] }, { checked: 0, flagged: 0, flaggedCents: 0, goalMonthsAtStake: 0, weeks: [] });
+  assert.equal(empty.weeks.length, 8);
   await client.evaluateCopilot({ body: { pageType: "checkout", itemType: "retail_purchase", priceCents: 149_900, merchant: "Gadget Store" } });
   const impact = await client.getCopilotImpact();
   assert.equal(impact.checked, 1);
   assert.ok(impact.flagged <= impact.checked);
+  // The check lands in one of the eight weeks. (Events are stamped with the real clock, the demo's "today" can be later.)
+  assert.equal(impact.weeks.reduce((sum, w) => sum + w.checked, 0), 1);
 });
 
 test("unusual charges are well above a merchant's usual and never include money in", async () => {

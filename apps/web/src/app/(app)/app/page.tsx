@@ -2,16 +2,15 @@ import Link from "next/link";
 import { PiggyBank, ReceiptText, Repeat, TrendingUp, Wallet } from "lucide-react";
 import { formatUsd } from "@finvantage/contracts";
 import { AnalyticsChart } from "@/components/finance/AnalyticsChart";
-import { CreditCards } from "@/components/finance/CreditCards";
 import { MockedBadge } from "@/components/ui/MockedBadge";
 import { StatCard } from "@/components/ui/Stat";
 import { OverviewCharts } from "./OverviewCharts";
-import { OverviewHealth } from "./OverviewHealth";
 import { MoneyCalendarCard } from "./OverviewCalendar";
-import { AttentionStrip, HealthScoreCard, SafeToSpendCard } from "./OverviewPlanning";
+import { AttentionStrip } from "./AttentionStrip";
+import { HealthScoreCard, SafeToSpendCard } from "./OverviewPlanning";
 import { OverviewSearch } from "./OverviewSearch";
 import { api } from "@/lib/api";
-import { needsLook } from "@/lib/subscriptions";
+import { shortDate } from "@/lib/format";
 
 /* ─── Merchant Logo / Avatar ───────────────────────────────────────────────── */
 // Brand colors of the merchants they stand for: the same in both themes.
@@ -53,7 +52,7 @@ function MerchantLogo({ name }: { name: string }) {
 }
 
 export default async function OverviewPage() {
-  const [netWorth, goals, transactions, accounts, spending, investments, categories, subscriptions, insights, attention, safeToSpend, health, calendar] = await Promise.all([
+  const [netWorth, goals, transactions, accounts, spending, investments, categories, subscriptions, attention, safeToSpend, health, calendar] = await Promise.all([
     api.getNetWorth(),
     api.listGoals(),
     api.listTransactions({ query: { limit: 500 } }),
@@ -63,14 +62,15 @@ export default async function OverviewPage() {
     api.listSpendingCategories(),
     // A card, not the page: if this fails, the card is left out and everything else still shows.
     api.listSubscriptions().catch(() => null),
-    // Also a card, not the page.
-    api.getOverviewInsights().catch(() => null),
     api.getAttention().catch(() => null),
     api.getSafeToSpend().catch(() => null),
     api.getHealthScore().catch(() => null),
     api.getMoneyCalendar().catch(() => null),
   ]);
 
+  const nextDue = calendar?.events.find((e) => e.kind !== "payday");
+  const nextDueText = nextDue ? `${nextDue.label}, ${shortDate(nextDue.date)}` : null;
+  const nextPayday = calendar?.events.find((e) => e.kind === "payday")?.date ?? null;
   const displayTx = transactions.slice(0, 5);
   const accountNames = new Map(accounts.map((account) => [account.id, account.name]));
   const categoryLabels = new Map(categories.map((category) => [category.id, category.label]));
@@ -128,18 +128,16 @@ export default async function OverviewPage() {
         />
       </div>
 
-      {attention && <AttentionStrip feed={attention} />}
+      {attention && <AttentionStrip feed={attention} next={nextDueText} />}
 
       {(safeToSpend || health) && (
         <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
-          {safeToSpend && <SafeToSpendCard safe={safeToSpend} />}
+          {safeToSpend && <SafeToSpendCard safe={safeToSpend} nextPayday={nextPayday} />}
           {health && <HealthScoreCard health={health} />}
         </div>
       )}
 
       {calendar && <MoneyCalendarCard cal={calendar} />}
-
-      {insights && <OverviewHealth insights={insights} />}
 
       {/* ── Subscriptions ────────────────────────────────────────────── */}
       {subscriptions && (
@@ -157,7 +155,7 @@ export default async function OverviewPage() {
                 <p className="mt-0.5 text-xs text-muted">Charges that repeat, and what needs a look</p>
               </div>
             </div>
-            <dl className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-4">
+            <dl className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-3">
               <div>
                 <dt className="text-xs text-muted">Monthly Cost</dt>
                 <dd className="font-poppins text-xl font-bold tabular-nums text-ink">{formatUsd(subscriptions.subscriptionTotals.monthlyCents)}</dd>
@@ -165,12 +163,6 @@ export default async function OverviewPage() {
               <div>
                 <dt className="text-xs text-muted">Active</dt>
                 <dd className="font-poppins text-xl font-bold tabular-nums text-ink">{subscriptions.subscriptionTotals.count}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted">Needs a Look</dt>
-                <dd className="font-poppins text-xl font-bold tabular-nums text-ink">
-                  {needsLook([...subscriptions.subscriptions, ...subscriptions.bills, ...subscriptions.cancelled]).length}
-                </dd>
               </div>
               <div>
                 <dt className="text-xs text-muted">Saved So Far</dt>
@@ -181,32 +173,12 @@ export default async function OverviewPage() {
         </Link>
       )}
 
-      {/* ── Cash Flow and Credit Accounts ────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_330px]">
-        {/* Analytics Card */}
-        <div className="flex min-h-[620px] flex-col rounded-3xl border border-line bg-raised p-5 [box-shadow:var(--shadow-resting)] sm:p-6">
-          {/* Header */}
-          <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-4">
-            <div><h2 className="font-poppins text-lg font-bold text-ink">Cash Flow</h2><p className="mt-0.5 text-xs text-muted">Recent months with activity · USD</p></div>
-          </div>
-
-          <AnalyticsChart data={spending.monthlyTrend} />
+      {/* ── Cash Flow ────────────────────────────────────────────────── */}
+      <div className="flex min-h-[420px] flex-col rounded-3xl border border-line bg-raised p-5 [box-shadow:var(--shadow-resting)] sm:p-6">
+        <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-4">
+          <div><h2 className="font-poppins text-lg font-bold text-ink">Cash Flow</h2><p className="mt-0.5 text-xs text-muted">Recent months with activity · USD</p></div>
         </div>
-
-        {/* Credit Card Accounts */}
-        <div className="rounded-3xl bg-raised border border-line p-5 [box-shadow:var(--shadow-resting)] sm:p-6">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-poppins text-lg font-bold text-ink">Credit Cards</h2>
-            </div>
-
-            <CreditCards accounts={accounts} />
-          </div>
-
-          <a href="/accounts" className="mt-6 block w-full rounded-2xl bg-accent-soft py-3.5 text-center font-roboto text-xs font-medium text-accent-ink transition-all hover:bg-accent-soft-hover">
-            View all accounts
-          </a>
-        </div>
+        <AnalyticsChart data={spending.monthlyTrend} />
       </div>
 
       <section aria-label="Financial charts" className="space-y-4">

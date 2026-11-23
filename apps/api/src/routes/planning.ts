@@ -234,5 +234,5 @@ export function registerPlanningRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     return driftFor(userId);
   });
 
-  mount(app, deps, routes.getCopilotImpact, async ({ userId }) => copilotImpact(await deps.docs.listCopilotEvents(userId)));
+  mount(app, deps, routes.getCopilotImpact, async ({ userId }) => copilotImpact(await deps.docs.listCopilotEvents(userId), deps.today()));
 }

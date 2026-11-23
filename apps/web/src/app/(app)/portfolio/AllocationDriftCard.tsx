@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { MockedBadge } from "@/components/ui/MockedBadge";
 import { api } from "@/lib/api";
 import { ALLOCATION_PRESETS, ASSET_CLASS_LABEL } from "@/lib/allocationPresets";
+import { buttonClass } from "@/components/ui/Button";
 
 function moveSentence(row: AllocationDrift["rows"][number]): string | null {
   if (!row.outside || row.moveCents === 0) return null;
@@ -89,10 +90,10 @@ export function AllocationDriftCard({ initial }: { initial: AllocationDrift }) {
       </fieldset>
       {preset && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button type="button" disabled={saving} onClick={() => void save()} className="min-h-11 rounded-xl px-5 text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--accent)" }}>
+          <button type="button" disabled={saving} onClick={() => void save()} className={buttonClass({ variant: "primary" })}>
             {saving ? "Saving…" : "Save Targets"}
           </button>
-          <button type="button" disabled={saving} onClick={() => setPresetId(null)} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-muted">Cancel</button>
+          <button type="button" disabled={saving} onClick={() => setPresetId(null)} className={buttonClass({ variant: "quiet" })}>Cancel</button>
         </div>
       )}
       {error && <p role="alert" className="mt-2 text-sm" style={{ color: "var(--critical)" }}>{error}</p>}

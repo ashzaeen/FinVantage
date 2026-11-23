@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { api } from "@/lib/api";
 import { accountsCsv, goalsCsv, transactionsCsv } from "@/lib/dataExport";
+import { buttonClass } from "@/components/ui/Button";
 
 function save(name: string, type: string, text: string) {
   const url = URL.createObjectURL(new Blob([text], { type }));
@@ -47,8 +48,8 @@ export function DataExport() {
     <Card lift={false} title="Download My Data" subtitle="Your accounts, transactions, goals, life events and budgets">
       <p className="mb-3 text-sm text-muted">The file is made in your browser and goes nowhere else. The latest 500 transactions are included. This is demo data.</p>
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={busy} onClick={() => void run("json")} className="min-h-11 rounded-xl px-5 text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--accent)" }}>{busy ? "Preparing…" : "Download JSON"}</button>
-        <button type="button" disabled={busy} onClick={() => void run("csv")} className="min-h-11 rounded-xl border border-line bg-raised px-5 text-sm font-semibold text-ink-secondary disabled:opacity-50">Download CSV</button>
+        <button type="button" disabled={busy} onClick={() => void run("json")} className={buttonClass({ variant: "primary" })}>{busy ? "Preparing…" : "Download JSON"}</button>
+        <button type="button" disabled={busy} onClick={() => void run("csv")} className={buttonClass({ variant: "secondary" })}>Download CSV</button>
       </div>
       <p role="status" aria-live="polite" className="mt-2 text-sm text-ink">{message}</p>
     </Card>

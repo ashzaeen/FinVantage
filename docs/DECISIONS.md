@@ -536,3 +536,31 @@ GO2 and GO4. With these, every phase 3 idea is built except Delete My Data (ST2)
 | Every button-shaped element is at least 44px tall on touch screens, links included: `buttonClass` adds `max-lg:min-h-11`. The global touch rule only covers real `<button>` elements | A scripted touch test (real touch-enabled mobile context, 390px) found link-styled buttons at 40px and a 24px standalone link. After the fixes no control is under 44px on any page |
 | The one-button theme switch flips between light and dark from what you see now (the icon shows the current look), and Settings keeps the three-way System, Light, Dark control | The old cycle started at System, so on a light device the first tap changed the setting but not the look, and it seemed broken |
 | The extension was tested loaded as a real unpacked extension in Chromium (Chrome stable no longer allows sideloading): the overlay rendered on all three mock pages with live API data in dark and light, the focus ring shows, and the popup is dark. Chrome stable itself was not used | Closes the "only tested on a mock page" gap. Real-device testing of touch gestures is still not done: the touch test used an emulated mobile context |
+
+## Dashboard layout pass: one home for each figure, decided 2026-11-23
+
+The owner asked for the wireframe gaps to be closed and for no information to appear in several places, with the less important cards cut. Each figure now has one home.
+
+| Figure | Lives on | Removed from |
+| --- | --- | --- |
+| Debt payoff plans (cards and loans) | Accounts | Credit (it keeps the what-if, which is cards only) |
+| Cash runway | Accounts, beside How Reachable Is Your Money, and as a Health part | The Overview card |
+| Savings rate | Income (Stability) and as a Health part | The Overview card |
+| Financial Health score | Overview, each part linking to its page | Reports |
+| The calendar of dated money | Overview Money Calendar | The Credit due-date calendar and the Subscriptions upcoming calendar (both keep their lists) |
+| Spending Patterns | Spending | Transactions |
+| Monthly need per goal | A bar on each goal card | The separate funding summary, and the "Goals That Need More" list in the allocation card |
+| Needs a Look count | The Needs Attention strip | The Overview subscriptions tile |
+| Credit card balances | Accounts and Credit | The Overview Credit Cards panel (Cash Flow now takes the full width) |
+
+Overview order, most to least important: the four state tiles, Needs Attention, Safe to Spend beside Financial Health, the Money Calendar, Subscriptions, Cash Flow, the charts, Recent Transactions. The Finances sidebar order is Accounts, Transactions, Income, Spending, Goals, Credit, Investments.
+
+Wireframe gaps closed: W1 (Dismiss for today, kept per day in this browser, and a Next line when nothing needs a look), W2 (a stacked bar of where the month's money goes, and the next payday), W4 (tap or arrow to a day and read its list; a plain list by date on phones), W5 (a bar on each goal card), W6 (an order toggle, end dots with dates, and "finishes N months sooner" from the API), W8 (each part links to its page), W9 (a Difference line in Compare, goal dates and a start slider on the timeline), W14 (three tiles and a weekly chart from `weeks` on the impact route), W15 (the usual amount is printed on the chip, not in a hover tooltip), W16 (before and after bars per affected goal).
+
+Not done, on purpose:
+- **W3 What Moved Net Worth:** it would repeat Cash Flow, and net worth is rebuilt from transactions so there is no market part to show.
+- **W8 four-quarter sparkline:** account balances keep no history.
+- **W12 formula name:** the working shown is the calculation's own label and expression.
+- **W13 Alerts and Delete My Data:** alerts wait on the delivery decision (D3); delete needs a delete method on every store.
+
+Colors follow "one meaning per color": red (`--flow-out`) is only money going out. A flagged purchase, a stressed case, a budget limit and a low point use `--warning`. New charts are drawn at a width of 30 to 44rem and scroll sideways on a phone, so their text never scales below about 10px.

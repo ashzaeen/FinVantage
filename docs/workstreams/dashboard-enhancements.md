@@ -239,6 +239,10 @@ About 15 to 20 working days. Pick from this list after phase 2. Each needs its d
 | IV5 Retirement fan | Range chart at 65 from the simulator | New inputs: retirement age, contribution |
 | ST2 Export and delete my data | Export CSV and JSON, confirmed delete | Surfaces the existing delete reducer, needs confirm flow |
 
+### Layout pass (2026-11-23)
+
+After phase 3 the wireframe gaps were closed and duplicated figures were given one home each. See `docs/DECISIONS.md`, "Dashboard layout pass". Cash Runway (OV5) now lives on Accounts and Savings Rate (OV6) on Income; both also feed the Overview's Health card.
+
 ### Phase 3 result (first group)
 
 | Idea | Status |
