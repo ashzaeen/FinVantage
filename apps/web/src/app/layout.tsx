@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { themeScript } from "@/lib/theme";
 import "./globals.css";
 
 /** `viewportFit: "cover"` lets pages draw under the iPhone notch and home bar; the shell pads
@@ -21,8 +23,11 @@ export const metadata: Metadata = {
 /** Shared by the landing page and the dashboard. The dashboard's sidebar lives in `(app)/layout.tsx`. */
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: the script below sets data-theme and color-scheme on <html> before React runs.
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Sets the theme before first paint, so a dark visitor never sees a white flash. */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript() }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -30,7 +35,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
         />
       </head>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

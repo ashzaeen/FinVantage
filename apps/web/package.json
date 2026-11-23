@@ -8,7 +8,8 @@
     "build": "node scripts/bundle-extension.mjs && next build --webpack",
     "start": "next start -p 3000",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "node --import tsx --test \"src/**/*.test.ts\""
+    "test": "node --import tsx --test \"src/**/*.test.ts\" && node scripts/theme-audit.mjs",
+    "theme:audit": "node scripts/theme-audit.mjs"
   },
   "dependencies": {
     "@finvantage/contracts": "*",

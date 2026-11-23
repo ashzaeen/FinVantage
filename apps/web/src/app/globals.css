@@ -1,9 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;600;700&display=swap');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css');
 @import "tailwindcss";
 
-/* ─── Design tokens ────────────────────────────────────────────────────────── */
+/* The escape hatch for the rare case a token cannot express, such as swapping a logo: `dark:hidden`.
+   It follows the app's own theme switch, not the OS setting. Colors go through the tokens below. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ─── Design tokens ────────────────────────────────────────────────────────────
+   Two blocks: this light one, and `:root[data-theme="dark"]` right after it. Every color token
+   below (outside the landing page's own --landing-* set) must exist in both. A test enforces it:
+   src/lib/theme-tokens.test.ts. Components use these tokens and never a raw color. */
 :root {
+  color-scheme: light;
+
   /* Typography */
   --font-poppins: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-roboto:  'Roboto', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
@@ -23,13 +30,27 @@
   /* Text & Hierarchy */
   --ink:             #16192c;   /* Dark navy/slate for primary high-contrast text */
   --ink-secondary:   #4a4f68;
-  --ink-muted:       #8d94a8;   /* Soft slate for labels & metadata */
-  --ink-light:       #b3b9cb;
+  --ink-muted:       #5d647e;   /* Labels & metadata. 4.9:1 or better on every surface it sits on */
+  --ink-light:       #8d94a8;   /* Icons, lines and disabled states only. Never body text: 3:1 at best */
 
   /* Brand / Primary */
   --accent:          #544af7;   /* Signature purple */
   --accent-hover:    #4338e3;
   --accent-soft:     #eef1fc;   /* Soft lavender for active states / buttons */
+  /* The accent as TEXT, a link, an icon or a focus ring on a surface. --accent is the FILL (a button
+     under white text, the sidebar). They match in light; in dark the ink steps lighter to stay legible. */
+  --accent-ink:      #544af7;
+  --accent-soft-hover: #e2e6fc;
+  /* The sidebar, the phone top bar and the drawer. The browser's status bar is tinted to match
+     (CHROME_COLOR in src/lib/theme.ts). */
+  --chrome:          #544af7;
+  /* The active row in the sidebar and drawer: a white pill with accent text in light, a lighter indigo
+     pill with white text in dark. The chip is the icon tile behind an active Intelligence row. */
+  --chrome-active-bg:   #ffffff;
+  --chrome-active-ink:  #544af7;
+  --chrome-active-chip: rgba(84, 74, 247, 0.12);
+  /* A hovered card or tile's border */
+  --border-accent:   #d7d4ff;
 
   /* Semantic colors. Fills are soft; text variants (--gain, --loss, *-text) pass AA on white.
      Money in and money out are NOT good and bad: they use --flow-in and --flow-out (teal and orange),
@@ -45,9 +66,12 @@
   --warning-text:    #9a4a0f;
   --info:            #2d83c9;
   --info-bg:         #e6f0fa;
+  --info-text:       #1d5f9e;   /* Info as text on --info-bg. --info itself is for icons and fills */
   --cyan:            #2d83c9;
+  /* Money in and out. The same green and red as --good and --critical, so income and spending read the same
+     on every page (a test keeps them equal). */
   --flow-in:         #2a9d8f;
-  --flow-out:        #dd6f2c;
+  --flow-out:        #d14a62;
   --border-strong:   #d9ddec;
   --ink-chart:       #626981;   /* Axis and legend text inside charts */
 
@@ -58,6 +82,18 @@
 
   /* The one floating shadow, after Airbnb's single elevation tier, tinted with our ink */
   --shadow-float:    0 0 0 1px rgba(22, 25, 44, 0.02), 0 2px 6px rgba(22, 25, 44, 0.04), 0 4px 8px rgba(22, 25, 44, 0.1);
+  /* A card's shadow at rest, before it lifts */
+  --shadow-resting:  0 2px 12px 0 rgba(22, 25, 44, 0.03);
+  /* Hover lift on cards (.card-lift) and on small tiles and rows (.tile-lift) */
+  --shadow-lift:     0 8px 24px rgba(84, 74, 247, 0.09);
+  --shadow-lift-sm:  0 6px 16px rgba(84, 74, 247, 0.08);
+  /* The dim layer behind a drawer or dialog */
+  --scrim:           rgba(22, 25, 44, 0.42);
+
+  /* Browser surfaces: scrollbar thumb and the tap flash on touch screens */
+  --scrollbar-thumb:       #d8dce8;
+  --scrollbar-thumb-hover: #bac0d2;
+  --tap-highlight:         rgba(84, 74, 247, 0.14);
 
   /* Shape, after Airbnb: buttons 8px, cards 14px, pills fully round */
   --radius-button:   8px;
@@ -81,6 +117,16 @@
   --chart-benchmark: #8d94a8;
   --chart-other:     #aab1c3;
 
+  /* Goal progress bars run from series 1 to a lighter step */
+  --progress-end:    #818cf8;
+  /* Life Events timeline: one accent per goal row */
+  --timeline-1:      #287a78;
+  --timeline-2:      #4e69b1;
+  --timeline-3:      #b66831;
+  --timeline-4:      #8d5b8d;
+  --timeline-5:      #3e7d48;
+  --timeline-6:      #b34d62;
+
   /* Budget bars: the lighter bar behind spending shows the projected month end */
   --budget-projected:      #cbc7fc;
   --budget-projected-over: #f6c4cd;
@@ -88,6 +134,9 @@
   /* Landing page v2. Distinct names, not a redefinition of --accent/--ink/etc. above, so this
      never reskins the dashboard. All checked against WCAG AA (4.5:1) on their stated backgrounds. */
   --landing-primary:        #4F46E5;
+  /* Indigo as text and borders on the page, and the card color. In light they match primary and white. */
+  --landing-primary-ink:    #4F46E5;
+  --landing-surface:        #FFFFFF;
   --landing-primary-hover:  #4338CA;
   --landing-primary-dark:   #3730A3;
   --landing-tint-50:        #EEF2FF;
@@ -112,6 +161,162 @@
   --landing-shadow-float:   0 2px 4px rgba(17, 24, 39, 0.05), 0 28px 56px -20px rgba(34, 31, 92, 0.32);
 }
 
+/* ─── Dark theme ───────────────────────────────────────────────────────────────
+   Indigo-tinted navy, not gray or pure black (docs/DECISIONS.md, "Dark mode"). Set by the script in
+   src/lib/theme.ts, which puts data-theme="dark" on <html> before first paint.
+   - Depth comes from lighter surfaces, not shadows: canvas < inset < raised.
+   - Text is off-white, never #fff. Muted text still clears 4.5:1 on the raised surface.
+   - Chart colors keep their light-mode hues, re-stepped for the dark surface and checked with the
+     dataviz validator (lightness band, colorblind separation, 3:1 contrast on --surface-raised).
+   - Gain, loss, flow-in and flow-out keep the same meaning and the same arrows. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --surface:         #0e1022;
+  --surface-raised:  #171a33;
+  --surface-card:    #171a33;
+  --surface-inset:   #101328;
+  --sidebar-bg:      #1c1952;
+  --sidebar-bg-dark: #15133f;
+
+  /* Borders */
+  --border:          #262a4a;
+  --border-subtle:   #1d2040;
+  --border-strong:   #373c66;
+
+  /* Text & Hierarchy */
+  --ink:             #e8eaf6;
+  --ink-secondary:   #b7bcd6;
+  --ink-muted:       #9097b8;
+  --ink-light:       #646b90;
+
+  /* Brand / Primary */
+  --accent:          #544af7;
+  --accent-hover:    #6258ff;
+  --accent-soft:     #25285c;
+  --accent-ink:      #a29cff;
+  --accent-soft-hover: #30357a;
+  --chrome:          #1c1952;
+  --chrome-active-bg:   #3a35a8;
+  --chrome-active-ink:  #ffffff;
+  --chrome-active-chip: rgba(255, 255, 255, 0.16);
+  --border-accent:   #4a46a0;
+
+  /* Semantic colors */
+  --good:            #34b3a3;
+  --good-bg:         #11332f;
+  --gain:            #4fd1c0;
+  --critical:        #f0647e;
+  --critical-bg:     #3b1824;
+  --loss:            #ff8aa1;
+  --warning:         #f0a43c;
+  --warning-bg:      #3a2a12;
+  --warning-text:    #f6bd69;
+  --info:            #5aa9e6;
+  --info-bg:         #13294a;
+  --info-text:       #5aa9e6;
+  --cyan:            #5aa9e6;
+  --flow-in:         #34b3a3;
+  --flow-out:        #f0647e;
+  --ink-chart:       #a6acca;
+
+  /* Elevation: black shadows, deeper, because a navy shadow vanishes on navy */
+  --shadow-sm:       0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --shadow-card:     0 4px 20px -2px rgba(0, 0, 0, 0.35);
+  --shadow-hover:    0 8px 30px -4px rgba(0, 0, 0, 0.5);
+  --shadow-float:    0 0 0 1px rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-resting:  0 2px 12px 0 rgba(0, 0, 0, 0.3);
+  --shadow-lift:     0 10px 28px rgba(0, 0, 0, 0.5);
+  --shadow-lift-sm:  0 6px 16px rgba(0, 0, 0, 0.4);
+  --scrim:           rgba(0, 0, 0, 0.6);
+
+  /* Browser surfaces */
+  --scrollbar-thumb:       #353a60;
+  --scrollbar-thumb-hover: #4a5080;
+  --tap-highlight:         rgba(162, 156, 255, 0.22);
+
+  /* Fan chart */
+  --fan-outer:       #2a2872;
+  --fan-inner:       #4640b4;
+  --fan-line:        #8f89ff;
+
+  /* Chart palette (Indigo Core, dark steps). Same hues and order as light. Validated on #171a33 with
+     the dataviz validator: lightness band, chroma, colorblind separation 8.6, 3:1 contrast. */
+  --series-1:        #7d76ff;
+  --series-2:        #26a998;
+  --series-3:        #e06d2c;
+  --series-4:        #d861b6;
+  --series-5:        #4496e0;
+  --series-6:        #b38c1e;
+  --tone-cyan-bg:    #13294a;
+  --chart-benchmark: #8f96b6;
+  --chart-other:     #6b7296;
+
+  --progress-end:    #b4afff;
+  --timeline-1:      #3fb0ad;
+  --timeline-2:      #6f8fdc;
+  --timeline-3:      #e08a4e;
+  --timeline-4:      #b987b9;
+  --timeline-5:      #5fb06c;
+  --timeline-6:      #e0788d;
+
+  /* Budget bars */
+  --budget-projected:      #3a3688;
+  --budget-projected-over: #5c2536;
+
+  /* Landing page: the same navy as the dashboard, with its own dark bands lifted a step above the page */
+  /* Same as light: the fill under white button text, and the always-dark band's lines and text */
+  --landing-primary:        #4F46E5;
+  --landing-primary-hover:  #4338CA;
+  --landing-dark-line:      rgba(255, 255, 255, 0.1);
+  --landing-dark-text:      rgba(255, 255, 255, 0.78);
+  --landing-primary-dark:   #c4c0ff;
+  --landing-primary-ink:    #a29cff;
+  --landing-surface:        #171a33;
+  --landing-tint-50:        #1b1e45;
+  --landing-tint-100:       #252963;
+  --landing-tint-200:       #3b4090;
+  --landing-text:           #e8eaf6;
+  --landing-text-secondary: #b7bcd6;
+  --landing-text-muted:     #9097b8;
+  --landing-border:         #2a2e52;
+  --landing-border-subtle:  #1f2342;
+  --landing-section-bg:     #0e1022;
+  --landing-dark-bg:        #161a3d;
+  --landing-dark-surface:   #1f2452;
+  --landing-warning-bg:     #3a2a12;
+  --landing-warning-text:   #f6bd69;
+  --landing-severe-bg:      #3b1824;
+  --landing-severe-text:    #ff9aae;
+  --landing-shadow-card:    0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 28px -14px rgba(0, 0, 0, 0.6);
+  --landing-shadow-float:   0 2px 4px rgba(0, 0, 0, 0.4), 0 28px 56px -20px rgba(0, 0, 0, 0.7);
+}
+
+/* Native selects ignore the card color in dark and paint their own gray. Draw the box ourselves, with a
+   chevron in the muted text color. Light keeps the native look, so nothing changes there. */
+:root[data-theme="dark"] select:not([multiple]):not([size]) {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239097b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 1rem;
+  padding-right: 2rem;
+}
+
+/* Recharts draws its tooltip as a white box with inline styles, so these need !important. In light the
+   values equal what it drew before; in dark they follow the card. */
+.recharts-default-tooltip {
+  background-color: var(--surface-raised) !important;
+  border-color: var(--border) !important;
+}
+.recharts-tooltip-label {
+  color: var(--ink) !important;
+}
+.recharts-tooltip-cursor {
+  stroke: var(--border-strong);
+}
+
 @theme inline {
   --font-heading:       var(--font-poppins);
   --font-sans:          var(--font-roboto);
@@ -128,6 +333,9 @@
   --color-loss:         var(--loss);
   --color-accent:       var(--accent);
   --color-accent-soft:  var(--accent-soft);
+  --color-accent-ink:   var(--accent-ink);
+  --color-accent-soft-hover: var(--accent-soft-hover);
+  --color-chrome:       var(--chrome);
   --color-good:         var(--good);
   --color-good-bg:      var(--good-bg);
   --color-critical:     var(--critical);
@@ -137,6 +345,7 @@
   --color-warning-text: var(--warning-text);
   --color-info:         var(--info);
   --color-info-bg:      var(--info-bg);
+  --color-info-text:    var(--info-text);
   --color-flow-in:      var(--flow-in);
   --color-flow-out:     var(--flow-out);
   --color-line-strong:  var(--border-strong);
@@ -152,6 +361,8 @@
   --color-lp-primary:      var(--landing-primary);
   --color-lp-primary-hover: var(--landing-primary-hover);
   --color-lp-primary-dark: var(--landing-primary-dark);
+  --color-lp-ink:          var(--landing-primary-ink);
+  --color-lp-surface:      var(--landing-surface);
   --color-lp-tint-50:      var(--landing-tint-50);
   --color-lp-tint-100:     var(--landing-tint-100);
   --color-lp-tint-200:     var(--landing-tint-200);
@@ -215,12 +426,14 @@ p, span, label, input, button, table, td, th,
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d8dce8;
+  background: var(--scrollbar-thumb);
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #bac0d2;
+  background: var(--scrollbar-thumb-hover);
 }
+/* No `scrollbar-color` here on purpose: in Chrome it switches off the ::-webkit-scrollbar styling
+   above. Firefox's default scrollbar follows `color-scheme`, so it goes dark with the theme. */
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -250,7 +463,7 @@ p, span, label, input, button, table, td, th,
   appearance: none;
   height: 6px;
   border-radius: 999px;
-  background: linear-gradient(to right, var(--accent) 0 var(--fill, 0%), var(--accent-soft) var(--fill, 0%) 100%);
+  background: linear-gradient(to right, var(--accent-ink) 0 var(--fill, 0%), var(--accent-soft) var(--fill, 0%) 100%);
   cursor: pointer;
 }
 .advisor-range::-webkit-slider-thumb {
@@ -259,8 +472,8 @@ p, span, label, input, button, table, td, th,
   height: 18px;
   border-radius: 999px;
   background: var(--surface-card);
-  border: 2px solid var(--accent);
-  box-shadow: 0 2px 6px rgba(84, 74, 247, 0.25);
+  border: 2px solid var(--accent-ink);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--accent-ink) 25%, transparent);
   transition: box-shadow 150ms, transform 150ms;
 }
 .advisor-range::-moz-range-thumb {
@@ -268,12 +481,12 @@ p, span, label, input, button, table, td, th,
   height: 16px;
   border-radius: 999px;
   background: var(--surface-card);
-  border: 2px solid var(--accent);
-  box-shadow: 0 2px 6px rgba(84, 74, 247, 0.25);
+  border: 2px solid var(--accent-ink);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--accent-ink) 25%, transparent);
 }
 .advisor-range:hover::-webkit-slider-thumb,
 .advisor-range:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 6px rgba(84, 74, 247, 0.15);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent-ink) 15%, transparent);
   transform: scale(1.06);
 }
 .advisor-range:focus-visible { outline: none; }
@@ -351,7 +564,7 @@ p, span, label, input, button, table, td, th,
   to { opacity: 1; transform: none; }
 }
 .invest-drawer { animation: invest-drawer 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.invest-drawer::backdrop { background: rgba(22, 25, 44, 0.42); }
+.invest-drawer::backdrop { background: var(--scrim); }
 
 @media (prefers-reduced-motion: reduce) {
   .invest-rise, .invest-fade, .invest-reveal, .invest-drawer { animation: none; }
@@ -403,9 +616,9 @@ p, span, label, input, button, table, td, th,
    .tile-lift  for small tiles and rows inside a card: a lighter version.
    !important wins over cards' inline resting shadow. */
 .card-lift { transition: transform 200ms ease, box-shadow 200ms ease; }
-.card-lift:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(84, 74, 247, 0.09) !important; }
+.card-lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift) !important; }
 .tile-lift { transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease; }
-.tile-lift:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(84, 74, 247, 0.08); }
+.tile-lift:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift-sm); }
 @media (prefers-reduced-motion: reduce) {
   .card-lift:hover, .tile-lift:hover { transform: none; }
 }
@@ -421,7 +634,7 @@ html {
 
 /* A soft brand-tinted flash on tap instead of the default grey box (Android Chrome, iOS Safari). */
 a, button, [role="button"], summary, label {
-  -webkit-tap-highlight-color: rgba(84, 74, 247, 0.14);
+  -webkit-tap-highlight-color: var(--tap-highlight);
 }
 
 /* Taps respond at once: no 300ms wait for a double-tap zoom on buttons and links. */
@@ -453,6 +666,25 @@ a, button, [role="button"], summary, select, input, label {
     font-size: 12px !important;
   }
 }
+
+/* The sidebar's links scroll on short screens. Shadows at the top and bottom edge show there is more:
+   the cover layers (`local`) hide a shadow once the list is scrolled to that end. */
+.nav-scroll {
+  background:
+    linear-gradient(var(--chrome) 30%, transparent) top / 100% 28px no-repeat local,
+    linear-gradient(transparent, var(--chrome) 70%) bottom / 100% 28px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.16), transparent) top / 100% 8px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.16), transparent) bottom / 100% 8px no-repeat scroll;
+}
+
+/* Placeholder blocks while a page loads. A slow shimmer; still when motion is reduced. */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-inset) 0%, var(--border-subtle) 50%, var(--surface-inset) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
 
 /* Phone navigation drawer. */
 @keyframes nav-drawer-in {
@@ -489,6 +721,14 @@ a, button, [role="button"], summary, select, input, label {
   :where(button, [role="button"], [role="tab"]):not(.tap-auto) {
     min-width: 44px;
   }
+}
+
+/* Checkboxes and radios are 18px everywhere (the browser default is 13px), in the brand colour. */
+input[type="checkbox"], input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
 }
 
 /* Checkboxes and radios: a larger box in the brand colour, and the whole label is the target. */
@@ -572,7 +812,7 @@ a, button, [role="button"], summary, select, input, label {
   background:
     radial-gradient(520px 360px at 88% 8%, rgba(79, 70, 229, 0.16), transparent 70%),
     radial-gradient(420px 320px at 6% 96%, rgba(15, 118, 110, 0.1), transparent 70%),
-    linear-gradient(160deg, var(--landing-tint-50), var(--landing-section-bg) 60%, #fff);
+    linear-gradient(160deg, var(--landing-tint-50), var(--landing-section-bg) 60%, var(--landing-surface));
 }
 .lp-stage::before {
   content: "";

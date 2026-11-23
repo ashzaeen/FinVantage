@@ -1,6 +1,9 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
+import { AppearanceCard } from "@/components/theme/AppearanceCard";
+import { DataExport } from "./DataExport";
+import { PrivacyCenter } from "./PrivacyCenter";
 import { SettingsClient } from "./SettingsClient";
 import { ManageTools } from "../spending/ManageTools";
 
@@ -15,14 +18,17 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" tier="P0" prd="9" />
+      <PageHeader title="Settings" />
       <div className="space-y-4">
+        <AppearanceCard />
         <Card lift={false} title="Spending Organization">
           <p className="mb-3 text-sm text-muted">
             Create your own categories and set rules that sort matching purchases automatically.
           </p>
           <ManageTools categories={categories} rules={rules} transactions={recentSpending} />
         </Card>
+        <PrivacyCenter />
+        <DataExport />
         <SettingsClient user={user} />
       </div>
     </>
