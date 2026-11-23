@@ -24,7 +24,7 @@ function CreditCardFace({ account, index, muted = false }: { account: Account; i
             <p className="truncate text-sm font-semibold">{account.name}</p>
           </div>
         </div>
-        <span className="shrink-0 rounded-full bg-white/12 px-2 py-1 text-[9px] font-semibold uppercase tracking-[.12em]">Credit</span>
+        <span className="shrink-0 rounded-full bg-white/12 px-2 py-1 text-xs font-semibold uppercase tracking-[.12em]">Credit</span>
       </div>
       <div className="relative mt-4 flex items-center gap-2 text-sm font-medium tracking-[.18em] tabular-nums text-white/90">
         <span aria-hidden="true" className="text-xs tracking-normal text-white/55">••••</span>

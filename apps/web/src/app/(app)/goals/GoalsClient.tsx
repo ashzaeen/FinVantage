@@ -104,7 +104,7 @@ function GoalCard({ goal, outcome, marks, funding, onOpen, draggable = false, on
       </div>}
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-line pt-3">
         <button type="button" onClick={onOpen} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-accent-ink hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink">Manage</button>
-        {onMove && <label className="flex items-center gap-2 whitespace-nowrap text-xs text-muted"><span>Move To</span><select aria-label={`Move ${goal.name} to`} value={goalStatus(goal)} disabled={moving} onChange={(event) => onMove(event.target.value as VisibleGoalStatus)} className="max-w-32 rounded-lg border border-line bg-raised px-2 py-1.5 text-xs font-semibold text-ink-secondary outline-none focus:border-accent-ink disabled:opacity-60">{GOAL_STATUSES.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}</select></label>}
+        {onMove && <label className="flex items-center gap-2 whitespace-nowrap text-xs text-muted"><span>Move To</span><select aria-label={`Move ${goal.name} to`} value={goalStatus(goal)} disabled={moving} onChange={(event) => onMove(event.target.value as VisibleGoalStatus)} className="max-w-32 rounded-lg border border-line bg-raised px-2 py-1.5 text-xs font-semibold text-ink-secondary outline-none focus:border-accent-ink disabled:opacity-60 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink">{GOAL_STATUSES.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}</select></label>}
         {moving && <span className="text-xs text-muted">Saving…</span>}
       </div>
       </div>
@@ -249,8 +249,8 @@ export function GoalsClient({ goals, outcomes, milestones, funding, allocation, 
       {GOAL_STATUSES.map((column) => {
         const columnGoals = goals.filter((goal) => goalStatus(goal) === column.id);
         const isDragTarget = dragOverColumn === column.id;
-        return <section key={column.id} aria-labelledby={`goal-column-${column.id}`} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDragOverColumn(column.id); }} onDrop={(event) => { event.preventDefault(); const goalId = event.dataTransfer.getData("text/plain"); setDragOverColumn(null); void moveGoal(goalId, column.id); }} className={`min-h-60 rounded-2xl border p-3 transition-colors sm:p-4 ${isDragTarget ? "border-accent-ink bg-accent-soft ring-2 ring-accent-ink/15" : "border-line bg-surface"}`}>
-          <header className="mb-3 flex items-center justify-between px-1">
+        return <section key={column.id} aria-labelledby={`goal-column-${column.id}`} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDragOverColumn(column.id); }} onDrop={(event) => { event.preventDefault(); const goalId = event.dataTransfer.getData("text/plain"); setDragOverColumn(null); void moveGoal(goalId, column.id); }} className={`min-h-60 rounded-2xl p-1 transition-colors ${isDragTarget ? "bg-accent-soft ring-2 ring-accent-ink/15" : ""}`}>
+          <header className="mb-3 flex items-center justify-between border-b border-line px-1 pb-3">
             <div><h2 id={`goal-column-${column.id}`} className="flex items-center gap-2 font-poppins text-sm font-bold text-ink"><span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: column.accent }} />{column.label}</h2><p className="mt-1 pl-4 text-xs text-muted">{column.hint}</p></div>
             <div className="flex items-center gap-2"><span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-raised px-2 text-xs font-semibold text-ink-chart">{columnGoals.length}</span><button type="button" onClick={() => openCreateGoal(column.id)} aria-label={`Add a goal to ${column.label}`} className="rounded-lg px-2 py-1 text-sm font-semibold text-accent-ink hover:bg-raised">+ Add</button></div>
           </header>
@@ -284,7 +284,7 @@ export function GoalsClient({ goals, outcomes, milestones, funding, allocation, 
         </section>}
         <form onSubmit={saveGoal} className="space-y-4 p-6">
           <label className="block text-sm font-medium" style={{ color: "var(--ink)" }}>Goal name *
-            <input name="name" required maxLength={80} defaultValue={selectedGoal?.name ?? ""} placeholder="e.g. Emergency fund" className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-4 py-3 outline-none focus:border-[var(--accent-ink)]" style={{ borderColor: "var(--border)" }} />
+            <input name="name" required maxLength={80} defaultValue={selectedGoal?.name ?? ""} placeholder="e.g. Emergency fund" className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-4 py-3 outline-none focus:border-[var(--accent-ink)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink" style={{ borderColor: "var(--border)" }} />
           </label>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium" style={{ color: "var(--ink)" }}>Target amount *
@@ -296,21 +296,21 @@ export function GoalsClient({ goals, outcomes, milestones, funding, allocation, 
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium" style={{ color: "var(--ink)" }}>Target date *
-              <input name="targetDate" type="date" required defaultValue={selectedGoal?.targetDate ?? `${new Date().getFullYear() + 1}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`} className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-3 py-3 outline-none focus:border-[var(--accent-ink)]" style={{ borderColor: "var(--border)" }} />
+              <input name="targetDate" type="date" required defaultValue={selectedGoal?.targetDate ?? `${new Date().getFullYear() + 1}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`} className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-3 py-3 outline-none focus:border-[var(--accent-ink)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink" style={{ borderColor: "var(--border)" }} />
             </label>
             <label className="block text-sm font-medium" style={{ color: "var(--ink)" }}>Priority
-              <select name="priority" defaultValue={selectedGoal ? priorityLabel(selectedGoal.priorityRank).toLowerCase() : "medium"} className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-3 py-3 outline-none focus:border-[var(--accent-ink)]" style={{ borderColor: "var(--border)" }}><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+              <select name="priority" defaultValue={selectedGoal ? priorityLabel(selectedGoal.priorityRank).toLowerCase() : "medium"} className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-3 py-3 outline-none focus:border-[var(--accent-ink)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink" style={{ borderColor: "var(--border)" }}><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
             </label>
           </div>
           <label className="block text-sm font-medium" style={{ color: "var(--ink)" }}>Status
-            <select name="status" defaultValue={selectedGoal ? goalStatus(selectedGoal) : newGoalStatus} className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-3 py-3 outline-none focus:border-[var(--accent-ink)]" style={{ borderColor: "var(--border)" }}>{GOAL_STATUSES.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}</select>
+            <select name="status" defaultValue={selectedGoal ? goalStatus(selectedGoal) : newGoalStatus} className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-3 py-3 outline-none focus:border-[var(--accent-ink)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink" style={{ borderColor: "var(--border)" }}>{GOAL_STATUSES.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}</select>
           </label>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium" style={{ color: "var(--ink)" }}>Flexibility
-              <select name="flexibility" defaultValue={selectedGoal?.flexibility ?? "flexible"} className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-3 py-3 outline-none focus:border-[var(--accent-ink)]" style={{ borderColor: "var(--border)" }}><option value="flexible">Flexible</option><option value="non_negotiable">Non-negotiable</option></select>
+              <select name="flexibility" defaultValue={selectedGoal?.flexibility ?? "flexible"} className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-3 py-3 outline-none focus:border-[var(--accent-ink)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink" style={{ borderColor: "var(--border)" }}><option value="flexible">Flexible</option><option value="non_negotiable">Non-negotiable</option></select>
             </label>
             <label className="block text-sm font-medium" style={{ color: "var(--ink)" }}>Linked account <span style={{ color: "var(--ink-muted)" }}>(optional)</span>
-              <select name="linkedAccountId" defaultValue={selectedGoal?.linkedAccountId ?? ""} className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-3 py-3 outline-none focus:border-[var(--accent-ink)]" style={{ borderColor: "var(--border)" }}><option value="">No linked account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select>
+              <select name="linkedAccountId" defaultValue={selectedGoal?.linkedAccountId ?? ""} className="mt-2 w-full rounded-xl border bg-[var(--surface-inset)] px-3 py-3 outline-none focus:border-[var(--accent-ink)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink" style={{ borderColor: "var(--border)" }}><option value="">No linked account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select>
             </label>
           </div>
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
