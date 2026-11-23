@@ -11,7 +11,7 @@ import { api } from "@/lib/api";
  */
 
 /** Keeps the visual in sync with the API: change inputs, and the figures come back recomputed. */
-export function useVisual<V extends AdvisorVisual>(initial: V) {
+export function useVisual<V extends AdvisorVisual>(initial: V, onVisual?: (visual: V) => void) {
   const [visual, setVisual] = useState<V>(initial);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -42,6 +42,12 @@ export function useVisual<V extends AdvisorVisual>(initial: V) {
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
   }, []);
+
+  // Tells a paired view which figures are on screen. It never changes them.
+  useEffect(() => {
+    onVisual?.(visual);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visual]);
 
   return { visual, update, pending, failed };
 }
@@ -123,7 +129,7 @@ export function Chips<T extends string | number>({
           type="button"
           onClick={() => onChange(option)}
           aria-pressed={option === value}
-          className={`h-9 rounded-full border px-3.5 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+          className={`h-9 rounded-full border px-3.5 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink/40 ${
             option === value
               ? "border-ink bg-card font-medium text-ink shadow-sm"
               : "border-line bg-card text-[var(--ink-secondary)] hover:border-[var(--ink-light)]"
@@ -185,7 +191,7 @@ export function TableToggle({ caption, head, rows }: { caption: string; head: st
   const [open, setOpen] = useState(false);
   return (
     <div className="mt-2">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="text-xs font-medium text-accent hover:underline" aria-expanded={open}>
+      <button type="button" onClick={() => setOpen((o) => !o)} className="text-xs font-medium text-accent-ink hover:underline" aria-expanded={open}>
         {open ? "Hide Table" : "Show Table"}
       </button>
       {open && (
@@ -310,8 +316,8 @@ export function FanArea({
             cx={x(m.index)}
             cy={y(m.value)}
             r={m.emphasis ? 5.5 : 4}
-            fill={m.emphasis ? (m.color ?? "var(--accent)") : "var(--surface-card)"}
-            stroke={m.emphasis ? "var(--surface-card)" : (m.color ?? "var(--accent)")}
+            fill={m.emphasis ? (m.color ?? "var(--series-1)") : "var(--surface-card)"}
+            stroke={m.emphasis ? "var(--surface-card)" : (m.color ?? "var(--series-1)")}
             strokeWidth={2}
           />
         ))}
@@ -323,8 +329,8 @@ export function FanArea({
             ))}
           </>
         )}
-        <text x={PAD.left} y={height - 6} fontSize={11} fill="var(--ink-muted)">{startLabel}</text>
-        <text x={WIDTH - PAD.right} y={height - 6} fontSize={11} fill="var(--ink-muted)" textAnchor="end">{endLabel}</text>
+        <text x={PAD.left} y={height - 6} fontSize={12} fill="var(--ink-muted)">{startLabel}</text>
+        <text x={WIDTH - PAD.right} y={height - 6} fontSize={12} fill="var(--ink-muted)" textAnchor="end">{endLabel}</text>
       </svg>
       <figcaption className="mt-1 min-h-4 text-xs tabular-nums text-muted">{hover === null ? defaultCaption : caption(hover)}</figcaption>
     </figure>
@@ -344,7 +350,7 @@ export function Ring({ share, size = 44 }: { share: number; size?: number }) {
         cy={size / 2}
         r={r}
         fill="none"
-        stroke="var(--accent)"
+        stroke="var(--series-1)"
         strokeWidth={6}
         strokeLinecap="round"
         strokeDasharray={`${c * Math.min(1, Math.max(0, shown ?? 0))} ${c}`}

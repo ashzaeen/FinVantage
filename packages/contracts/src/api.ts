@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AdvisorVisual, AdvisorVisualRequest } from "./advisor-visuals";
+import { SpeakRequest, SpeakResponse } from "./speech";
 import { Account, BankItemSummary, CreateTransaction, NetWorth, NewAccount, NewTransaction, Transaction } from "./account";
 import {
   EmailSchedule,
@@ -64,6 +65,29 @@ import {
 } from "./categories";
 import { Budget, BudgetLimit, CreditScore, Portfolio, IncomeSummary, RecurringCharge, SpendingBreakdownRow, SpendingSummary } from "./spending";
 import { InvestmentsOverview } from "./investments";
+import { BulkRecategorize, BulkRecategorized, SpendingPatterns, SplitTransaction, TransactionSummary, TransactionSummaryRequest } from "./transaction-insights";
+import { CreditCardsOverview, GoalMilestones, OverviewInsights } from "./insights";
+import {
+  AllocationDrift,
+  AttentionFeed,
+  BudgetSuggestion,
+  CopilotImpact,
+  CreditWhatIf,
+  CreditWhatIfRequest,
+  DebtPayoff,
+  GoalFunding,
+  HealthScore,
+  GoalAllocation,
+  MoneyCalendar,
+  RetirementProjection,
+  RetirementRequest,
+  StressRequest,
+  StressResult,
+  SafeToSpend,
+  SpendingPace,
+  TargetAllocation,
+  UnusualCharge,
+} from "./planning";
 import { AuthResponse, ExtensionSettings, LogInRequest, SignUpRequest, User } from "./user";
 
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
@@ -296,6 +320,8 @@ export const routes = {
     response: Recommendation,
   }),
   advisorChat: route({ method: "POST", path: "/v1/advisory/chat", body: AdvisorChatRequestBody, response: AdvisorChatResponse }),
+  /** Audio for one chunk of a saved Advisor reply. Only saved replies can be spoken. 503 `voice_unavailable` means the client should use the browser's voice. */
+  speakAdvisorReply: route({ method: "POST", path: "/v1/advisory/speak", body: SpeakRequest, response: SpeakResponse }),
   /** Recomputes an interactive visual after the user changes an input. Saves nothing. */
   renderAdvisorVisual: route({
     method: "POST",
@@ -411,6 +437,63 @@ export const routes = {
     path: "/v1/spending/summary",
     response: SpendingSummary,
   }),
+  /** Cash runway and savings rate, for the Overview. */
+  getOverviewInsights: route({ method: "GET", path: "/v1/overview/insights", response: OverviewInsights }),
+  /** What is left to spend this month without missing a bill or a savings target. */
+  getSafeToSpend: route({ method: "GET", path: "/v1/overview/safe-to-spend", response: SafeToSpend }),
+  /** Where monthly savings go across goals, in priority order, and a suggested reorder when a fixed-date goal is short. */
+  getGoalAllocation: route({ method: "GET", path: "/v1/goals/allocation", response: GoalAllocation }),
+  /** Thirty days of paydays, bills and card payments, with checking projected day by day. */
+  getMoneyCalendar: route({ method: "GET", path: "/v1/overview/calendar", response: MoneyCalendar }),
+  /** Savings and goal odds with less income and/or higher rent. Changes nothing. */
+  stressTest: route({ method: "POST", path: "/v1/life-events/stress", body: StressRequest, response: StressResult }),
+  /** What a retirement balance could look like, as a range, from retirement accounts and a monthly contribution. Mocked. */
+  projectRetirement: route({ method: "POST", path: "/v1/investments/retirement", body: RetirementRequest, response: RetirementProjection }),
+  /** The few things worth a look today, most urgent first. */
+  getAttention: route({ method: "GET", path: "/v1/overview/attention", response: AttentionFeed }),
+  /** Four parts and one score: savings rate, debt-to-income, utilization and runway. */
+  getHealthScore: route({ method: "GET", path: "/v1/health-score", response: HealthScore }),
+  /** What each goal needs a month to reach its target on its date. */
+  getGoalFunding: route({ method: "GET", path: "/v1/goals/funding", response: GoalFunding }),
+  /** This month's spending day by day, against last month and the budgets. */
+  getSpendingPace: route({ method: "GET", path: "/v1/spending/pace", response: SpendingPace }),
+  /** Limits worth setting for categories that have spending and no budget. Suggestions only: nothing is saved. */
+  listBudgetSuggestions: route({ method: "GET", path: "/v1/budgets/suggestions", response: z.array(BudgetSuggestion) }),
+  /** Charges far above what the same merchant usually charges. */
+  listUnusualCharges: route({ method: "GET", path: "/v1/transactions/unusual", response: z.array(UnusualCharge) }),
+  /** What paying a card down does to utilization and an estimated (mocked) score range. Changes nothing. */
+  creditWhatIf: route({ method: "POST", path: "/v1/credit/what-if", body: CreditWhatIfRequest, response: CreditWhatIf }),
+  /** Avalanche and snowball plans for the user's cards and loans, with an optional extra payment each month. */
+  getDebtPayoff: route({
+    method: "GET",
+    path: "/v1/debt/payoff",
+    query: z.object({ extraCents: z.coerce.number().int().min(0).max(100_000_000).default(0) }),
+    response: DebtPayoff,
+  }),
+  /** Actual against target allocation, with the dollars to move. Mocked, like the rest of Investments. */
+  getAllocationDrift: route({ method: "GET", path: "/v1/investments/drift", response: AllocationDrift }),
+  /** Saves the mix the user wants. The page confirms before it calls this. */
+  setTargetAllocation: route({ method: "PATCH", path: "/v1/investments/targets", body: TargetAllocation, response: AllocationDrift }),
+  /** What the Copilot has caught: checks, flags and what was at stake. */
+  getCopilotImpact: route({ method: "GET", path: "/v1/copilot/impact", response: CopilotImpact }),
+  /** Every credit card with its utilization, interest cost and dates, for the Credit page. */
+  getCreditCards: route({ method: "GET", path: "/v1/credit/cards", response: CreditCardsOverview }),
+  /** The quarter marks of each goal. */
+  getGoalMilestones: route({ method: "GET", path: "/v1/goals/milestones", response: z.array(GoalMilestones) }),
+  /** How a month's spending falls across days, weekdays and merchants. `month` defaults to the current one. */
+  getSpendingPatterns: route({
+    method: "GET",
+    path: "/v1/spending/patterns",
+    query: z.object({ month: z.string().regex(/^\d{4}-\d{2}$/).optional() }),
+    response: SpendingPatterns,
+  }),
+  /** Totals for the transactions with these ids. A POST only because the list of ids is too long for a URL; it changes nothing. */
+  summarizeTransactions: route({
+    method: "POST",
+    path: "/v1/transactions/summary",
+    body: TransactionSummaryRequest,
+    response: TransactionSummary,
+  }),
   listSpendingCategories: route({
     method: "GET",
     path: "/v1/spending/categories",
@@ -461,7 +544,11 @@ export const routes = {
   listTopExpenses: route({
     method: "GET",
     path: "/v1/spending/top-expenses",
-    query: z.object({ limit: z.coerce.number().int().positive().max(50).default(10) }),
+    query: z.object({
+      limit: z.coerce.number().int().positive().max(50).default(10),
+      /** "purchases" leaves out money moved to savings and investing and anything that repeats (rent, loans, subscriptions). */
+      kind: z.enum(["all", "purchases"]).default("all"),
+    }),
     response: z.array(Transaction),
   }),
   listCategoryRules: route({ method: "GET", path: "/v1/spending/rules", response: z.array(CategoryRule) }),
@@ -476,6 +563,10 @@ export const routes = {
     path: "/v1/spending/rules/:id",
     response: z.object({ deleted: z.literal(true) }),
   }),
+  /** Moves up to 200 transactions to one category. Every id is checked before any is changed. */
+  bulkRecategorizeTransactions: route({ method: "POST", path: "/v1/transactions/bulk-category", body: BulkRecategorize, response: BulkRecategorized }),
+  /** Splits one transaction into parts that add up to it. */
+  splitTransaction: route({ method: "POST", path: "/v1/transactions/:id/split", body: SplitTransaction, response: z.array(Transaction) }),
   recategorizeTransaction: route({
     method: "PATCH",
     path: "/v1/transactions/:id/category",

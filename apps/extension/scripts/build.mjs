@@ -1,4 +1,4 @@
-import { copyFileSync, createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,6 +15,19 @@ const rootEnv = join(root, "../../.env");
 if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 const apiUrl = process.env.EXTENSION_API_URL ?? "http://localhost:4000";
+// Dark mode is on for everyone, as in the dashboard. EXTENSION_DARK_MODE=0 builds without it.
+const darkMode = process.env.EXTENSION_DARK_MODE !== "0";
+// The popup is plain HTML, so the dark rules are spliced in at the marker, or dropped.
+const POPUP_DARK = `@media (prefers-color-scheme: dark) {
+        :root { color-scheme: dark; }
+        body { background: #171a33; color: #e8eaf6; }
+        p { color: #a6acca; }
+        button { background: #101328; border-color: #373c66; color: #e8eaf6; }
+        button:hover { border-color: #a29cff; }
+        button:focus-visible { outline-color: #a29cff; }
+        section { border-top-color: #262a4a; }
+        .who { color: #e8eaf6; }
+      }`;
 
 mkdirSync(dist, { recursive: true });
 // The service worker may only call hosts listed here, so the API origin it was built for is
@@ -27,7 +40,7 @@ const webPermission = `${new URL(process.env.EXTENSION_WEB_URL ?? "http://localh
 if (!manifest.host_permissions.includes(webPermission)) manifest.host_permissions.push(webPermission);
 writeFileSync(join(dist, "manifest.json"), `${JSON.stringify(manifest, null, 2)}
 `);
-copyFileSync(join(root, "popup.html"), join(dist, "popup.html"));
+writeFileSync(join(dist, "popup.html"), readFileSync(join(root, "popup.html"), "utf8").replace("/* dark-mode */", darkMode ? POPUP_DARK : ""));
 
 const options = {
   entryPoints: {
@@ -44,6 +57,7 @@ const options = {
     __API_URL__: JSON.stringify(apiUrl),
     __WEB_URL__: JSON.stringify(process.env.EXTENSION_WEB_URL ?? "http://localhost:3000"),
     __API_TOKEN__: JSON.stringify(process.env.EXTENSION_API_TOKEN ?? "demo-token"),
+    __DARK_MODE__: JSON.stringify(darkMode),
   },
 };
 

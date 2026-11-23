@@ -12,6 +12,8 @@ Assumptions are named constants at the top of `src/index.ts`. The reasoning behi
 
 `src/subscriptions.ts` holds the Subscriptions page's figures: monthly and yearly cost by cadence, totals, merchant normalization and stable ids, the subscription-or-bill rule, duplicate groups, price changes, recent starts, a cancelled charge that kept charging, and savings so far. Plan: `docs/workstreams/subscriptions.md`.
 
+`src/patterns.ts` holds how a month's spending falls across days, weekdays and merchants, and totals for a set of transactions. `src/insights.ts` holds cash runway and savings rate, how reachable assets are, the credit cards overview (interest, utilization, promo countdown), goal milestones and the next payday.
+
 Known limits:
 
 - Subscriptions: duplicate groups match whole words in a merchant name, so an unrelated merchant that shares a word with a listed one ("Peacock Lane Diner") lands in the group. The category list is short and fixed.
@@ -31,3 +33,5 @@ Known limits:
 ```bash
 npm test -w @finvantage/math-core
 ```
+
+`src/planning.ts` holds the planning figures: safe to spend, attention items, health score, goal funding, spending pace, budget suggestions, unusual charges, the mocked credit what-if (`UTILIZATION_SCORE_POINTS`), debt payoff (avalanche and snowball), allocation drift and Copilot impact. Tests in `planning.test.ts`.

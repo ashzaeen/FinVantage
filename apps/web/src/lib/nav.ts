@@ -20,7 +20,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { href: "/advisor", label: "Advisor", hint: "Ask about your money" },
       { href: "/copilot", label: "Copilot", hint: "Check a purchase first" },
       { href: "/life-events", label: "Life Events", hint: "Plan what comes next" },
-      { href: "/subscriptions", label: "Subscriptions", hint: "Find and trim recurring charges" },
+      { href: "/subscriptions", label: "Subscriptions", hint: "Trim recurring charges" },
       { href: "/reports", label: "Reports", hint: "Your quarterly review" },
     ],
   },

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { User } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
 import { api } from "@/lib/api";
+import { buttonClass } from "@/components/ui/Button";
 
 export function SettingsClient({ user: initial }: { user: User }) {
   const router = useRouter();
@@ -25,18 +26,18 @@ export function SettingsClient({ user: initial }: { user: User }) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <Card lift={false} title="Copilot">
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex min-h-6 items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={user.extensionSettings.enabled}
             onChange={toggleCopilot}
           />
-          Show cards on shopping and listing pages
+          Show Cards on Shopping and Listing Pages
         </label>
       </Card>
-      <Card lift={false} title="Demo data">
-        <button className="rounded bg-accent px-3 py-1.5 text-sm text-surface" onClick={loadDemo}>
-          Reload demo profile
+      <Card lift={false} title="Demo Data">
+        <button className={buttonClass()} onClick={loadDemo}>
+          Reload Demo Profile
         </button>
         {status && <p className="mt-2 text-sm text-muted">{status}</p>}
       </Card>

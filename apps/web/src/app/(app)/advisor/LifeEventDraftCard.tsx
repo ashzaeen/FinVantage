@@ -11,6 +11,8 @@ import {
 import { ProbabilityRange } from "@/components/finance/ProbabilityRange";
 import { api } from "@/lib/api";
 import { remembered, remember, type DraftState } from "./draft-state";
+import { longDate } from "@/lib/format";
+import { buttonClass } from "@/components/ui/Button";
 
 /**
  * A life event the Advisor drafted from the conversation. Nothing is saved until the user
@@ -52,7 +54,7 @@ export function LifeEventDraftCard({ id, draft, goalChanges }: { id: string; dra
   return (
     <div className="rounded-2xl border border-line bg-card p-4 shadow-sm">
       <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
           <CalendarPlus size={18} aria-hidden />
         </div>
         <div className="min-w-0">
@@ -61,7 +63,7 @@ export function LifeEventDraftCard({ id, draft, goalChanges }: { id: string; dra
           </p>
           <p className="font-poppins text-base font-semibold text-ink">{LIFE_EVENT_LABEL[draft.type]}</p>
           <p className="text-sm text-muted">
-            {draft.date} · {draft.dollarImpactCents < 0 ? "costs" : "adds"} {amount}
+            {longDate(draft.date)} · {draft.dollarImpactCents < 0 ? "costs" : "adds"} {amount}
             {draft.recurrence === "recurring" ? " a month" : " once"}
             {draft.durationMonths ? ` for ${draft.durationMonths} months` : ""}
           </p>
@@ -87,7 +89,7 @@ export function LifeEventDraftCard({ id, draft, goalChanges }: { id: string; dra
             type="button"
             onClick={confirm}
             disabled={state === "saving"}
-            className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            className={buttonClass()}
           >
             {state === "saving" ? "Saving…" : "Confirm and Save"}
           </button>

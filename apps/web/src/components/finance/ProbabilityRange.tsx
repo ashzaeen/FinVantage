@@ -20,9 +20,14 @@ export function ProbabilityRange({
     avg >= 0.5  ? "var(--warning-text)" :
     "var(--loss)";
 
+  // Lead with a word when the whole range is high, so a row of 98% badges still tells goals apart
+  // from the ones that are not. The range and the disclaimer stay beside it (rule 7).
+  const onTrack = low >= 0.9;
+
   return (
     <div>
       <p className="text-sm font-semibold" style={{ color }}>
+        {onTrack && <span>On track · </span>}
         {formatPercent(low) === formatPercent(high) ? `About ${formatPercent(low)}` : `${formatPercent(low)} – ${formatPercent(high)}`} likely
       </p>
       {note && (

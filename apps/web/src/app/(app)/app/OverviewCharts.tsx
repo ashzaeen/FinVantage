@@ -29,17 +29,18 @@ import { MockedBadge } from "@/components/ui/MockedBadge";
 
 import { niceTicks, tickPercent } from "@/lib/chartAxis";
 import { ASSET_CLASS_COLOR } from "@/lib/chartColors";
+import { compactUsd, monthYear, longDate } from "@/lib/format";
 const currency = (cents: number) => formatUsd(cents);
-const compactCurrency = (cents: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 }).format(cents / 100);
+const compactCurrency = compactUsd;
 
 function ChartPanel({ title, detail, children, className = "" }: { title: string; detail: string; children: ReactNode; className?: string }) {
-  return <section className={`min-w-0 rounded-3xl border border-line bg-white p-5 sm:p-6 ${className}`}>
+  return <section className={`min-w-0 rounded-3xl border border-line bg-raised p-5 sm:p-6 ${className}`}>
     <div className="mb-4"><h2 className="font-poppins text-lg font-bold text-ink">{title}</h2><p className="mt-1 text-xs text-muted">{detail}</p></div>
     {children}
   </section>;
 }
 
-const chartTooltipStyle = { borderColor: "var(--border)", borderRadius: 12, boxShadow: "0 8px 24px rgba(22,25,44,0.12)" };
+const chartTooltipStyle = { borderColor: "var(--border)", borderRadius: 12, boxShadow: "var(--shadow-float)" };
 
 export function OverviewCharts({ netWorth, spending, categories, investments }: {
   netWorth: NetWorth;
@@ -53,8 +54,10 @@ export function OverviewCharts({ netWorth, spending, categories, investments }: 
     month: new Date(`${point.date}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", year: "2-digit", timeZone: "UTC" }),
     value: point.netWorthCents,
   }));
+  // Saving and investing are not spending, so they stay out of the ranking (see `spentCents`).
+  const savingsIds = new Set(categories.filter((category) => category.bucket === "savings").map((category) => category.id));
   const spendingCategories = [...spending.categories]
-    .filter((item) => item.spentCents > 0)
+    .filter((item) => item.spentCents > 0 && !savingsIds.has(item.category))
     .sort((a, b) => b.spentCents - a.spentCents)
     .slice(0, 7)
     .map((item) => ({ name: categoryLabel.get(item.category) ?? item.category.replaceAll("_", " ").replaceAll(".", " · "), value: item.spentCents }));
@@ -76,7 +79,7 @@ export function OverviewCharts({ netWorth, spending, categories, investments }: 
           <YAxis tickFormatter={(value) => compactCurrency(Number(value))} tickLine={false} axisLine={false} width={58} tick={{ fill: "var(--ink-muted)", fontSize: 12 }} />
           <Tooltip labelFormatter={(_, payload) => payload?.[0]?.payload?.date ?? ""} formatter={(value) => typeof value === "number" ? currency(value) : "-"} contentStyle={chartTooltipStyle} />
           <ReferenceLine y={0} stroke="var(--border-strong)" strokeDasharray="4 4" />
-          <Line type="monotone" dataKey="value" name="Net Worth" stroke="var(--accent)" strokeWidth={3} dot={{ r: 3, fill: "var(--accent)", stroke: "white", strokeWidth: 2 }} activeDot={{ r: 5 }} />
+          <Line type="monotone" dataKey="value" name="Net Worth" stroke="var(--series-1)" strokeWidth={3} dot={{ r: 3, fill: "var(--series-1)", stroke: "var(--surface-raised)", strokeWidth: 2 }} activeDot={{ r: 5 }} />
         </LineChart></ResponsiveContainer>
       </div> : <div className="flex h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-line-strong px-5 text-center">
         <p className="text-sm font-semibold text-ink">Net worth history is starting</p>
@@ -89,21 +92,21 @@ export function OverviewCharts({ netWorth, spending, categories, investments }: 
       </div>
     </ChartPanel>
 
-    <ChartPanel title="Spending by Category" detail={`${spending.month} · Top categories this month`}>
+    <ChartPanel title="Spending by Category" detail={`${monthYear(spending.month)} · Top categories this month`}>
       {spendingCategories.length ? <div className="h-64 min-w-0" role="img" aria-label="Spending totals by category this month">
         <ResponsiveContainer width="100%" height="100%"><BarChart data={spendingCategories} layout="vertical" margin={{ top: 2, right: 64, bottom: 2, left: 4 }}>
           <CartesianGrid stroke="var(--border)" strokeDasharray="3 5" horizontal={false} />
           <XAxis type="number" hide />
           <YAxis type="category" dataKey="name" width={112} tickLine={false} axisLine={false} tick={{ fill: "var(--ink-chart)", fontSize: 12 }} />
           <Tooltip formatter={(value) => typeof value === "number" ? currency(value) : "-"} cursor={{ fill: "var(--surface)" }} contentStyle={chartTooltipStyle} />
-          <Bar dataKey="value" name="Spent" fill="var(--accent)" radius={[0, 6, 6, 0]} maxBarSize={22}>
+          <Bar dataKey="value" name="Spent" fill="var(--series-1)" radius={[0, 6, 6, 0]} maxBarSize={22}>
             <LabelList dataKey="value" position="right" formatter={(value) => typeof value === "number" ? compactCurrency(value) : ""} style={{ fill: "var(--ink-chart)", fontSize: 12, fontWeight: 600 }} />
           </Bar>
         </BarChart></ResponsiveContainer>
       </div> : <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-line-strong px-5 text-center text-sm text-muted">No categorized spending recorded this month.</div>}
     </ChartPanel>
 
-    <ChartPanel title="Investment Performance" detail={`Sample portfolio vs. S&P 500 · ${investments.pricesAsOf}`} className="xl:col-span-2">
+    <ChartPanel title="Investment Performance" detail={`Sample portfolio vs. S&P 500 · ${longDate(investments.pricesAsOf)}`} className="xl:col-span-2">
       <div className="mb-3 flex items-center justify-between gap-3"><div className="flex flex-wrap gap-4 text-xs text-ink-chart"><span><i className="mr-2 inline-block h-0.5 w-4 align-middle" style={{ background: portfolioTone }} />Portfolio <strong className="ml-1 tabular-nums text-ink">{(investmentView.performance["3M"].changeRate * 100).toFixed(1)}%</strong></span><span><i className="mr-2 inline-block h-0.5 w-4 align-middle border-t border-dashed border-muted" />S&amp;P 500 <strong className="ml-1 tabular-nums text-ink">{(investmentView.performance["3M"].benchmarkChangeRate * 100).toFixed(1)}%</strong></span></div><MockedBadge /></div>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(260px,1fr)]">
         <div className="h-64 min-w-0" role="img" aria-label="Three-month investment return and benchmark comparison">
@@ -122,10 +125,10 @@ export function OverviewCharts({ netWorth, spending, categories, investments }: 
             <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={investmentView.allocation} dataKey="valueCents" nameKey="assetClass" innerRadius={44} outerRadius={68} paddingAngle={2}>
               {investmentView.allocation.map((slice, index) => <Cell key={slice.assetClass} fill={ASSET_CLASS_COLOR[slice.assetClass]} />)}
             </Pie><Tooltip formatter={(value) => typeof value === "number" ? currency(value) : "-"} contentStyle={chartTooltipStyle} /></PieChart></ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><span className="text-[9px] text-muted">Portfolio</span><strong className="text-xs tabular-nums text-ink">{compactCurrency(investmentView.totalValueCents)}</strong></div>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><span className="text-xs text-muted">Portfolio</span><strong className="text-xs tabular-nums text-ink">{compactCurrency(investmentView.totalValueCents)}</strong></div>
           </div>
           <ul className="space-y-2">
-            {investmentView.allocation.map((slice, index) => <li key={slice.assetClass} className="flex items-center justify-between gap-2 text-[11px]"><span className="flex min-w-0 items-center gap-1.5 text-ink-chart"><i aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ background: ASSET_CLASS_COLOR[slice.assetClass] }} /><span className="truncate">{ASSET_CLASS_LABEL[slice.assetClass]}</span></span><span className="shrink-0 font-semibold tabular-nums text-ink">{(slice.weight * 100).toFixed(0)}%</span></li>)}
+            {investmentView.allocation.map((slice, index) => <li key={slice.assetClass} className="flex items-center justify-between gap-2 text-xs"><span className="flex min-w-0 items-center gap-1.5 text-ink-chart"><i aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ background: ASSET_CLASS_COLOR[slice.assetClass] }} /><span className="truncate">{ASSET_CLASS_LABEL[slice.assetClass]}</span></span><span className="shrink-0 font-semibold tabular-nums text-ink">{(slice.weight * 100).toFixed(0)}%</span></li>)}
           </ul>
         </div>
       </div>

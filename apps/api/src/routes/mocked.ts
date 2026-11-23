@@ -5,7 +5,10 @@ import { buildInvestmentsOverview } from "@finvantage/math-core";
 import type { AppDeps } from "../deps";
 import { mount, type AppEnv } from "../mount";
 
-async function investmentsOverview(deps: AppDeps) {
+/** The demo's credit score. Mocked, and the what-if estimates from it. */
+export const MOCK_CREDIT_SCORE = 742;
+
+export async function investmentsOverview(deps: AppDeps) {
   const market = await deps.market.snapshot({ today: deps.today(), now: deps.now() });
   return buildInvestmentsOverview({ ...demoInvestments(), market });
 }
@@ -34,7 +37,7 @@ export function registerMockedRoutes(app: Hono<AppEnv>, deps: AppDeps) {
 
   mount(app, deps, routes.getCreditScore, async () => ({
     mocked: true as const,
-    score: 742,
+    score: MOCK_CREDIT_SCORE,
     history: [
       { date: "2026-05-01", score: 718 },
       { date: "2026-06-01", score: 723 },

@@ -1,10 +1,14 @@
 "use client";
 
 import { useMemo, useState, useCallback, type FormEvent, type CSSProperties } from "react";
-import { formatUsd, type Account, type CurrencyCode, type SpendingCategory, type Transaction } from "@finvantage/contracts";
-import { ArrowDownLeft, ArrowUpRight, Plus, Repeat, Search, SearchX, X } from "lucide-react";
+import { assignCategory, formatUsd, type Account, type CurrencyCode, type SpendingCategory, type UnusualCharge, type Transaction } from "@finvantage/contracts";
+import { ArrowDownLeft, ArrowUpRight, Check, Download, Plus, Repeat, Search, SearchX, X } from "lucide-react";
 import { CategoryIcon } from "@/components/spending/CategoryIcon";
 import { api } from "@/lib/api";
+import { TransactionSummaryBar } from "./TransactionSummaryBar";
+import { BulkEditBar } from "./BulkEditBar";
+import { SplitDialog } from "./SplitDialog";
+import { buttonClass } from "@/components/ui/Button";
 
 /* ─── Cascading Category Picker ──────────────────────────────────────────── */
 
@@ -66,7 +70,7 @@ function CategoryPicker({ categories, value, onChange }: {
             <select
               value={level.selected ?? ""}
               onChange={(e) => handleChange(i, e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent focus:bg-white"
+              className="mt-1.5 w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition focus:border-accent-ink focus:bg-raised focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
             >
               <option value="">{i === 0 ? "Uncategorized" : `All ${byId.get(level.parentId!)?.label ?? ""}`}</option>
               {level.options.map((c) => (
@@ -95,6 +99,29 @@ function StatusBadge({ positive }: { positive: boolean }) {
   );
 }
 
+/**
+ * A spreadsheet can run a cell that starts with one of these as a formula. Merchant names come from
+ * outside, so a leading quote makes them text.
+ */
+function csvCell(value: string): string {
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return /[",\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
+}
+
+/** The rows as shown, as a file. Amounts are plain decimals so a spreadsheet can add them. */
+function downloadCsv(rows: Transaction[], accountName: (id: string) => string, categoryLabel: (id: string | null) => string) {
+  const lines = [
+    ["Date", "Merchant", "Category", "Account", "Amount", "Currency", "Recurring"].join(","),
+    ...rows.map((tx) => [tx.date, csvCell(tx.merchant), csvCell(categoryLabel(tx.subcategory ?? tx.category)), csvCell(accountName(tx.accountId)), (tx.amountCents / 100).toFixed(2), "USD", tx.isRecurring ? "yes" : "no"].join(",")),
+  ];
+  const url = URL.createObjectURL(new Blob([`${lines.join("\r\n")}\r\n`], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 /** Rows shown before "Show More". */
 const PAGE_SIZE = 30;
 
@@ -107,7 +134,7 @@ function formatCurrency(amountCents: number, currency: CurrencyCode) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amountCents / 100);
 }
 
-export function TransactionsClient({ transactions: initialTransactions, accounts, categories: spendingCategories, initialQuery = "" }: { transactions: Transaction[]; accounts: Account[]; categories: SpendingCategory[]; initialQuery?: string }) {
+export function TransactionsClient({ transactions: initialTransactions, accounts, categories: spendingCategories, initialQuery = "", unusual = {} }: { unusual?: Record<string, UnusualCharge>; transactions: Transaction[]; accounts: Account[]; categories: SpendingCategory[]; initialQuery?: string }) {
   const [transactions, setTransactions] = useState(initialTransactions);
   const [query, setQuery] = useState(initialQuery);
   const [type, setType] = useState<"all" | "income" | "expense">("all");
@@ -117,6 +144,10 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [editCategory, setEditCategory] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [splitting, setSplitting] = useState<Transaction | null>(null);
+  const toggleSelected = (id: string) => setSelected((cur) => { const next = new Set(cur); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const labelMap = useMemo(() => new Map(spendingCategories.map((c) => [c.id, c.label])), [spendingCategories]);
   const label = (id: string | null) => (id ? (labelMap.get(id) ?? id) : "Uncategorized");
   const categories = useMemo(() => [...new Set(transactions.map((tx) => tx.category).filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b)), [transactions]);
@@ -202,30 +233,48 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
             {hasFilters ? `${filtered.length} of ${transactions.length} match` : `${transactions.length} transactions`}
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          aria-pressed={selectMode}
+          onClick={() => { setSelectMode((on) => !on); setSelected(new Set()); }}
+          className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${selectMode ? "border-accent-ink bg-accent-soft text-accent-ink" : "border-line bg-card text-ink hover:border-accent-ink hover:text-accent-ink"}`}
+        >
+          <Check size={16} aria-hidden /> {selectMode ? "Selecting" : "Select"}
+        </button>
+        <button
+          type="button"
+          disabled={filtered.length === 0}
+          onClick={() => downloadCsv(filtered, (id) => accounts.find((a) => a.id === id)?.name ?? "", label)}
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-accent-ink hover:text-accent-ink disabled:cursor-not-allowed disabled:opacity-45 lg:min-h-0"
+        >
+          <Download size={16} aria-hidden /> Export CSV
+        </button>
         <button
           type="button"
           disabled={!accounts.length}
           title={!accounts.length ? "Add an account first" : undefined}
           onClick={startCreate}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-45"
+          className={buttonClass()}
         >
           <Plus size={16} aria-hidden /> Add Transaction
         </button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2 px-5 pb-4 pt-4 sm:px-6 lg:flex-row lg:items-center">
         <label className="relative min-w-0 flex-1">
-          <span className="sr-only">Search transactions</span>
+          <span className="sr-only">Search Transactions</span>
           <Search size={16} aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search merchant, category, date, or amount…"
-            className="w-full rounded-xl border border-line bg-inset py-2.5 pl-10 pr-10 text-sm text-ink outline-none transition placeholder:text-subtle focus:border-accent focus:bg-card focus:ring-4 focus:ring-accent/10"
+            className="w-full rounded-xl border border-line bg-inset py-2.5 pl-10 pr-10 text-sm text-ink outline-none transition placeholder:text-muted focus:border-accent-ink focus:bg-card focus:ring-4 focus:ring-accent-ink/10"
           />
           {query && (
-            <button type="button" aria-label="Clear search" onClick={() => setQuery("")} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-muted hover:bg-accent-soft hover:text-accent">
+            <button type="button" aria-label="Clear search" onClick={() => setQuery("")} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-muted hover:bg-accent-soft hover:text-accent-ink">
               <X size={15} />
             </button>
           )}
@@ -238,7 +287,7 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
                 type="button"
                 aria-pressed={type === value}
                 onClick={() => setType(value)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${type === value ? "bg-card text-accent shadow-sm" : "text-muted hover:text-ink"}`}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${type === value ? "bg-card text-accent-ink shadow-sm" : "text-muted hover:text-ink"}`}
               >
                 {value === "all" ? "All" : value === "income" ? "Income" : "Expenses"}
               </button>
@@ -249,7 +298,7 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
-              className="rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink outline-none transition focus:border-accent"
+              className="rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink outline-none transition focus:border-accent-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
             >
               <option value="all">All Categories</option>
               {categories.map((value) => <option key={value} value={value}>{label(value)}</option>)}
@@ -258,7 +307,9 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
         </div>
       </div>
 
-      <div className="hidden grid-cols-[minmax(0,1fr)_140px_130px_96px] gap-4 border-y border-line bg-surface px-6 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted sm:grid">
+      <TransactionSummaryBar ids={filtered.map((tx) => tx.id)} filtered={hasFilters} />
+
+      <div className="hidden grid-cols-[minmax(0,1fr)_140px_130px_96px] gap-4 border-y border-line bg-surface px-6 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted sm:grid">
         <span>Merchant</span><span>Date</span><span className="text-right">Amount</span><span className="text-right">Type</span>
       </div>
 
@@ -272,12 +323,13 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
                   const income = tx.amountCents >= 0;
                   const i = row++;
                   return (
-                    <li key={tx.id} className="row-cascade" style={{ "--i": i } as CSSProperties}>
+                    <li key={tx.id} className={`row-cascade ${selectMode && selected.has(tx.id) ? "rounded-xl bg-accent-soft" : ""}`} style={{ "--i": i } as CSSProperties}>
                       <button
                         type="button"
-                        onClick={() => { setEditing(tx); setEditCategory(tx.subcategory ?? tx.category); setIsCreating(false); setSaveError(""); }}
-                        aria-label={`Edit transaction from ${tx.merchant}`}
-                        className="tile-lift grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 rounded-xl px-3 py-3 text-left hover:bg-inset focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:grid-cols-[minmax(0,1fr)_140px_130px_96px] sm:gap-4 sm:px-4"
+                        onClick={() => { if (selectMode) { toggleSelected(tx.id); return; } setEditing(tx); setEditCategory(tx.subcategory ?? tx.category); setIsCreating(false); setSaveError(""); }}
+                        aria-pressed={selectMode ? selected.has(tx.id) : undefined}
+                        aria-label={selectMode ? `${selected.has(tx.id) ? "Deselect" : "Select"} transaction from ${tx.merchant}` : `Edit transaction from ${tx.merchant}`}
+                        className="tile-lift grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 rounded-xl px-3 py-3 text-left hover:bg-inset focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-ink sm:grid-cols-[minmax(0,1fr)_140px_130px_96px] sm:gap-4 sm:px-4"
                       >
                         <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 sm:col-auto sm:row-auto">
                           <CategoryIcon id={income ? "income" : (tx.subcategory ?? tx.category)} size={17} colored />
@@ -286,11 +338,21 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
                             <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted">
                               <span className="truncate">{label(tx.subcategory ?? tx.category)}</span>
                               {tx.isRecurring && (
-                                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-soft px-1.5 py-px text-[10px] font-medium text-accent">
+                                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-soft px-1.5 py-px text-xs font-medium text-accent-ink">
                                   <Repeat size={10} aria-hidden /> Recurring
                                 </span>
                               )}
-                              {tx.pending && <span className="shrink-0 rounded-full bg-warning-bg px-1.5 py-px text-[10px] font-medium text-warning-text">Pending</span>}
+                              {tx.pending && <span className="shrink-0 rounded-full bg-warning-bg px-1.5 py-px text-xs font-medium text-warning-text">Pending</span>}
+                              {unusual[tx.id] && (
+                                <span
+                                  title={`Usual here: ${formatUsd(unusual[tx.id]!.usualCents)}`}
+                                  className="shrink-0 rounded-full px-1.5 py-px text-xs font-medium text-ink-secondary"
+                                  style={{ border: "1px solid var(--flow-out)" }}
+                                >
+                                  {unusual[tx.id]!.ratio.toFixed(1)}x usual here
+                                  <span className="sr-only">. A usual charge at {tx.merchant} is about {formatUsd(unusual[tx.id]!.usualCents)}.</span>
+                                </span>
+                              )}
                             </span>
                           </span>
                         </span>
@@ -299,7 +361,7 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
                         </span>
                         <span className={`col-start-2 row-start-1 text-right text-sm font-semibold tabular-nums sm:col-auto sm:row-auto ${income ? "text-gain" : "text-loss"}`}>
                           {income ? "+" : "−"}{formatCurrency(Math.abs(tx.originalAmountCents ?? tx.amountCents), tx.originalAmountCents == null ? "USD" : tx.currency)}
-                          {tx.currency !== "USD" && <span className="mt-0.5 block text-[11px] font-normal text-muted">{formatUsd(tx.amountCents)} equivalent</span>}
+                          {tx.currency !== "USD" && <span className="mt-0.5 block text-xs font-normal text-muted">{formatUsd(tx.amountCents)} equivalent</span>}
                         </span>
                         <span className="col-start-2 row-start-2 flex justify-end sm:col-auto sm:row-auto"><StatusBadge positive={income} /></span>
                       </button>
@@ -316,7 +378,7 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
                 onClick={() => setShown((n) => n + PAGE_SIZE)}
                 className="rounded-xl border border-line px-4 py-2 text-sm font-medium text-ink transition hover:bg-inset"
               >
-                Show More <span className="text-muted">({filtered.length - shown} left)</span>
+                Show More <span className="text-muted">({filtered.length - shown} Left)</span>
               </button>
             </div>
           )}
@@ -327,27 +389,53 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
           <h3 className="mt-3 font-poppins font-semibold text-ink">{transactions.length ? "No Matching Transactions" : "No Transactions Yet"}</h3>
           <p className="mt-1 text-sm text-muted">{transactions.length ? "Try another merchant, category, date, or filter." : "Add one, or link a bank on the Accounts tab."}</p>
           {hasFilters && (
-            <button type="button" onClick={() => { setQuery(""); setType("all"); setCategory("all"); }} className="mt-4 rounded-xl px-4 py-2 text-sm font-semibold text-accent hover:bg-accent-soft">
+            <button type="button" onClick={() => { setQuery(""); setType("all"); setCategory("all"); }} className="mt-4 rounded-xl px-4 py-2 text-sm font-semibold text-accent-ink hover:bg-accent-soft">
               Clear Filters
             </button>
           )}
         </div>
       )}
     </section>
+    {selectMode && selected.size > 0 && (
+      <BulkEditBar
+        ids={[...selected]}
+        categories={spendingCategories}
+        onClear={() => { setSelected(new Set()); setSelectMode(false); }}
+        onApplied={(ids, categoryId) => {
+          const idSet = new Set(ids);
+          setTransactions((rows) => rows.map((t) => (idSet.has(t.id) ? { ...t, ...assignCategory(categoryId) } : t)));
+          setSelected(new Set());
+        }}
+      />
+    )}
+    {splitting && (
+      <SplitDialog
+        transaction={splitting}
+        categories={spendingCategories}
+        onClose={() => setSplitting(null)}
+        onSplit={(parts) => {
+          setTransactions((rows) => [...parts.slice(1), ...rows.map((t) => parts.find((p) => p.id === t.id) ?? t)]);
+          setSplitting(null);
+        }}
+      />
+    )}
     {editing && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setEditing(null); setIsCreating(false); } }} className="fixed inset-0 z-[100] flex justify-center overflow-y-auto bg-ink/45 [&>*]:my-auto p-3 text-ink backdrop-blur-[2px] sm:p-6">
       <div role="dialog" aria-modal="true" aria-labelledby="transaction-edit-title" className="max-h-[94dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-surface shadow-2xl sm:max-h-[90dvh]">
-        <header className="sticky top-0 z-10 flex h-[70px] items-center justify-between border-b border-line bg-white px-6 shadow-sm sm:px-8"><h2 id="transaction-edit-title" className="font-poppins text-xl font-semibold">{isCreating ? "Add Transaction" : "Edit Transaction"}</h2><button type="button" onClick={() => { setEditing(null); setIsCreating(false); }} aria-label="Close transaction editor" className="rounded-xl p-2 text-3xl leading-none text-muted hover:bg-inset hover:text-ink">×</button></header>
+        <header className="sticky top-0 z-10 flex h-[70px] items-center justify-between border-b border-line bg-raised px-6 shadow-sm sm:px-8"><h2 id="transaction-edit-title" className="font-poppins text-xl font-semibold">{isCreating ? "Add Transaction" : "Edit Transaction"}</h2><button type="button" onClick={() => { setEditing(null); setIsCreating(false); }} aria-label="Close transaction editor" className="rounded-xl p-2 text-3xl leading-none text-muted hover:bg-inset hover:text-ink">×</button></header>
         <form onSubmit={saveTransaction}>
-          <div className="flex flex-col gap-5 bg-white p-6 sm:p-8">
-            <div className="grid grid-cols-2 gap-2 rounded-xl bg-inset p-1"><label className="cursor-pointer"><input type="radio" name="type" value="expense" defaultChecked={isCreating || editing.amountCents < 0} className="peer sr-only" /><span className="block rounded-lg px-4 py-3 text-center font-semibold text-muted transition peer-checked:bg-white peer-checked:text-accent peer-checked:shadow-sm">Expense</span></label><label className="cursor-pointer"><input type="radio" name="type" value="income" defaultChecked={!isCreating && editing.amountCents >= 0} className="peer sr-only" /><span className="block rounded-lg px-4 py-3 text-center font-semibold text-muted transition peer-checked:bg-white peer-checked:text-gain peer-checked:shadow-sm">Income</span></label></div>
-            <label className="space-y-2 text-sm font-medium text-ink-secondary">Amount *<div className="flex gap-3"><input name="amount" type="number" min="0" step="0.01" required defaultValue={isCreating ? "" : (Math.abs(editing.originalAmountCents ?? editing.amountCents) / 100).toFixed(2)} className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-lg text-ink outline-none focus:border-accent focus:bg-white"/><select name="currency" defaultValue={editing.currency} aria-label="Transaction currency" className="rounded-xl border border-line bg-surface px-3 text-ink-secondary outline-none focus:border-accent">{CURRENCIES.map((code) => <option key={code} value={code}>{code}</option>)}</select></div><span className="block text-xs font-normal text-muted">Non-USD amounts are converted to USD for your dashboard using the transaction-date exchange rate.</span></label>
-            <label className="space-y-2 text-sm font-medium text-ink-secondary">Merchant<input name="merchant" required maxLength={120} defaultValue={editing.merchant} className="mt-2 w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent focus:bg-white" /></label>
-            <label className="space-y-2 text-sm font-medium text-ink-secondary">Account<select name="accountId" required defaultValue={editing.accountId} className="mt-2 w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent">{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
+          <div className="flex flex-col gap-5 bg-raised p-6 sm:p-8">
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-inset p-1"><label className="cursor-pointer"><input type="radio" name="type" value="expense" defaultChecked={isCreating || editing.amountCents < 0} className="peer sr-only" /><span className="block rounded-lg px-4 py-3 text-center font-semibold text-muted transition peer-checked:bg-raised peer-checked:text-accent-ink peer-checked:shadow-sm">Expense</span></label><label className="cursor-pointer"><input type="radio" name="type" value="income" defaultChecked={!isCreating && editing.amountCents >= 0} className="peer sr-only" /><span className="block rounded-lg px-4 py-3 text-center font-semibold text-muted transition peer-checked:bg-raised peer-checked:text-gain peer-checked:shadow-sm">Income</span></label></div>
+            <label className="space-y-2 text-sm font-medium text-ink-secondary">Amount *<div className="flex gap-3"><input name="amount" type="number" min="0" step="0.01" required defaultValue={isCreating ? "" : (Math.abs(editing.originalAmountCents ?? editing.amountCents) / 100).toFixed(2)} className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-lg text-ink outline-none focus:border-accent-ink focus:bg-raised focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"/><select name="currency" defaultValue={editing.currency} aria-label="Transaction currency" className="rounded-xl border border-line bg-surface px-3 text-ink-secondary outline-none focus:border-accent-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink">{CURRENCIES.map((code) => <option key={code} value={code}>{code}</option>)}</select></div><span className="block text-xs font-normal text-muted">Non-USD amounts are converted to USD for your dashboard using the transaction-date exchange rate.</span></label>
+            <label className="space-y-2 text-sm font-medium text-ink-secondary">Merchant<input name="merchant" required maxLength={120} defaultValue={editing.merchant} className="mt-2 w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent-ink focus:bg-raised focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink" /></label>
+            <label className="space-y-2 text-sm font-medium text-ink-secondary">Account<select name="accountId" required defaultValue={editing.accountId} className="mt-2 w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink">{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
             <CategoryPicker categories={spendingCategories} value={editCategory} onChange={setEditCategory} />
-            <label className="space-y-2 text-sm font-medium text-ink-secondary">Date<input name="date" type="date" required defaultValue={editing.date} className="mt-2 w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent focus:bg-white" /></label>
+            <label className="space-y-2 text-sm font-medium text-ink-secondary">Date<input name="date" type="date" required defaultValue={editing.date} className="mt-2 w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none focus:border-accent-ink focus:bg-raised focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink" /></label>
             <label className="flex items-center gap-3 text-sm text-ink-secondary"><input name="isRecurring" type="checkbox" defaultChecked={editing.isRecurring} className="h-4 w-4 accent-accent"/>Recurring Transaction</label>
             {saveError && <p role="alert" className="text-sm text-loss">{saveError}</p>}
-            <button disabled={saving} type="submit" className="mt-auto rounded-2xl bg-accent px-5 py-4 font-semibold text-white transition hover:bg-[#453bc9] disabled:opacity-50">{saving ? "Saving…" : isCreating ? "Add Transaction" : "Save Changes"}</button>
+            <button disabled={saving} type="submit" className={buttonClass({ size: "lg" }, "mt-auto")}>{saving ? "Saving…" : isCreating ? "Add Transaction" : "Save Changes"}</button>
+            {!isCreating && editing.currency === "USD" && Math.abs(editing.amountCents) >= 2 && (
+              <button type="button" disabled={saving} onClick={() => { setSplitting(editing); setEditing(null); }} className="min-h-11 rounded-xl border border-line bg-raised text-sm font-semibold text-ink-secondary">Split This Purchase</button>
+            )}
           </div>
         </form>
       </div>

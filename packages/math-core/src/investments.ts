@@ -173,6 +173,10 @@ function buildView(
       .map((assetClass) => ({ assetClass, valueCents: classValue(assetClass), weight: ratio(classValue(assetClass), totalValueCents) }))
       .filter((slice) => slice.valueCents > 0),
     holdings,
+    concentration: {
+      top: holdings.slice(0, CONCENTRATION_TOP).map((h) => ({ symbol: h.symbol, name: h.name, share: h.shareOfView })),
+      topShare: ratio(holdings.slice(0, CONCENTRATION_TOP).reduce((sum, h) => sum + h.valueCents, 0), totalValueCents),
+    },
     performance,
   };
 }
@@ -197,6 +201,22 @@ function watchlistItem(security: MarketSecurity, market: MarketSnapshot): Watchl
   };
 }
 
+/** How many of the largest holdings the concentration line lists. */
+export const CONCENTRATION_TOP = 3;
+
+/** Where the money sits: retirement accounts (tax-advantaged) against taxable ones. */
+function accountMixOf(accounts: InvestmentAccountRef[], views: InvestmentView[]): InvestmentsOverview["accountMix"] {
+  const rows = accounts.map((account) => ({
+    id: account.id,
+    label: account.name,
+    valueCents: views.find((view) => view.id === account.id)?.totalValueCents ?? 0,
+    taxTreatment: account.taxTreatment ?? ("taxable" as const),
+  }));
+  const taxAdvantagedCents = rows.filter((r) => r.taxTreatment === "tax_advantaged").reduce((sum, r) => sum + r.valueCents, 0);
+  const taxableCents = rows.filter((r) => r.taxTreatment === "taxable").reduce((sum, r) => sum + r.valueCents, 0);
+  return { taxAdvantagedCents, taxableCents, taxAdvantagedShare: ratio(taxAdvantagedCents, taxAdvantagedCents + taxableCents), accounts: rows };
+}
+
 export function buildInvestmentsOverview(input: {
   accounts: InvestmentAccountRef[];
   positions: InvestmentPosition[];
@@ -208,15 +228,18 @@ export function buildInvestmentsOverview(input: {
   const quotes = tradable.map((security) => quote(security, market));
   const accountNames = new Map(accounts.map((account) => [account.id, account.name]));
 
+  const views = [
+    buildView(ALL_ACCOUNTS_VIEW, "All", accounts.length, positions, market, accountNames),
+    ...accounts.map((account) => buildView(account.id, account.name, 1, positions.filter((p) => p.accountId === account.id), market, accountNames)),
+  ];
+
   return {
     mocked: true,
     priceSource: market.source,
     marketStatus: market.marketStatus,
     pricesAsOf: market.pricesAsOf,
-    views: [
-      buildView(ALL_ACCOUNTS_VIEW, "All", accounts.length, positions, market, accountNames),
-      ...accounts.map((account) => buildView(account.id, account.name, 1, positions.filter((p) => p.accountId === account.id), market, accountNames)),
-    ],
+    views,
+    accountMix: accountMixOf(accounts, views),
     markets: market.indexes.flatMap((index) => {
       const security = market.securities[index.symbol];
       return security ? [{ ...quote(security, market), label: index.label }] : [];

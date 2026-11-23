@@ -17,7 +17,7 @@ function DtiMeter({ before, after, guideline }: { before: number; after: number;
       <div className="flex items-baseline justify-between text-xs">
         <span className="text-muted">Debt-to-income</span>
         <span className="tabular-nums text-ink">
-          {formatPercent(before)} <span className="text-subtle">→</span>{" "}
+          {formatPercent(before)} <span className="text-muted">→</span>{" "}
           <span className={`font-semibold ${over ? "text-loss" : "text-ink"}`}>{formatPercent(after)}</span>
         </span>
       </div>
@@ -26,7 +26,7 @@ function DtiMeter({ before, after, guideline }: { before: number; after: number;
         <div className="absolute inset-y-0 left-0 rounded-full bg-accent" style={{ width: `${Math.min(100, ((b ?? before) / scale) * 100)}%` }} />
         <div className="absolute -inset-y-1 w-0.5 rounded bg-ink" style={{ left: `${(guideline / scale) * 100}%` }} aria-hidden />
       </div>
-      <p className="mt-1.5 flex items-center gap-1 text-[11px] text-muted">
+      <p className="mt-1.5 flex items-center gap-1 text-xs text-muted">
         {over ? <AlertTriangle size={12} className="text-loss" aria-hidden /> : <CheckCircle2 size={12} className="text-gain" aria-hidden />}
         {over ? `Above the ${formatPercent(guideline)} many lenders use` : `Under the ${formatPercent(guideline)} many lenders use`}
       </p>
@@ -34,8 +34,8 @@ function DtiMeter({ before, after, guideline }: { before: number; after: number;
   );
 }
 
-export function LoanExplorer({ initial }: { initial: LoanExplorerVisual }) {
-  const { visual: v, update, pending, failed } = useVisual(initial);
+export function LoanExplorer({ initial, onVisual }: { initial: LoanExplorerVisual; onVisual?: (v: LoanExplorerVisual) => void }) {
+  const { visual: v, update, pending, failed } = useVisual(initial, onVisual);
   const { inputs } = v;
   const cushionOk = v.cushion.afterDownPaymentCents >= v.cushion.bufferTargetCents;
   const years = v.amortization.length;
@@ -63,9 +63,9 @@ export function LoanExplorer({ initial }: { initial: LoanExplorerVisual }) {
         <div className="relative shrink-0" aria-label={`${formatPercent(v.interestShare)} of the total cost is interest`}>
           <svg width={64} height={64} viewBox="0 0 64 64" className="-rotate-90" aria-hidden>
             <circle cx={32} cy={32} r={26} fill="none" stroke="var(--fan-outer)" strokeWidth={8} />
-            <circle cx={32} cy={32} r={26} fill="none" stroke="var(--accent)" strokeWidth={8} strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 26 * (share ?? v.interestShare)} ${2 * Math.PI * 26}`} />
+            <circle cx={32} cy={32} r={26} fill="none" stroke="var(--series-1)" strokeWidth={8} strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 26 * (share ?? v.interestShare)} ${2 * Math.PI * 26}`} />
           </svg>
-          <span className="absolute inset-0 flex flex-col items-center justify-center text-[10px] leading-tight text-muted">
+          <span className="absolute inset-0 flex flex-col items-center justify-center text-xs leading-tight text-muted">
             <span className="font-semibold tabular-nums text-ink">{formatPercent(v.interestShare)}</span>interest
           </span>
         </div>
@@ -148,7 +148,7 @@ export function LoanExplorer({ initial }: { initial: LoanExplorerVisual }) {
             <span className="h-2 rounded-r-[4px] bg-accent-soft">
               <span
                 className="block h-2 rounded-r-[4px] transition-all duration-300"
-                style={{ width: `${(t.totalInterestCents / maxTermInterest) * 100}%`, background: t.termMonths === inputs.termMonths ? "var(--accent)" : "var(--fan-inner)" }}
+                style={{ width: `${(t.totalInterestCents / maxTermInterest) * 100}%`, background: t.termMonths === inputs.termMonths ? "var(--series-1)" : "var(--fan-inner)" }}
               />
             </span>
             <span className="tabular-nums text-ink">{formatUsd(t.monthlyPaymentCents)}/mo · {formatUsd(t.totalInterestCents)}</span>
@@ -165,7 +165,7 @@ export function LoanExplorer({ initial }: { initial: LoanExplorerVisual }) {
               <ProbabilityRange low={g.probabilityLowAfter} high={g.probabilityHighAfter} note={false} />
             </div>
           ))}
-          <p className="text-[11px] text-muted">Educational estimates, not guarantees.</p>
+          <p className="text-xs text-muted">Educational estimates, not guarantees.</p>
         </div>
       )}
 

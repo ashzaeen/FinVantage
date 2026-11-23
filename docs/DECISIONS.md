@@ -367,3 +367,172 @@ Answers to the open questions above. These replace those rows.
 | The demo button is "Try the Demo" with a small asterisk. A note under it says "Judges: please use the demo for a hassle-free experience." It appears in the hero and the closing section | Judges get a clear pointer to the no-signup path, without the old "For judges" tag sitting in the button row |
 | The trust section states only what the code enforces (math before words, the number guardrail, suggest only, ranges, confirm before saving, mocks labeled, sandbox data). Plaid scope and a data-sale policy stay out until confirmed | Root `AGENTS.md` rules 1 to 5, 7, 8 and 10. The TODO in `TrustSection.tsx` stays open |
 | Use cases: Overview, Goals and Simulation, Advisor, Spending and Subscriptions, Copilot. Life Events and Reports are not on the page | Chosen by the dashboard owner. Rows are added in `UseCases.tsx` |
+
+## Dark mode, decided 2026-11-23
+
+| Decision | Why |
+| --- | --- |
+| The dark theme is indigo-tinted navy: canvas `#0e1022`, raised surfaces `#171a33`. Not neutral gray, not true black | It keeps the brand identity, and avoids the harshness and scroll smearing of pure black on OLED phones |
+| The default is System, with a Light or Dark override. The choice is kept in `localStorage` under `fv-theme`. A script in `<head>` sets `data-theme` on `<html>` before first paint | A device in dark mode never sees a white flash. No cookie is read on the server, so the landing page stays static |
+| Dark mode is behind a flag (`DARK_MODE_ENABLED` in `src/lib/theme.ts`): on in `next dev`, and in any build with `NEXT_PUBLIC_DARK_MODE=1`. With it off, every visitor gets light whatever is stored. Landing, login, privacy and terms stay light even with it on (`UNTHEMED_PATHS`) until their phase ships | Pages are converted one phase at a time, and nobody should see a half-dark app |
+| There are two token blocks in `globals.css`: `:root` and `:root[data-theme="dark"]`. Dark is a token override only, with no `dark:` utilities in components. The `dark:` variant exists for cases a token cannot express, such as swapping a logo. `src/lib/theme-tokens.test.ts` fails if a color token is missing from either block or a dark text pair drops below its contrast minimum | One place to change a color, and a forgotten token cannot ship |
+| `--accent` is the fill (buttons, sidebar) and the new `--accent-ink` is the accent as text, links, icons and focus rings. `--chrome` is the sidebar, top bar and drawer color. In light they equal `--accent`. In dark `--accent-ink` is `#a29cff`, because `#544af7` is only 3.0:1 on a dark card | Indigo as text fails contrast on dark surfaces, and white on the same indigo fill passes (5.7:1). Every `text-accent`, `border-accent` and `ring-accent` class, and every inline accent used as text, now uses `accent-ink`. Chart marks use `--series-1` (the same indigo in light, `#7d76ff` in dark) |
+| Chart colors keep their hues and order. The dark steps are `#7d76ff #26a998 #e06d2c #d861b6 #4496e0 #b38c1e`, validated against the dark card surface with the dataviz validator (lightness band, chroma, colorblind separation 8.6, 3:1 contrast). Flow-in and flow-out reuse series 2 and 3, as in light | A category stays recognizable in both themes. Gain and loss keep their arrows, and spending is still never red |
+| `npm run theme:audit -w @finvantage/web` counts hardcoded colors (`bg-white`, hex, `rgba(`) against `scripts/theme-baseline.json` and fails if a file goes up. A line marked `theme-ok` is skipped, and a file marked `theme-ok-file` is skipped whole. It runs inside `npm test` in the web workspace, so `npm run check` includes it | Components should use tokens so they can be themed. The count started at 247 in 50 files and is 1 now. Files of fixed colors (card artwork, the sidebar's white tints, the landing page's dark bands) say `theme-ok-file` once. The audit ignored that marker until the polish pass (2026-11-23); it is honored now |
+| Light mode has one gap that was already there: `--ink-muted` on white is 3.03:1, short of 4.5:1. Dark mode's muted text is 5.9:1. Light is not changed here | Raising it changes the look of every page, so it is a separate decision |
+| Phases 0 to 5 are built, behind the flag: tokens, provider and toggle; the shell (sidebar, phone drawer, top bar) and the `Card`, `Stat` and `PageHeader` pieces; every dashboard page; charts (Recharts tooltips are themed in `globals.css`); the landing page, login and the legal pages; the extension. `UNTHEMED_PATHS` is empty. What is left is the release decision: turn the flag on | Slow rollout, checked in a browser at each step, in both themes at 390 and 1280px |
+| Landing tokens got dark values too: `--landing-surface` is the card color, `--landing-primary-ink` is indigo as text, and the always-dark bands (Copilot section, closing call to action) stay dark in both themes, so the white buttons on them stay white. A header theme button (System, Light, Dark in turn) sits in the landing header, since there is no room for the three-way control | The same navy as the dashboard, and the dark bands are lifted a step above the page so they still read as bands |
+| Native selects are redrawn in dark (`appearance: none` with a chevron in the muted text color) | Chromium paints a `select` in its own gray and ignores the card color. Light keeps the native look |
+| The extension overlay and popup follow the device's setting (`prefers-color-scheme`) inside the Shadow DOM, and are gated by `EXTENSION_DARK_MODE=1` at build time (on in watch mode, and set from `NEXT_PUBLIC_DARK_MODE` when the web build packages it). With it off the dark CSS is not in the bundle. A test checks the overlay's dark values equal the dashboard's dark tokens | The card sits on pages whose theme it cannot know, and it cannot read the dashboard's stored choice |
+
+## Dashboard enhancements, phase 0, decided 2026-11-21 and 2026-11-23
+
+Plan: `docs/workstreams/dashboard-enhancements.md`. Design: `docs/design/dashboard-enhancements-design.md`.
+
+| Decision | Why |
+| --- | --- |
+| **Spent** means money out, minus transfers between the user's own accounts and money moved to savings or investing. Debt payments count. **Saved** is its own figure. `SpendingSummary` carries `spentCents` and `savedCents`; every tab quotes them | Overview said $3,552.56 for November and Spending said $5,902.56. The $2,350 gap was savings counted as spent |
+| The Spending pie and the Overview category chart leave out the `savings` bucket, and the pie names what was saved on a line underneath | The ring's total now equals "spent" |
+| Overview's first row is Net Worth (with assets and liabilities as its detail line), Spent This Month, Saved This Month and Investments. The Accounts count and the separate assets and liabilities tiles are gone | Those repeated Accounts, and a count of accounts decides nothing |
+| Overview's Credit Cards panel draws two card faces but lists every card's balance, and shows when a 0% rate ends. Its link goes to Credit | The 0% Promo Card, the one at 30% utilization, was missing |
+| Overview's Recent Transactions shows category and account in place of the Income and Expense pill, and amounts use `formatUsd` | The pill repeated the sign and the colour. Amounts had no thousands separators |
+| Accounts no longer has the "All bank accounts" directory. Spending no longer has Upcoming Bills and Recurring Charges, and links to Subscriptions | Each repeated a list on the same page or in another tab |
+| Changes From Last Month shows only categories that changed, biggest first, and leaves out savings | Seven rows read "▼ $0" |
+| `GET /v1/spending/top-expenses` takes `kind` (`all` or `purchases`). Spending uses `purchases`: not savings and not recurring. The card is "Top 10 Purchases" | The list was led by a savings transfer, the mortgage and an IRA contribution |
+| A budget's "Usually" is the median of the last three months, not the mean | One odd month showed Shopping as "Usually $992.75" against a $300 limit |
+| **Demo clock:** `deps.today()` is the later of the real date and `DEMO_DATA_ENDS_ON` (`packages/data/src/profile.ts`, 2026-12-03). The fixture is unchanged. Until Dec 3 the app behaves as if it is Dec 3, so the current month is December with three days of data. After that the rule does nothing | The fixture ends Dec 3, so the demo showed items dated after "today". Regenerating to today broke six tests that pin Dec 3, and the pitch footage may too. The decision to anchor the clock, not the data, was made 2026-11-23. A test checks the constant against the fixture's last transaction |
+| A report's `outlookAsOf` is when the run was made (a real timestamp), so it compares to `deps.now()`, not the demo clock | It was compared with `deps.today()` only because both used the real clock |
+| Reports build the latest quarter on first visit. Copilot has a Try It Now button and a Try an Example button that send a sample $329 purchase, named "Northwind Store (Example)", through the same route as the extension. Life Events opens on a worked example when the user has no saved events | The first screen of each was a button or a sentence. The example sends only the four fields the extension sends, and analysing never saves |
+| `ProbabilityRange` leads with "On track" when the low end is 90% or more, and still shows the range and the disclaimer | Four of five goals read 97 to 98%. Rule 7 still holds |
+| **Not done:** collapsing the empty Achieved column on Goals. It is one of three equal board columns and the drop target for finished goals | Collapsing it would remove the place to drop a goal |
+| A flagged price rise on a bill says the latest charge, what it rose from, and that the amount shown is the bank's usual amount, when the two differ | City Power & Light read "Was $82.85, now $87.32" beside a $101.31 row |
+
+## Advisor voice, decided 2026-11-23
+
+Plan: `docs/workstreams/voice.md`.
+
+| Decision | Why |
+| --- | --- |
+| The voice call is a cascade: speech to text, the existing Advisor turn, then text to speech. Gemini Live (speech to speech) is a possible later experimental mode behind a swappable session interface | Speech to speech speaks before `validateGrounded` can check a figure, which breaks rules 1 and 2. The cascade keeps every guardrail |
+| Dictation uses the browser's Web Speech API and fills the message box. It never sends on its own, and Esc cancels | Free, no backend, no contract change. The person reviews a misheard amount before it is sent. Chrome sends the audio to its speech service, so the UI says so while listening. Unsupported browsers (Firefox) do not see the mic button |
+| `cleanTranscript` rewrites wording only: "four oh one k" to 401(k), "7.49 percent" to 7.49%, "28 grand" to $28,000, acronyms to capitals | The Advisor and its tools read the user's stated amounts. It never computes or rounds a figure |
+| Spoken replies use Gemini TTS through `packages/llm/src/client.ts`, with the browser voice as fallback. ElevenLabs was considered and left out | One provider, one key. ElevenLabs' free tier is about 10 minutes a month with no commercial license |
+| Calls are hands-free with a push-to-talk option, and last at most 5 minutes | Natural to use, and keeps cost bounded |
+| Voice is a modality of the Advisor, not a second app. Anything a person does by hand is added to voice as an Advisor tool that calls the same route. Writes are propose then confirm, like `draft_goal`. A parity test fails when a write route has no tool and no stated exclusion | Rule 9: a misheard "fifteen" for "fifty" must never save silently. One path keeps the safety rules in one place |
+
+## Income and spending bars, decided 2026-11-23
+
+| Decision | Why |
+| --- | --- |
+| Overview's Cash Flow chart and Income's Income vs Spending bars draw income in `--good` (green) and spending in `--critical` (red), the same tokens as the Accounts charts, in light and dark. This is an exception to "never draw spending in red" in the Chart palette decision. Other charts keep `--flow-in` and `--flow-out`, and Reports keeps its own colors | The dashboard owner asked for one green and red across the pages that put income next to spending, matching Accounts |
+
+## Dashboard enhancements, phase 1, decided 2026-11-23
+
+Plan: `docs/workstreams/dashboard-enhancements.md`.
+
+| Decision | Why |
+| --- | --- |
+| New charts live in `apps/web/src/components/charts`: `BulletBar`, `Sparkline`, `HeatGrid` and `DotCalendar`. Each is a plain server-renderable component that draws what it is given, uses tokens only, and has a hidden text or table version for screen readers | Eleven phase 1 ideas needed the same few shapes. One home keeps their colours, motion and accessibility the same |
+| Pages use the API's date, not the browser's. `SubscriptionOverview` and `CreditCardsOverview` carry `asOf`; `IncomeSummary.nextPayday` carries `daysAway`; the Credit page's own maths and its `new Date()` were removed | The demo's clock (`DEMO_DATA_ENDS_ON`) is not the visitor's, so any page that read `new Date()` disagreed with the API. Still open: Goals' new-goal date, the Advisor's conversation dates, and the Subscriptions row actions read the browser's clock |
+| `POST /v1/transactions/summary` takes the ids of the rows on screen and returns their totals. It is a read sent as a POST, so it is on the shared demo token's allowlist | A filter in the browser and the figures beside it cannot disagree, and no filtering logic is copied into the API. The ids are too many for a URL |
+| CSV export is made in the browser from the rows already shown. A cell that starts with `=`, `+`, `-` or `@` gets a leading quote | No new figures, and merchant names come from outside, so a spreadsheet must not run them as formulas |
+| A subscription is "worth acting on" when it is not a bill and carries a `price_up`, `possible_duplicate`, `started_recently` or `annual_coming` flag. The list is `FLAGS_WORTH_ACTING_ON` in contracts, read by both the API's yearly total and the page's list | One definition. A bill cannot just be dropped, and `still_charging` is a different problem |
+| The price line on a subscription row is drawn only for subscriptions whose price changed. Bills never get one | A flat line says nothing, and a utility bill varies every month |
+| Cash runway is liquid cash (checking and savings) over the average spending of the last three full months. The Overview bar's tick is at three months | The common emergency-fund guideline. It is labelled a guideline, not advice |
+| "Reachable" money is cash (checking, savings), sellable (brokerage) and locked (CDs and retirement accounts) | Net worth hides the difference between money you can spend today and money that costs a penalty to open |
+| Next payday comes from the days of the month recent paychecks landed on, over the last 120 days, not from the profile's single payday day | The demo is paid on the 1st and 15th, which the profile cannot say |
+| The Credit page's factors come from the API. Length of history and recent applications are marked "not tracked in this demo" instead of scored | The page invented a verdict from the number of cards, and it read the browser's clock to decide a payment was overdue |
+| Investments gain `concentration` (the top three holdings) and `accountMix` (tax-advantaged against taxable). A big share in an index fund is not called a risk | A concentration alert on VOO at 30% would be wrong: it holds hundreds of companies |
+| The Privacy Center is generated from a list that a test checks against `CopilotContext` | The strictest product rule is now visible, and cannot drift from the code |
+| Not built in phase 1: stale-account flag (AC5) and linked-bank health (ST4), which need a stored last-updated or last-sync time; the wins timeline (RP4), which needs dated milestones. Already existed: sources on Advisor answers (AD1, the citations), Download PDF on Reports (RP5), and the Appearance card (ST6, from the dark-mode work) | Each needs data we do not keep, or was already there |
+
+
+### Advisor voice, phase 2 (spoken replies), decided 2026-11-23
+
+| Decision | Why |
+| --- | --- |
+| Only the validated, saved answer is spoken. `POST /v1/advisory/speak` takes a conversation id, a reply id and a part number, never free text. It refuses the user's own messages | `validateGrounded` runs on the whole answer after the model finishes and can retry or strip sentences, so streaming raw words could speak a figure that is later removed. Naming a saved reply also stops the endpoint being a free text-to-speech proxy |
+| A reply is split into chunks (`speechChunks` in `packages/contracts/src/speech.ts`). The first is one sentence, so audio starts quickly, and the browser asks for the next part while one plays | Short wait before the first word without streaming unchecked text. The server and the browser's fallback voice share the splitter, so part numbers agree |
+| `modality: "voice"` on `SendAdvisorMessage` (optional, additive) adds a spoken style to the prompt: at most three short sentences, no lists or symbols, detail left on screen. The figure rules are unchanged | Long answers and bullets sound bad read aloud. The saved reply is the short one, and the card and visuals still carry the detail |
+| Gemini TTS runs in `packages/llm/src/client.ts` (`speak`), model from `GEMINI_MODEL_TTS`, voice from `GEMINI_TTS_VOICE` (default Kore). Raw PCM is wrapped as WAV so an audio element plays it. If it is unset or fails, the route answers 503 `voice_unavailable` and the browser reads the reply with its own voice | One provider and one key. The demo never goes silent (rule 3) |
+| Replies are read aloud only after the visitor dictated, and only while the speaker button is on. The choice is kept in `localStorage` as `fv-voice-replies`. Typed messages are never spoken | Reading aloud unprompted is surprising in an office. A muted speaker is a single click |
+| The endpoint is in `MODEL_ROUTES`, so it shares the 30 a minute per user and 60 a minute per address limits. Audio for a reply part is cached in memory (40 parts) | A reply is one to three parts, and a replay should not be paid for twice |
+
+## Dashboard enhancements, phase 2, decided 2026-11-23
+
+Phase 2 adds the planning figures. Each is worked out in `packages/math-core/src/planning.ts`, served by `apps/api/src/routes/planning.ts`, and only worded and drawn by the web app.
+
+- **Target allocation lives on the spending profile document** (`SpendingProfile.targetAllocation`, optional), not on `User`. `User.preferences` is a SpacetimeDB column, so changing it means republishing the module. The profile document takes an optional field freely.
+- **`PATCH /v1/investments/targets`, not PUT.** It changes one part of the profile. Targets must add to 100% or the API returns a 400. The page previews a preset and saves only on Save Targets (rule 9).
+- **The mocked score estimate is a documented rule** (`UTILIZATION_SCORE_POINTS` in `planning.ts`): always a range of plus or minus 15 around a point estimate, always `mocked: true`, shown beside `MockedBadge`. The what-if changes nothing, and `POST /v1/credit/what-if` is on the demo token's allowlist because it saves nothing.
+- **Debt payoff leaves the mortgage out.** It covers cards and loans. A debt with no stated minimum is assumed to need 2% of its balance, at least $25. A 0% promo card is treated as 0% for the whole plan.
+- **Goal funding ignores growth and interest.** Needed per month is the remaining amount over months left, rounded up. The simulator's odds also count growth, so the two can disagree, and the Goals page says so. There is no "shortfall" verdict.
+- **`spendingContext(deps)`** in `routes/spending.ts` is the shared source for the spending profile, catalog, transactions, six-month summary and budgets.
+- **Budget suggestions save nothing.** Each row has an Add This Limit button that calls `setBudget`.
+- **Not built, with reasons:** net worth drivers (OV3, no market component), net worth by account type (AC1, no per-account history), interest earned vs paid (AC4, no interest transactions), quarter over quarter deltas (RP2), break-even month and raise impact (LE6, IN4, need new simulator inputs), contributions vs growth (IV2, same as Total Return), dividend calendar (IV3) and free-trial guard (SU4, nothing to show on the demo data).
+
+## Dashboard enhancements, phase 3 (first group), decided 2026-11-23
+
+Chosen by the owner: the builds that need no new simulator inputs. Five of thirteen are done. The rest (goals math GO2 and GO4, simulator forecasts LE3, LE4 and IV5, and chat and edit tools AD4, AD5 and TX5) are not started.
+
+- **Money calendar (OV4)** is worked out in `moneyCalendar` (`packages/math-core/src/planning.ts`) and served by `GET /v1/overview/calendar`. It counts each subscription or bill once, on its next date, and a card's minimum payment on its due date (a card with no stated minimum is shown but counts for nothing). Paydays come from `paydaysAhead` in `insights.ts`, the same pattern `nextPayday` uses, which now sits on top of it. Checking is projected day by day. It is a projection, and the card says so.
+- **Download My Data (ST2) is export only.** It is built in the browser from the routes every page already uses (JSON, or CSV for transactions, accounts and goals; the latest 500 transactions). **Delete My Data is not built**: no route removes a user's data across the ledger, document, spending and bank-token stores, and adding one means a new method on each store interface and each implementation (memory, SpacetimeDB, MongoDB). It needs its own decision and a typed confirmation.
+- **CSV cells** that start with `=`, `+`, `-` or `@` are made text, but amounts are written as plain numbers so a negative stays a number (`lib/dataExport.ts`).
+- **Events timeline (LE5)** draws saved life events from `GET /v1/life-events` as lanes over five years: a dot for one-time, a bar for monthly.
+- **Compare two events (LE2)** analyzes two saved models against the current goals through the existing `analyzeLifeScenario` and shows the API's figures side by side. It saves nothing. `formForCurrentContext` moved to `lifeSimulatorShared.tsx` so both files can use it.
+- **Save as Goal (AD2)** on the Advisor's goal planner now shows a preview and saves only on Confirm (it used to save on the first press).
+
+## Design audit fixes, decided 2026-11-23
+
+| Decision | Why |
+| --- | --- |
+| Muted text meets 4.5:1 in light: `--ink-muted` is `#5d647e` (4.9:1 or better on the canvas, cards, insets and the accent tint). `--ink-light` (`#8d94a8`) is for icons, lines and disabled states only, never text. The sidebar's links, hints and group labels are white at 86 to 92%, and the hints are 12px | The audit found 21 to 111 failing text runs per page in light mode, mostly `--ink-muted` at 2.8 to 3.0:1, plus the sidebar at 2.1 to 3.7:1 on every page. A test now fails if a light text token drops below 4.5:1 on any surface |
+| Money direction is one pair everywhere: `--flow-in` is the green and `--flow-out` is the red, equal to `--good` and `--critical` in both themes (a test enforces it). The Income page's Expected Income meter is green too. A chart of a single measure keeps `--series-1`. This replaces the teal and orange `--flow-*` pair and the indigo and teal income and spending bars on Reports | The same quantity had four treatments across four pages. The rule is one meaning per color. Categories (donuts, stacked sources) still use the series palette |
+| The sidebar keeps Settings and the account card pinned and scrolls only the links, with a shadow cue at each edge. The theme switch is one icon button on the Settings row, and the full System, Light, Dark control lives in Settings. Nav hint "Find and trim recurring charges" became "Trim recurring charges" | Settings and Credit were below the fold on a laptop-height screen, with no sign of more. At 900px tall the whole list now fits with no scrolling |
+| One `Button` (`primary`, `secondary`, `quiet`; `sm`, `md`, `lg`, always `rounded-xl`) and `buttonClass()` for a Link. The accent-filled buttons were migrated. The chat bubble and the icon-only send button are not buttons of this kind and were left | There were four or more primary recipes (rounded-xl, full, 2xl; px 4 or 5; py 2 to 4). The same action should look the same on every page |
+| Lucide is the only icon set. Font Awesome's stylesheet (3 icons, on every page, from a CDN) and the duplicate Google Fonts `@import` are gone. The 14 hand-drawn sidebar SVGs and the `▲ ▼ ✓ ✕ ×` glyph icons became Lucide | Smaller and faster, and one stroke and weight. The 8.4px text on Investments was a `▲` glyph at `0.7em` |
+| 12px is the smallest text: the 9, 10 and 11px utilities became `text-xs`, and SVG chart text is 12. The global rule that bumped those sizes below 1024px is now redundant | Tiny type was on every page (75 uses) and Investments had 11 distinct sizes |
+| Dates read in words (`longDate`: "Sep 1, 2029"; `monthYear`: "Dec 2026") and chart money uses `compactUsd` on every axis | ISO strings and four money formatters (`$8K`, `$8k`, `$40,000`, `$42.8`) were mixed across pages |
+| Reports no longer wraps the page in `textTransform: capitalize`. Headings and tile labels are Title Case in the markup, and an id with no label is made readable by `humanize` | The wrapper Title-Cased whole sentences. The page title is now "Reports", the Credit page "Credit", to match the nav |
+| `PageHeader` takes a `subtitle`, and the duplicate "Your Accounts" and "Your Goals" headings are gone. Goals and Linked Banks use `h2`, so no heading level is skipped | One heading per idea, and a clean outline for screen readers |
+| Added `app/(app)/loading.tsx` (a skeleton that stays still under reduced motion) and `app/not-found.tsx` | Dashboard pages were blank while the API answered, and an unknown address showed the framework's default 404 |
+| Two regressions from the dark-mode work were fixed: the landing page's white call-to-action button had light lavender text in dark (1.7:1), and the `text-surface` buttons on Settings and Reports were navy on indigo in dark. `text-surface` as a stand-in for white must not come back | An audit with measured contrast caught both. The token tests only cover pairs listed in advance |
+| Not changed, on purpose: cards lift on hover even when they are not clickable (a rule in `apps/web/AGENTS.md`), and every mocked value keeps its `MockedBadge` (root rule 8) | Both are the owner's rules, so they are a decision, not a polish fix |
+
+## Dashboard enhancements, phase 3 (second group), decided 2026-11-23
+
+Simulator forecasts and the chat and edit tools: LE3, LE4, IV5, TX5, AD4 and AD5. Not started: GO2 and GO4 (goals math).
+
+- **Forecasts live in the simulator, beside `simulate`, and change nothing in it.** `forecastCash` returns free cash for 24 months as a 10th to 90th percentile band. It is the same monthly pool the goal run draws from, before any of it goes to a goal, and it consumes random draws in the same order, so the same seed gives matching months. `projectRetirement` grows a balance at the invested return and volatility with a yearly fan. Both are seeded and pure. Tests are in `packages/simulator/src/index.test.ts`.
+- **The stress test needs no new simulator input.** `POST /v1/life-events/stress` turns the two switches into a change in monthly savings (`stressMonthlyChange` in `math-core`: `-(income x drop + usual rent x rise)`) and passes it as the existing `whatIf.monthlySavingsDeltaCents`. Usual rent is housing spending over the last three full months. It runs at a fixed seed and 2,000 paths, so the same switches give the same answer, and it saves nothing. Switches are capped at 50%.
+- **The retirement fan (IV5)** is `POST /v1/investments/retirement`, always `mocked: true`. It starts from the user's `ira` accounts, adds a fixed monthly contribution, and ignores taxes and inflation, which the card says. The page takes ages and a contribution; only the number of years is sent. Both new POSTs are in `COMPUTE_ROUTES` and on the demo token's allowlist because they change nothing.
+- **Bulk edit and split (TX5)** are two routes: `POST /v1/transactions/bulk-category` (up to 200 ids, every id and the category are checked before any row changes) and `POST /v1/transactions/:id/split` (two to five parts that must add up to the original, same sign, US dollars only). A split updates the original row with the first part and adds new rows for the rest, so no store gained a delete method. The ledger total never changes. The page has a Select mode and a bar that moves the selected rows on a confirm press.
+- **Two scenarios in chat (AD4)** is a wrapper on each Advisor visual: Compare Two Scenarios starts B as a copy of what is on screen, each side recomputes through the existing `POST /v1/advisory/visuals`, and a table shows B minus A on headline figures chosen in `lib/visualCompare.ts`. No new API.
+- **Tap a number (AD5)** makes a figure in an answer a button only when a calculation attachment's result contains it (`lib/figureLinks.ts`). The drawer shows the figure, what it is, the working with its inputs, the answer's date and the sources the answer cited. A figure with no calculation behind it stays plain text. Not every figure carries a working yet, so some stay untappable until the Advisor's tools attach more calculations.
+
+## Release and mock badges, decided 2026-11-23
+
+| Decision | Why |
+| --- | --- |
+| Dark mode is on for everyone, with the default System. `DARK_MODE_ENABLED` is now a kill switch: `NEXT_PUBLIC_DARK_MODE=0` turns it off. The extension follows (`EXTENSION_DARK_MODE=0` builds without it). This replaces the earlier "behind a flag until the dashboard passes" rollout | Every phase is built and was checked in a browser in both themes, and the owner chose to ship it |
+| The "Mocked data" badge is hidden on the demo profile (no sign-in, or a guest session) and still shows for a signed-in account. `isDemoViewer` in `src/lib/viewer.ts` decides it from the session cookie, and the dashboard layout passes it down through `ViewerProvider` | The owner asked to remove the badges because every figure on the Jordan Rivera account is sample data. For a signed-in account the portfolio and credit score are still mocked (the contract forces `mocked: true`), so root rule 8 still needs the badge there. Removing it for everyone is one line in `MockedBadge` if that is wanted |
+| Cards keep lifting on hover, as the rule in `apps/web/AGENTS.md` says | The owner kept it as is |
+
+## Dashboard enhancements, phase 3 (goals math), decided 2026-11-23
+
+GO2 and GO4. With these, every phase 3 idea is built except Delete My Data (ST2), which waits on a decision.
+
+- **The priority model is the simulator's first step.** `goalAllocation` (`packages/math-core/src/planning.ts`) hands the monthly savings to goals in priority order, each getting what it needs per month to land on its date (from `goalFunding`) until the money runs out. What is left over is shown as Not Assigned. A goal marked achieved needs nothing. `GET /v1/goals/allocation`. It ignores growth and interest, so the simulated odds can differ, and the card says so.
+- **A rebalance is a new priority order, not a transfer.** The Goals tab has no per-goal contribution, so the only lever is rank. A reorder is suggested only when a **fixed-date** goal is short, a **flexible** goal ranked above it is fully funded, and ranking the fixed goal just above that goal makes it whole. The suggestion states the dollars a month moved and each affected goal's new monthly amount and months later than its date (or "paused" at $0). It never suggests moving one flexible goal behind another, which would only swap which of them is late.
+- **Apply This Plan previews, then saves only on Confirm** (rule 9). It updates the priority rank of the goals whose rank changes through the existing `updateGoal` route. No money moves. On the demo data the one short goal is flexible, so no reorder is offered; marking it fixed-date shows the suggestion.
+- **New chart piece:** `StackedBar` in `components/charts` (one bar split into parts with a legend that doubles as the text version).
+
+## Keyboard and touch pass, decided 2026-11-23
+
+| Decision | Why |
+| --- | --- |
+| Every dashboard page starts with a "Skip to Main Content" link (the first Tab stop, visible only when focused) and `main` is its target (`id="main-content"`) | A keyboard user had to tab through about 16 sidebar links on every page. Checked in a fresh browser: skip link, brand, then the sidebar, and Enter moves focus to the content |
+| A form control that hides the browser outline (`outline-none`) must give a real focus outline in its place, and with Tailwind 4 that needs `focus-visible:outline-solid` as well as `outline-2`, because `outline-none` leaves the outline style at none. 27 fields were changed. A border color change alone is not a focus indicator | The Goals "Move To" selects, the Transactions and Credit selects and three Investments fields showed no ring when tabbed to |
+| Every button-shaped element is at least 44px tall on touch screens, links included: `buttonClass` adds `max-lg:min-h-11`. The global touch rule only covers real `<button>` elements | A scripted touch test (real touch-enabled mobile context, 390px) found link-styled buttons at 40px and a 24px standalone link. After the fixes no control is under 44px on any page |
+| The one-button theme switch flips between light and dark from what you see now (the icon shows the current look), and Settings keeps the three-way System, Light, Dark control | The old cycle started at System, so on a light device the first tap changed the setting but not the look, and it seemed broken |
+| The extension was tested loaded as a real unpacked extension in Chromium (Chrome stable no longer allows sideloading): the overlay rendered on all three mock pages with live API data in dark and light, the focus ring shows, and the popup is dark. Chrome stable itself was not used | Closes the "only tested on a mock page" gap. Real-device testing of touch gestures is still not done: the touch test used an emulated mobile context |

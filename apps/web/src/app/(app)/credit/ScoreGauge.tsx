@@ -6,7 +6,7 @@ export function ScoreGauge({ score }: { score: number }) {
   const min = 300, max = 850;
   const targetPct = Math.max(0, Math.min(100, ((score - min) / (max - min)) * 100));
   const label = score >= 800 ? "Exceptional" : score >= 740 ? "Very Good" : score >= 670 ? "Good" : score >= 580 ? "Fair" : "Poor";
-  const color = "var(--accent)"; // the band is named by the pill beneath; color stays one hue
+  const color = "var(--series-1)"; // the band is named by the pill beneath; color stays one hue
   const circumference = 2 * Math.PI * 83;
 
   const [animPct, setAnimPct] = useState(0);
@@ -43,17 +43,17 @@ export function ScoreGauge({ score }: { score: number }) {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted">FICO</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.15em] text-muted">FICO</span>
           <span className="font-poppins text-3xl font-bold tracking-tight text-ink tabular-nums">{displayScore}</span>
           <span
-            className="mt-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-opacity duration-500"
-            style={{ color, backgroundColor: `${color}18`, opacity: animPct > targetPct * 0.8 ? 1 : 0 }}
+            className="mt-1 rounded-full px-2.5 py-0.5 text-xs font-bold transition-opacity duration-500"
+            style={{ color, backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`, opacity: animPct > targetPct * 0.8 ? 1 : 0 }}
           >
             {label}
           </span>
         </div>
       </div>
-      <p className="mt-2 text-[11px] text-muted">{min}–{max}</p>
+      <p className="mt-2 text-xs text-muted">{min}–{max}</p>
     </div>
   );
 }

@@ -150,5 +150,10 @@ export const NetWorth = z.object({
   netWorthCents: Cents,
   byCategory: z.array(z.object({ category: AccountCategory, balanceCents: Cents })),
   history: z.array(z.object({ date: IsoDate, netWorthCents: Cents })),
+  /**
+   * How reachable the assets are. Cash is checking and savings; sellable is a brokerage account
+   * (a few days to settle); locked is CDs and retirement accounts.
+   */
+  liquidity: z.object({ cashCents: Cents, sellableCents: Cents, lockedCents: Cents }).default({ cashCents: 0, sellableCents: 0, lockedCents: 0 }),
 });
 export type NetWorth = z.infer<typeof NetWorth>;

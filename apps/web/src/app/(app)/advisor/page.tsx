@@ -1,4 +1,6 @@
 import type { Situation } from "@finvantage/contracts";
+import { api } from "@/lib/api";
+import { personalPrompts } from "@/lib/advisorPrompts";
 import { AdvisorClient } from "./AdvisorClient";
 
 type Params = { [key: string]: string | string[] | undefined };
@@ -18,5 +20,17 @@ export default async function AdvisorPage({ searchParams }: { searchParams: Prom
     : run
       ? { kind: "simulation_change", runId: run }
       : null;
-  return <AdvisorClient initialConversationId={one(params.c)} situation={situation} />;
+  // Questions about what is flagged in the user's own data. A nicety: if any call fails, there are none.
+  const [budgets, subscriptions, categories] = await Promise.all([
+    api.listBudgets().catch(() => []),
+    api.listSubscriptions().catch(() => null),
+    api.listSpendingCategories().catch(() => []),
+  ]);
+  const labels = new Map(categories.map((c) => [c.id, c.label]));
+  const prompts = personalPrompts({
+    budgets,
+    subscriptions: subscriptions ? [...subscriptions.subscriptions, ...subscriptions.bills] : [],
+    categoryLabel: (id) => labels.get(id) ?? id,
+  });
+  return <AdvisorClient initialConversationId={one(params.c)} situation={situation} personalPrompts={prompts} />;
 }

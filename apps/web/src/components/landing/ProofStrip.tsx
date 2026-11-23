@@ -11,12 +11,12 @@ const FACTS = [
 
 export function ProofStrip() {
   return (
-    <section aria-label="Product principles" className="border-y border-lp-line bg-white">
+    <section aria-label="Product principles" className="border-y border-lp-line bg-lp-surface">
       <Reveal>
         <ul className="mx-auto grid max-w-[1200px] grid-cols-1 gap-x-8 gap-y-4 px-6 py-8 sm:grid-cols-2 lg:grid-cols-4">
           {FACTS.map(({ Icon, text }) => (
             <li key={text} className="flex items-center gap-3 text-sm font-medium text-lp-text-2">
-              <Icon size={18} className="shrink-0 text-lp-primary" aria-hidden="true" />
+              <Icon size={18} className="shrink-0 text-lp-ink" aria-hidden="true" />
               {text}
             </li>
           ))}

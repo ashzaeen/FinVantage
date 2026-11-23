@@ -1,6 +1,6 @@
 # Dashboard Enhancements
 
-**Owner:** Ashzaeen (dashboard). **Tier:** P1. **Status:** plan written and decisions D1 to D8 confirmed 2026-11-21, nothing built yet. Next: phase 0. **Code (planned):** `apps/web/src/app/(app)/*`, `apps/web/src/components/charts`, `packages/math-core/src`, `apps/api/src/routes`, contracts in `packages/contracts/src`. **Source:** the audit and 82 ideas in `docs/design/dashboard-ideas.html`. **Design:** `docs/design/dashboard-enhancements-design.md` and the wireframes in `docs/design/dashboard-enhancements-wireframes.html`.
+**Owner:** Ashzaeen (dashboard). **Tier:** P1. **Status:** plan written and decisions D1 to D8 confirmed 2026-11-21. **Phase 0 built 2026-11-23 on the `dash-fixes` branch** (see "Phase 0 result"). **Phase 1 built 2026-11-23 on `dash-quick-wins`** (see "Phase 1 result"). **Phase 2 built 2026-11-23** (see "Phase 2 result"). **Code (planned):** `apps/web/src/app/(app)/*`, `apps/web/src/components/charts`, `packages/math-core/src`, `apps/api/src/routes`, contracts in `packages/contracts/src`. **Source:** the audit and 82 ideas in `docs/design/dashboard-ideas.html`. **Design:** `docs/design/dashboard-enhancements-design.md` and the wireframes in `docs/design/dashboard-enhancements-wireframes.html`.
 
 ## Decisions to confirm before step 1
 
@@ -91,6 +91,25 @@ About 4 to 5 working days. No new design. Ship first, because every later chart 
 | 0.11 | Overview: drop the Accounts count tile; Recent Transactions shows category and account in place of the Income and Expense pill | `app/page.tsx` | Fewer tiles, more information per row |
 | 0.12 | Record D1, D6 and the removed cards in `docs/DECISIONS.md` and update `apps/web/AGENTS.md` | `docs/DECISIONS.md`, `apps/web/AGENTS.md` | Next agent finds the new definition of Spent |
 
+### Phase 0 result
+
+All twelve steps are done except the two noted. Recorded in `docs/DECISIONS.md`, "Dashboard enhancements, phase 0".
+
+| Step | Result |
+| --- | --- |
+| 0.1 | Done. `spentCents` and `savedCents` on `SpendingSummary`. Overview and Spending both say $3,552.56 for November. Test: "spent means the same thing on every tab" |
+| 0.2 | Done. Every card is listed. A 0% rate end date shows under the card. The link goes to Credit |
+| 0.3 | Done. Accounts directory removed. Spending's two bill lists became one link to Subscriptions. Overview's tiles are now Net Worth (with its parts), Spent, Saved and Investments |
+| 0.4 | Done |
+| 0.5 | Done. `kind=purchases` on `listTopExpenses`. The card is "Top 10 Purchases" |
+| 0.6 | Done. Median of the last three months |
+| 0.7 | Done. The sentence names the latest charge and says the row shows the bank's usual amount |
+| 0.8 | **Done a different way than planned.** The clock, not the data: `deps.today()` is never earlier than `DEMO_DATA_ENDS_ON` (2026-12-03). Regenerating broke tests pinned to Dec 3 and might not match the pitch footage. Side effect: until Dec 3 the app's "this month" is December with three days of data |
+| 0.9 | Done. Reports generate on first visit, Copilot has Try It Now and Try an Example, Life Events opens on an example |
+| 0.10 | **Partly.** "On track" now leads a range of 90% or more. The Achieved column stays, because it is a drop target |
+| 0.11 | Done |
+| 0.12 | Done |
+
 ## Phase 1: Quick wins on data we hold
 
 About 8 to 10 working days. Mostly web work, each with at most one small read added to the API.
@@ -131,6 +150,46 @@ About 8 to 10 working days. Mostly web work, each with at most one small read ad
 | ST6 Appearance | Settings | Theme and number format | None. Stored in the browser |
 
 Exit check for the phase: every card has a loading, empty and error state from the design plan, and `npm run check` passes.
+
+### Phase 1 result
+
+29 of the 32 are done, and 3 need data we do not keep. Recorded in `docs/DECISIONS.md`, "Dashboard enhancements, phase 1".
+
+| Tab | Built |
+| --- | --- |
+| Overview | Cash Runway and Savings Rate (OV5, OV6), from `GET /v1/overview/insights` |
+| Advisor | Prompts from your data (AD3). AD1 already existed: answers show their sources as citations |
+| Subscriptions | Price line per subscription (SU1), a calendar beside Upcoming Charges (SU2), What Acting on Flags Could Save (SU3), Where Subscriptions Go (SU5). The page now uses the API's date |
+| Reports | RP5 already existed (Download PDF). **RP4 not built**: a wins timeline needs dated milestones, and goal balances have no history |
+| Accounts | How Reachable Is Your Money (AC2). **AC5 not built**: accounts keep no last-updated time |
+| Transactions | A summary bar that follows the filter (TX1), Spending Patterns with top merchants (TX3) and a day-by-day calendar (TX4), Export CSV (TX6) |
+| Goals | Quarter marks on each goal, and "On track" ahead of high ranges (GO3) |
+| Income | Income Sources Over Time (IN1) and Next Payday (IN3) |
+| Spending | Six-month lines per category (SP2), and the Spending Patterns card: merchant concentration (SP4), no-spend streak (SP5), weekday against weekend (SP7) |
+| Investments | Biggest Holdings (IV4) and Where the Money Sits (IV6) |
+| Credit | Cards at a Glance with promo countdown (CR3), due-date calendar (CR4) and monthly interest (CR5); factors now from the API (CR6) |
+| Settings | Privacy Center (ST3). ST6 already existed (the dark-mode Appearance card). **ST4 not built**: bank items keep no last-sync time |
+
+New API: `GET /v1/overview/insights`, `GET /v1/credit/cards`, `GET /v1/goals/milestones`, `GET /v1/spending/patterns`, `POST /v1/transactions/summary`; additive fields on the spending summary, income summary, net worth, subscriptions and investments. Each new figure has a unit test in `math-core`, and each new route has a test in `apps/api/src/app.test.ts`.
+
+### Phase 2 result
+
+Built, with the backend first and the UI after. Recorded in `docs/DECISIONS.md`, "Dashboard enhancements, phase 2".
+
+| Tab | Built |
+| --- | --- |
+| Overview | Needs Attention strip, Safe to Spend, Financial Health (OV1, OV2, RP3) |
+| Goals | Monthly need and median finish on each card, and a funding summary (GO1, GO5) |
+| Spending | Spending Pace chart (SP1) and Suggested Budgets with Add This Limit (SP6) |
+| Transactions | "2.4x usual here" chip on unusual charges (TX2) |
+| Credit | What If You Paid Down a Card (CR1) and Paying Down Debt (CR2) |
+| Accounts | Paying Down Debt, the same card (AC3) |
+| Investments | Allocation Drift with presets and Save Targets (IV1) |
+| Income | Income That Moves (IN2) |
+| Copilot | Copilot Impact tiles (CP2) |
+| Reports | Financial Health card (RP3) |
+
+New API: `GET /v1/overview/safe-to-spend`, `/v1/overview/attention`, `/v1/health-score`, `/v1/goals/funding`, `/v1/spending/pace`, `/v1/budgets/suggestions`, `/v1/transactions/unusual`, `POST /v1/credit/what-if`, `GET /v1/debt/payoff`, `/v1/investments/drift`, `PATCH /v1/investments/targets`, `GET /v1/copilot/impact`, and `variability` on the income summary. The web UI has not been looked at in a browser yet.
 
 ## Phase 2: New figures in math-core
 
@@ -180,9 +239,27 @@ About 15 to 20 working days. Pick from this list after phase 2. Each needs its d
 | IV5 Retirement fan | Range chart at 65 from the simulator | New inputs: retirement age, contribution |
 | ST2 Export and delete my data | Export CSV and JSON, confirmed delete | Surfaces the existing delete reducer, needs confirm flow |
 
+### Phase 3 result (first group)
+
+| Idea | Status |
+| --- | --- |
+| OV4 Money Calendar | Built on Overview: `GET /v1/overview/calendar`, a dot calendar and a projected checking line |
+| ST2 Export and delete my data | **Export built** on Settings. **Delete not built**: needs a delete method on every store and a confirm flow |
+| LE5 All events timeline | Built on Life Events |
+| LE2 Compare two events | Built on Life Events |
+| AD2 Save as goal or life event | Save as Goal on the goal planner now previews and waits for Confirm. Life-event drafts already did |
+| LE3 Monthly cash forecast | Built on Life Events: 24 months as a range band, from `forecastCash` |
+| LE4 Stress test | Built beside it: Income Down 20% and Rent Up 10%, with goal odds before and after |
+| IV5 Retirement fan | Built on Investments: `projectRetirement`, mocked, with a stated simplification |
+| TX5 Bulk edit and split | Built on Transactions: Select mode, move many, split one purchase in two |
+| AD4 Two scenarios in chat | Built: Compare Two Scenarios on every Advisor visual, with a difference table |
+| AD5 Tap a number | Built for figures that have a calculation behind them. Others stay plain text |
+| GO2 Where savings go | Built on Goals: `goalAllocation` in `math-core`, a stacked bar by goal and the goals that need more |
+| GO4 Suggested rebalance | Built beside it: a reorder that funds a short fixed-date goal, with its cost, applied only on Confirm |
+
 ## Phase 4: Needs data or a decision we do not have
 
-Not started without an answer. Listed so they are tracked.
+**On hold since 2026-11-23, by the owner: treated as minor quality-of-life features.** Not started without an answer. Listed so they are tracked.
 
 | Idea | Missing | Question to answer |
 | --- | --- | --- |

@@ -19,6 +19,13 @@ export const SubscriptionFlagType = z.enum([
 ]);
 export type SubscriptionFlagType = z.infer<typeof SubscriptionFlagType>;
 
+/**
+ * Flags that suggest a subscription is worth dropping or checking. `still_charging` is a different
+ * problem (a cancelled charge that came back), so it is not here. The API's yearly total and the
+ * page's list both read this, so they cannot drift apart.
+ */
+export const FLAGS_WORTH_ACTING_ON: readonly SubscriptionFlagType[] = ["price_up", "possible_duplicate", "started_recently", "annual_coming"];
+
 /** Something worth a second look. The figures are computed by the API, so the page only shows them. */
 export const SubscriptionFlag = z.object({
   type: SubscriptionFlagType,
@@ -56,6 +63,8 @@ export const Subscription = RecurringCharge.extend({
    */
   savedSoFarCents: Cents.nullable().default(null),
   flags: z.array(SubscriptionFlag).default([]),
+  /** The last 12 charges, oldest first, as positive amounts. Draws the price line. */
+  priceHistory: z.array(Cents).default([]),
 });
 export type Subscription = z.infer<typeof Subscription>;
 
@@ -71,6 +80,8 @@ export const SubscriptionTotals = z.object({
 export type SubscriptionTotals = z.infer<typeof SubscriptionTotals>;
 
 export const SubscriptionOverview = z.object({
+  /** The date the figures are as of: the app's "today". Pages use it instead of the browser's clock. */
+  asOf: IsoDate,
   subscriptions: z.array(Subscription),
   bills: z.array(Subscription),
   cancelled: z.array(Subscription),
@@ -80,6 +91,11 @@ export const SubscriptionOverview = z.object({
   shareOfIncome: Rate.nullable(),
   /** Added up over the cancelled charges that really stopped. */
   savedSoFarCents: Cents.default(0),
+  /**
+   * What a year costs across the subscriptions (not bills) that carry a flag worth acting on:
+   * a price rise, a duplicate, a recent start or an annual renewal coming. A bill cannot just be dropped.
+   */
+  flaggedAnnualCents: Cents.default(0),
 });
 export type SubscriptionOverview = z.infer<typeof SubscriptionOverview>;
 

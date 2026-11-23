@@ -22,7 +22,7 @@ export function registerSubscriptionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
 
   mount(app, deps, routes.listSubscriptions, async ({ userId }) => {
     const { details, monthlyIncomeCents } = await load(userId);
-    return overviewOf(details, monthlyIncomeCents);
+    return overviewOf(details, monthlyIncomeCents, deps.today());
   });
 
   mount(app, deps, routes.getSubscription, async ({ userId, params }) => {

@@ -65,9 +65,42 @@ export interface WebSearchResult {
   sources: Array<{ title: string; url: string }>;
 }
 
+export interface SpeakRequest {
+  text: string;
+  timeoutMs?: number;
+}
+
+export interface SpeechAudio {
+  /** A WAV file, base64, ready for an audio element. */
+  audioBase64: string;
+  mimeType: "audio/wav";
+}
+
+/** Wraps raw 16-bit mono PCM (what Gemini TTS returns) in a WAV header so browsers can play it. */
+export function pcm16ToWav(pcmBase64: string, sampleRate = 24_000): string {
+  const pcm = Buffer.from(pcmBase64, "base64");
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + pcm.length, 4);
+  header.write("WAVE", 8);
+  header.write("fmt ", 12);
+  header.writeUInt32LE(16, 16); // PCM format block size
+  header.writeUInt16LE(1, 20); // PCM
+  header.writeUInt16LE(1, 22); // mono
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(sampleRate * 2, 28); // bytes per second
+  header.writeUInt16LE(2, 32); // bytes per sample frame
+  header.writeUInt16LE(16, 34); // bits per sample
+  header.write("data", 36);
+  header.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([header, pcm]).toString("base64");
+}
+
 export interface LlmClient {
   readonly provider: string;
   generate(request: LlmRequest): Promise<string>;
+  /** Text to speech. Optional like `chat`; callers fall back to the browser's voice without it. */
+  speak?(request: SpeakRequest): Promise<SpeechAudio>;
   /** Multi-turn chat with function calling. Optional so simple fakes stay small; callers fall back without it. */
   chat?(request: LlmChatRequest): Promise<LlmChatResponse>;
   /** Searches the public web and summarizes what it finds, with sources. Only the query is sent. */
@@ -87,6 +120,10 @@ class MockLlmClient implements LlmClient {
 
   async webSearch(): Promise<WebSearchResult> {
     throw new Error("Mock LLM: no web search.");
+  }
+
+  async speak(): Promise<SpeechAudio> {
+    throw new Error("Mock LLM: no speech.");
   }
 }
 
@@ -164,7 +201,29 @@ export class GeminiClient implements LlmClient {
     private readonly apiKey: string,
     private readonly models: Record<ModelTier, string>,
     private readonly fetchImpl: typeof fetch = fetch,
+    private readonly speech: { model: string; voice: string } = { model: "", voice: "Kore" },
   ) {}
+
+  /**
+   * Gemini text to speech. It returns raw PCM, which is wrapped as WAV for the browser. Only the
+   * text to be spoken is sent: a saved, already-validated Advisor reply.
+   */
+  async speak(request: SpeakRequest): Promise<SpeechAudio> {
+    if (!this.speech.model) throw new Error("Gemini: GEMINI_MODEL_TTS is not set.");
+    const data = await this.postTo(this.speech.model, {
+      contents: [{ role: "user", parts: [{ text: request.text }] }],
+      generationConfig: {
+        responseModalities: ["AUDIO"],
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.speech.voice } } },
+      },
+    }, request.timeoutMs ?? 15_000);
+    const inline = data.candidates?.[0]?.content?.parts?.find((p) => p.inlineData)?.inlineData as
+      | { data?: string; mimeType?: string }
+      | undefined;
+    if (!inline?.data) throw new Error(`Gemini: no audio (${data.candidates?.[0]?.finishReason ?? "no candidates"}).`);
+    const rate = Number(/rate=(\d+)/.exec(inline.mimeType ?? "")?.[1]) || 24_000;
+    return { audioBase64: pcm16ToWav(inline.data, rate), mimeType: "audio/wav" };
+  }
 
   async generate(request: LlmRequest): Promise<string> {
     const data = await this.post(request.tier, {
@@ -236,9 +295,12 @@ export class GeminiClient implements LlmClient {
   }
 
   private async post(tier: ModelTier, body: unknown, timeoutMs?: number): Promise<GeminiResponse> {
-    const model = this.models[tier];
+    if (!this.models[tier]) throw new Error(`Gemini: no model name set for the ${tier} tier.`);
+    return this.postTo(this.models[tier], body, timeoutMs);
+  }
+
+  private async postTo(model: string, body: unknown, timeoutMs?: number): Promise<GeminiResponse> {
     if (!this.apiKey) throw new Error("Gemini: GEMINI_API_KEY is not set.");
-    if (!model) throw new Error(`Gemini: no model name set for the ${tier} tier.`);
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs ?? GEMINI_DEFAULT_TIMEOUT_MS);
@@ -269,7 +331,10 @@ export class GeminiClient implements LlmClient {
 
 export function createLlmClient(env: NodeJS.ProcessEnv = process.env): LlmClient {
   if (env.LLM_PROVIDER !== "gemini") return new MockLlmClient();
-  return new GeminiClient(env.GEMINI_API_KEY ?? "", {
-    flash: env.GEMINI_MODEL_FLASH ?? "",
-  });
+  return new GeminiClient(
+    env.GEMINI_API_KEY ?? "",
+    { flash: env.GEMINI_MODEL_FLASH ?? "" },
+    fetch,
+    { model: env.GEMINI_MODEL_TTS ?? "", voice: env.GEMINI_TTS_VOICE ?? "Kore" },
+  );
 }

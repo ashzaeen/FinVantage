@@ -1,5 +1,6 @@
 import type { Hono } from "hono";
 import { ACCOUNT_CATEGORY, AccountCategory, isLiability, routes } from "@finvantage/contracts";
+import { creditCardsOverview, liquidityOf } from "@finvantage/math-core";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
 
@@ -50,6 +51,9 @@ export function registerAccountRoutes(app: Hono<AppEnv>, deps: AppDeps) {
           .reduce((total, a) => total + (isLiability(a.type) ? -a.balanceCents : a.balanceCents), 0),
       })),
       history,
+      liquidity: liquidityOf(accounts),
     };
   });
+
+  mount(app, deps, routes.getCreditCards, async ({ userId }) => creditCardsOverview(await deps.ledger.listAccounts(userId), deps.today()));
 }

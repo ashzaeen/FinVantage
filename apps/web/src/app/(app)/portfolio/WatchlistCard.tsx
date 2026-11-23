@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { formatUsd, type WatchlistItem } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
@@ -57,7 +58,7 @@ function AddSymbol({ options, onAdd }: { options: WatchlistItem[]; onAdd: (symbo
         type="button"
         aria-expanded={open}
         onClick={() => { setOpen((value) => !value); setQuery(""); }}
-        className="rounded-full bg-accent-soft px-3.5 py-1.5 text-xs font-bold max-lg:min-h-11 text-accent transition-colors hover:bg-accent hover:text-white"
+        className="rounded-full bg-accent-soft px-3.5 py-1.5 text-xs font-bold max-lg:min-h-11 text-accent-ink transition-colors hover:bg-accent hover:text-white"
       >
         + Add Symbol
       </button>
@@ -69,7 +70,7 @@ function AddSymbol({ options, onAdd }: { options: WatchlistItem[]; onAdd: (symbo
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by symbol or name"
             aria-label="Search Symbols"
-            className="w-full rounded-xl bg-inset px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:ring-2 focus:ring-accent"
+            className="w-full rounded-xl bg-inset px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:ring-2 focus:ring-accent-ink"
           />
           <ul className="no-scrollbar mt-1 max-h-56 overflow-y-auto">
             {matches.length === 0 && <li className="px-3 py-3 text-center text-xs text-muted">No matching symbols.</li>}
@@ -145,9 +146,9 @@ export function WatchlistCard({ watchlist, dates, live }: { watchlist: Watchlist
                           type="button"
                           aria-label={`Remove ${item.symbol} From Watchlist`}
                           onClick={(event) => { event.stopPropagation(); watchlist.remove(item.symbol); }}
-                          className="h-8 w-8 rounded-full text-muted max-lg:h-11 max-lg:w-11 transition-colors hover:bg-critical-bg hover:text-loss"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted max-lg:h-11 max-lg:w-11 transition-colors hover:bg-critical-bg hover:text-loss"
                         >
-                          <span aria-hidden="true">✕</span>
+                          <X size={16} aria-hidden="true" />
                         </button>
                       </td>
                     </tr>

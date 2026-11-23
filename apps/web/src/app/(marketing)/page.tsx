@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 /** Public landing page: one story, top to bottom. Hero, use cases, how it works, the Copilot, proof, trust, then the close. */
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-lp-surface">
       <Header />
       <main>
         <Hero />

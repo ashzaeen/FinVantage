@@ -87,6 +87,8 @@ test("W1: the shared demo token is read-only, apart from the extension's Copilot
   assert.ok(demoTokenMayCall("GET", "/v1/goals"));
   assert.ok(demoTokenMayCall("POST", "/v1/copilot/evaluate"));
   assert.ok(demoTokenMayCall("POST", "/v1/copilot/events/evt_1/action"));
+  assert.ok(demoTokenMayCall("POST", "/v1/transactions/summary"), "a read sent as a POST");
+  assert.ok(!demoTokenMayCall("POST", "/v1/transactions"), "adding a transaction is still a write");
   for (const [method, path] of [
     ["POST", "/v1/goals"],
     ["PATCH", "/v1/goals/goal_1"],
@@ -462,6 +464,301 @@ test("all read routes match their contracts", async () => {
     client.getPortfolio(),
     client.getCreditScore(),
   ]);
+});
+
+test("spent means the same thing on every tab, and saved is kept apart from it", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-30"; // a month the demo covers in full
+  const [summary, income] = await Promise.all([client.getSpendingSummary(), client.getIncomeSummary()]);
+  const thisMonth = summary.monthlyTrend.find((point) => point.month === summary.month);
+  assert.ok(thisMonth, "the trend covers the current month");
+  assert.equal(summary.spentCents, thisMonth.spendingCents);
+  assert.equal(income.trend.find((point) => point.month === summary.month)?.spendingCents, summary.spentCents);
+  assert.ok(summary.savedCents > 0, "the demo profile saves every month");
+  // Saving is not spending: the category rows add up to more than spent by exactly the saved amount.
+  const categories = await client.listSpendingCategories();
+  const savings = new Set(categories.filter((category) => category.bucket === "savings").map((category) => category.id));
+  const spentRows = summary.categories.filter((row) => !savings.has(row.category)).reduce((sum, row) => sum + row.spentCents, 0);
+  assert.equal(spentRows, summary.spentCents);
+});
+
+test("spending patterns follow the same idea of spending as the monthly summary", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-30";
+  const [summary, patterns] = await Promise.all([client.getSpendingSummary(), client.getSpendingPatterns({ query: {} })]);
+  assert.equal(patterns.month, summary.month);
+  assert.equal(patterns.spentCents, summary.spentCents);
+  assert.equal(Object.values(patterns.dailyCents).reduce((sum, cents) => sum + cents, 0), summary.spentCents);
+  assert.ok(patterns.topMerchants.length > 0 && patterns.topMerchants.length <= 5);
+  assert.equal(patterns.weekday.length, 7);
+  // An earlier month works, a later one does not.
+  const october = await client.getSpendingPatterns({ query: { month: "2026-10" } });
+  assert.equal(october.through, "2026-10-31");
+  await assert.rejects(client.getSpendingPatterns({ query: { month: "2027-01" } }), /not happened yet/);
+});
+
+test("the overview works out runway and savings rate from the same figures as the summary", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-30";
+  const [insights, summary, accounts] = await Promise.all([client.getOverviewInsights(), client.getSpendingSummary(), client.listAccounts()]);
+  const liquid = accounts.filter((a) => a.type === "checking" || a.type === "savings").reduce((sum, a) => sum + a.balanceCents, 0);
+  assert.equal(insights.runway.liquidCents, liquid);
+  assert.ok(insights.runway.months !== null && insights.runway.months > 0);
+  assert.equal(insights.runway.months, insights.runway.liquidCents / insights.runway.averageMonthlySpendCents);
+  assert.equal(insights.savingsRate.month, summary.month);
+  assert.equal(insights.savingsRate.savedCents, summary.savedCents);
+  assert.equal(insights.savingsRate.trend.length, 6);
+  assert.equal(summary.monthlyTrend.at(-1)?.savedCents, summary.savedCents);
+  // Every category line is six months long, one value per month in the trend.
+  for (const line of Object.values(summary.categoryTrend)) assert.equal(line.length, 6);
+  assert.equal(Object.keys(summary.categoryTrend).includes("savings_investing"), false, "saving is not spending");
+});
+
+test("net worth says how reachable the assets are, and the parts add up to the assets", async () => {
+  const { client } = setup();
+  const netWorth = await client.getNetWorth();
+  const { cashCents, sellableCents, lockedCents } = netWorth.liquidity;
+  assert.ok(cashCents > 0 && sellableCents > 0 && lockedCents > 0);
+  assert.equal(cashCents + sellableCents + lockedCents, netWorth.assetsCents);
+});
+
+test("the credit cards come with utilization, interest cost and dates, and totals that pool the limits", async () => {
+  const { client } = setup();
+  const [overview, accounts] = await Promise.all([client.getCreditCards(), client.listAccounts()]);
+  const cards = accounts.filter((a) => a.type === "credit_card");
+  assert.equal(overview.cards.length, cards.length);
+  assert.equal(overview.totals.balanceCents, cards.reduce((sum, a) => sum + a.balanceCents, 0));
+  const promo = overview.cards.find((c) => c.promoRateEndsOn !== null);
+  assert.ok(promo, "the demo has a 0% promo card");
+  assert.equal(promo.monthlyInterestCents, 0);
+  const paying = overview.cards.find((c) => (c.annualRate ?? 0) > 0)!;
+  assert.equal(paying.monthlyInterestCents, Math.round((paying.balanceCents * paying.annualRate!) / 12));
+  assert.ok(overview.totals.utilization !== null && overview.totals.utilization > 0 && overview.totals.utilization < 1);
+  assert.ok(overview.mix.some((m) => m.label === "Credit card"));
+  assert.match(overview.asOf, /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(promo.promoClear && promo.promoClear.monthlyToClearCents > 0, "a running 0% promo says what clears it in time");
+  assert.equal(paying.promoClear, null);
+});
+
+test("each goal has quarter marks that agree with what is saved", async () => {
+  const { client } = setup();
+  const [goals, marks] = await Promise.all([client.listGoals(), client.getGoalMilestones()]);
+  assert.equal(marks.length, goals.length);
+  for (const goal of goals) {
+    const row = marks.find((m) => m.goalId === goal.id)!;
+    assert.deepEqual(row.milestones.map((m) => m.share), [0.25, 0.5, 0.75]);
+    for (const m of row.milestones) assert.equal(m.reached, goal.currentCents >= m.cents);
+    assert.ok(row.next === null || row.next.remainingCents > 0);
+  }
+});
+
+test("income carries its sources by month and the next payday", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const income = await client.getIncomeSummary();
+  assert.equal(income.sourcesByMonth.length, 6);
+  assert.deepEqual(income.sourcesByMonth.map((m) => m.month), income.trend.map((t) => t.month));
+  const november = income.sourcesByMonth.at(-1)!;
+  assert.equal(november.categories.reduce((sum, c) => sum + c.totalCents, 0), income.trend.at(-1)!.incomeCents);
+  assert.ok(income.nextPayday, "the demo has paychecks");
+  assert.equal(income.nextPayday.date, "2026-12-01");
+  assert.equal(income.nextPayday.expectedCents, 285_000);
+  assert.equal(income.nextPayday.daysAway, 11);
+});
+
+test("investments say where money sits and what the biggest holdings make up", async () => {
+  const { client } = setup();
+  const overview = await client.getInvestments();
+  const all = overview.views[0]!;
+  const { accountMix } = overview;
+  assert.equal(accountMix.taxAdvantagedCents + accountMix.taxableCents, all.totalValueCents);
+  assert.ok(accountMix.taxAdvantagedCents > 0 && accountMix.taxableCents > 0);
+  assert.equal(accountMix.accounts.find((a) => a.label === "Brokerage")?.taxTreatment, "taxable");
+  assert.equal(accountMix.accounts.find((a) => a.label === "Roth IRA")?.taxTreatment, "tax_advantaged");
+  assert.equal(all.concentration.top.length, 3);
+  assert.equal(all.concentration.top[0]!.symbol, all.holdings[0]!.symbol);
+  assert.ok(all.concentration.topShare > 0 && all.concentration.topShare <= 1);
+});
+
+test("a subscription carries its price line, and the overview totals what the flagged ones cost a year", async () => {
+  const { client } = setup();
+  const overview = await client.listSubscriptions();
+  const streamflix = overview.subscriptions.find((s) => s.merchant === "StreamFlix")!;
+  assert.deepEqual(streamflix.priceHistory.slice(-2), [1549, 1549]);
+  assert.ok(streamflix.priceHistory.includes(1199), "the price used to be $11.99");
+  assert.ok(overview.flaggedAnnualCents > 0);
+  const flagged = overview.subscriptions.filter((s) => s.flags.some((f) => ["price_up", "possible_duplicate", "started_recently", "annual_coming"].includes(f.type)));
+  assert.equal(overview.flaggedAnnualCents, flagged.reduce((sum, s) => sum + (s.annualCents ?? 0), 0));
+});
+
+test("safe to spend is built from the user's own accounts, income and bills, and its parts add up", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-12-03"; // the demo's bills fall due in December
+  const [safe, accounts] = await Promise.all([client.getSafeToSpend(), client.listAccounts()]);
+  const checking = accounts.filter((a) => a.type === "checking").reduce((sum, a) => sum + a.balanceCents, 0);
+  assert.equal(safe.asOf, "2026-12-03");
+  assert.equal(safe.periodEnd, "2026-12-31");
+  assert.equal(safe.parts.checkingCents, checking);
+  assert.equal(safe.safeCents, safe.parts.checkingCents + safe.parts.incomeStillDueCents - safe.parts.billsStillDueCents - safe.parts.savingsStillNeededCents);
+  assert.ok(safe.parts.billsStillDueCents > 0, "the demo has bills due before the end of the month");
+});
+
+test("the attention feed lists what to do before what to know, at most five", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-12-03";
+  const feed = await client.getAttention();
+  assert.equal(feed.asOf, "2026-12-03");
+  assert.ok(feed.items.length > 0 && feed.items.length <= 5);
+  const firstHeadsUp = feed.items.findIndex((i) => i.severity === "heads_up");
+  if (firstHeadsUp >= 0) assert.ok(feed.items.slice(firstHeadsUp).every((i) => i.severity === "heads_up"), "actions come first");
+  for (const item of feed.items) assert.ok(item.message.length > 0 && item.href.startsWith("/"));
+  assert.equal(new Set(feed.items.map((i) => i.id)).size, feed.items.length);
+});
+
+test("the health score has four weighted parts that add up, and a label to match its score", async () => {
+  const { client } = setup();
+  const health = await client.getHealthScore();
+  assert.deepEqual(health.parts.map((p) => p.key), ["savings_rate", "debt_to_income", "utilization", "runway"]);
+  assert.ok(Math.abs(health.parts.reduce((sum, p) => sum + p.weight, 0) - 1) < 0.001);
+  assert.equal(health.score, Math.round(health.parts.reduce((sum, p) => sum + p.score * p.weight, 0)));
+  assert.equal(health.label, health.score >= 80 ? "Strong" : health.score >= 60 ? "Good" : health.score >= 40 ? "Fair" : "Needs Work");
+  assert.ok(health.parts.every((p) => p.hasData), "the demo has data for every part");
+});
+
+test("goal funding is what is left over the months left, for each goal", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const [funding, goals] = await Promise.all([client.getGoalFunding(), client.listGoals()]);
+  assert.equal(funding.goals.length, goals.length);
+  for (const row of funding.goals) {
+    const goal = goals.find((g) => g.id === row.goalId)!;
+    assert.equal(row.remainingCents, Math.max(0, goal.targetCents - goal.currentCents));
+    assert.equal(row.neededPerMonthCents, row.remainingCents === 0 ? 0 : Math.ceil(row.remainingCents / row.monthsLeft));
+  }
+  assert.equal(funding.neededPerMonthCents, funding.goals.reduce((sum, r) => sum + r.neededPerMonthCents, 0));
+  assert.ok(funding.goals.some((r) => r.medianCompletionDate !== null), "the simulator gives median finish dates");
+});
+
+test("the spending pace runs day by day and agrees with the summary", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-11-20";
+  const [pace, summary, budgets] = await Promise.all([client.getSpendingPace(), client.getSpendingSummary(), client.listBudgets()]);
+  assert.equal(pace.month, "2026-11");
+  assert.equal(pace.thisMonthCents.length, 20);
+  assert.equal(pace.lastMonthCents.length, 31); // October
+  assert.ok(pace.thisMonthCents.every((c, i) => i === 0 || c >= pace.thisMonthCents[i - 1]!), "a running total never falls");
+  assert.equal(pace.aheadByCents, pace.thisMonthCents[19]! - pace.lastMonthSameDayCents);
+  assert.equal(pace.budgetCents, budgets.reduce((sum, b) => sum + b.limitCents, 0));
+  assert.ok(pace.thisMonthCents[19]! <= summary.spentCents, "the first 20 days are part of the month");
+});
+
+test("budget suggestions are for categories with no budget, in round dollars, and save nothing", async () => {
+  const { client } = setup();
+  const [suggestions, budgets] = await Promise.all([client.listBudgetSuggestions(), client.listBudgets()]);
+  const budgeted = new Set(budgets.map((b) => b.category));
+  for (const s of suggestions) {
+    assert.equal(budgeted.has(s.category), false);
+    assert.equal(s.suggestedLimitCents % 500, 0);
+    assert.ok(s.suggestedLimitCents >= s.typicalCents);
+  }
+  assert.deepEqual(await client.listBudgets(), budgets, "asking for suggestions changes no budget");
+});
+
+test("a card's what-if lowers utilization and keeps a mocked score range, and never changes the balance", async () => {
+  const { client } = setup();
+  const accounts = await client.listAccounts();
+  const card = accounts.find((a) => a.type === "credit_card" && a.balanceCents > 100_000)!;
+  const w = await client.creditWhatIf({ body: { cardId: card.id, paymentCents: 100_000 } });
+  assert.equal(w.mocked, true);
+  assert.equal(w.paymentCents, 100_000);
+  assert.ok(w.after.totalUtilization! < w.before.totalUtilization!);
+  assert.ok(w.after.scoreLow > w.before.scoreLow);
+  assert.equal(w.before.scoreHigh - w.before.scoreLow, 30);
+  assert.equal((await client.listAccounts()).find((a) => a.id === card.id)!.balanceCents, card.balanceCents);
+  await assert.rejects(client.creditWhatIf({ body: { cardId: "nope", paymentCents: 100 } }), /does not exist/);
+});
+
+test("debt payoff compares the two plans, and an extra payment shortens them", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-12-03";
+  const base = await client.getDebtPayoff({ query: { extraCents: 0 } });
+  const more = await client.getDebtPayoff({ query: { extraCents: 20_000 } });
+  assert.deepEqual(base.plans.map((p) => p.strategy), ["avalanche", "snowball"]);
+  assert.ok(base.debts.every((d) => d.balanceCents > 0), "only debts with a balance");
+  assert.ok(base.debts.length >= 4, "cards and loans, not the mortgage");
+  for (let i = 0; i < 2; i++) {
+    assert.ok(more.plans[i]!.months! < base.plans[i]!.months!);
+    assert.ok(more.plans[i]!.totalInterestCents < base.plans[i]!.totalInterestCents);
+  }
+  assert.ok(base.plans[0]!.totalInterestCents <= base.plans[1]!.totalInterestCents, "avalanche never costs more interest");
+  assert.equal(base.avalancheSavesCents, base.plans[1]!.totalInterestCents - base.plans[0]!.totalInterestCents);
+  assert.match(base.plans[0]!.payoffDate!, /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test("allocation targets start unset, save only on request, and then drive the drift", async () => {
+  const { client } = setup();
+  const start = await client.getAllocationDrift();
+  assert.equal(start.mocked, true);
+  assert.equal(start.targetsSet, false);
+  assert.equal(start.rows.length, 5);
+  assert.equal(start.rows.reduce((sum, r) => sum + r.actual, 0) > 0.99, true);
+
+  await assert.rejects(client.setTargetAllocation({ body: { us_stocks: 0.5, international: 0.2, bonds: 0.1, crypto: 0, cash: 0.1 } }), /add up/);
+  assert.equal((await client.getAllocationDrift()).targetsSet, false, "a rejected target saved nothing");
+
+  const own = Object.fromEntries(start.rows.map((r) => [r.assetClass, r.actual])) as Record<string, number>;
+  // Use the actual mix (to the nearest 0.1%) as the target, so nothing is outside the band.
+  const rounded = { us_stocks: 0.721, international: 0.146, bonds: 0.104, crypto: 0.011, cash: 0.018 };
+  assert.ok(Math.abs(Object.values(rounded).reduce((a, b) => a + b, 0) - 1) < 0.0001);
+  const saved = await client.setTargetAllocation({ body: rounded });
+  assert.equal(saved.targetsSet, true);
+  assert.ok(saved.rows.every((r) => !r.outside), JSON.stringify(own));
+  assert.equal((await client.getAllocationDrift()).targetsSet, true);
+});
+
+test("the Copilot impact counts what it has checked", async () => {
+  const { client } = setup();
+  assert.deepEqual(await client.getCopilotImpact(), { checked: 0, flagged: 0, flaggedCents: 0, goalMonthsAtStake: 0 });
+  await client.evaluateCopilot({ body: { pageType: "checkout", itemType: "retail_purchase", priceCents: 149_900, merchant: "Gadget Store" } });
+  const impact = await client.getCopilotImpact();
+  assert.equal(impact.checked, 1);
+  assert.ok(impact.flagged <= impact.checked);
+});
+
+test("unusual charges are well above a merchant's usual and never include money in", async () => {
+  const { client } = setup();
+  const [unusual, transactions] = await Promise.all([client.listUnusualCharges(), client.listTransactions({ query: { limit: 500 } })]);
+  for (const u of unusual) {
+    const tx = transactions.find((t) => t.id === u.id)!;
+    assert.ok(tx.amountCents < 0);
+    assert.equal(-tx.amountCents, u.amountCents);
+    assert.ok(u.ratio >= 2 && u.amountCents - u.usualCents >= 2_000);
+  }
+});
+
+test("income names the sources that vary and gives their range", async () => {
+  const { client } = setup();
+  const income = await client.getIncomeSummary();
+  for (const v of income.variability) {
+    assert.ok(v.lowCents <= v.typicalCents && v.typicalCents <= v.highCents);
+    assert.ok((v.highCents - v.lowCents) / v.typicalCents >= 0.25);
+  }
+  assert.equal(income.variability.some((v) => v.categoryId === "income.paycheck"), false, "a steady paycheck is not variable");
+});
+
+test("a transaction summary totals exactly the ids it is given", async () => {
+  const { client } = setup();
+  const all = await client.listTransactions({ query: { limit: 500 } });
+  const groceries = all.filter((t) => t.category === "groceries");
+  assert.ok(groceries.length > 1, "the demo has grocery purchases");
+  const summary = await client.summarizeTransactions({ body: { ids: groceries.map((t) => t.id) } });
+  assert.equal(summary.count, groceries.length);
+  assert.equal(summary.inCents, 0);
+  assert.equal(summary.outCents, groceries.reduce((sum, t) => sum - t.amountCents, 0));
+  assert.equal(summary.netCents, -summary.outCents);
+  assert.equal(summary.byMonth.length, 6);
+  const none = await client.summarizeTransactions({ body: { ids: ["no-such-id"] } });
+  assert.deepEqual([none.count, none.inCents, none.outCents], [0, 0, 0]);
 });
 
 test("the demo profile covers all seven account categories", async () => {
@@ -1958,4 +2255,136 @@ test("/health checks each database, and says only up or down", async () => {
   } finally {
     console.error = quiet;
   }
+});
+
+test("a spoken Advisor reply uses the voice style and speaks only saved replies, chunk by chunk", async () => {
+  const { client, deps } = setup();
+  const systems: string[] = [];
+  const spoken: string[] = [];
+  deps.llm = {
+    provider: "test",
+    generate: async () => { throw new Error("unused"); },
+    chat: async (request: { system: string }) => {
+      systems.push(request.system);
+      return { message: { role: "model" as const, text: "Your budgets look steady. Keep an eye on dining.", functionCalls: [] } };
+    },
+    speak: async ({ text }: { text: string }) => {
+      spoken.push(text);
+      return { audioBase64: "AAAA", mimeType: "audio/wav" as const };
+    },
+  };
+
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const voice = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "How are my budgets?", modality: "voice" } });
+  const text = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "And my goals?" } });
+  assert.ok(systems[0]!.includes("VOICE REPLY"));
+  assert.ok(!systems[1]!.includes("VOICE REPLY"));
+
+  const first = await client.speakAdvisorReply({ body: { conversationId: conversation.id, messageId: voice.reply.id, part: 0 } });
+  assert.deepEqual({ part: first.part, parts: first.parts, mimeType: first.mimeType }, { part: 0, parts: 2, mimeType: "audio/wav" });
+  const second = await client.speakAdvisorReply({ body: { conversationId: conversation.id, messageId: voice.reply.id, part: 1 } });
+  assert.equal(second.part, 1);
+  assert.deepEqual(spoken, ["Your budgets look steady.", "Keep an eye on dining."]);
+
+  // A replay is served from the cache, so it is not made (or paid for) twice.
+  await client.speakAdvisorReply({ body: { conversationId: conversation.id, messageId: voice.reply.id, part: 0 } });
+  assert.equal(spoken.length, 2);
+
+  // Only saved Advisor replies can be spoken: not the user's own message, not a part past the end.
+  await assert.rejects(client.speakAdvisorReply({ body: { conversationId: conversation.id, messageId: text.userMessage.id, part: 0 } }), /Reply not found/);
+  await assert.rejects(client.speakAdvisorReply({ body: { conversationId: conversation.id, messageId: voice.reply.id, part: 9 } }), /does not exist/);
+  await assert.rejects(client.speakAdvisorReply({ body: { conversationId: "nope", messageId: voice.reply.id, part: 0 } }), /Conversation not found/);
+});
+
+test("spoken replies report voice_unavailable when no speech model is configured", async () => {
+  const { client } = setup();
+  const conversation = await client.createAdvisorConversation({ body: {} });
+  const turn = await client.sendAdvisorMessage({ params: { id: conversation.id }, body: { content: "How are my budgets?" } });
+  await assert.rejects(
+    client.speakAdvisorReply({ body: { conversationId: conversation.id, messageId: turn.reply.id, part: 0 } }),
+    (error: unknown) => error instanceof ApiError && error.status === 503 && error.code === "voice_unavailable",
+  );
+});
+
+test("the money calendar projects checking over thirty days from the user's own paydays, bills and cards", async () => {
+  const { client, deps } = setup();
+  deps.today = () => "2026-12-03";
+  const [cal, accounts] = await Promise.all([client.getMoneyCalendar(), client.listAccounts()]);
+  const checking = accounts.filter((a) => a.type === "checking").reduce((sum, a) => sum + a.balanceCents, 0);
+  assert.equal(cal.days, 30);
+  assert.equal(cal.balanceByDay.length, 30);
+  assert.equal(cal.startingCents, checking);
+  assert.ok(cal.events.every((e) => e.date >= "2026-12-03" && e.date <= "2027-01-01"));
+  assert.ok(cal.events.some((e) => e.kind === "bill"), "the demo has bills in the window");
+  assert.equal(cal.lowestCents, Math.min(...cal.balanceByDay));
+});
+
+test("a stress test lowers savings by the stated rule, never raises the odds, and changes nothing", async () => {
+  const { client } = setup();
+  const none = await client.stressTest({ body: {} });
+  assert.equal(none.monthlyChangeCents, 0);
+  const hit = await client.stressTest({ body: { incomeDropShare: 0.2, rentRiseShare: 0.1 } });
+  assert.equal(hit.monthlyChangeCents, -(Math.round(hit.monthlyIncomeCents * 0.2) + Math.round(hit.monthlyRentCents * 0.1)));
+  assert.ok(hit.monthlyChangeCents < 0);
+  for (const g of hit.goals) assert.ok(g.after.high <= g.before.high + 1e-9 && g.after.low <= g.before.low + 1e-9);
+  assert.equal(hit.baselineCash.months.length, 24);
+  assert.ok(hit.stressedCash.months[0]!.p50Cents < hit.baselineCash.months[0]!.p50Cents);
+  const again = await client.stressTest({ body: { incomeDropShare: 0.2, rentRiseShare: 0.1 } });
+  assert.deepEqual(again, hit, "the same switches give the same answer");
+  await assert.rejects(client.stressTest({ body: { incomeDropShare: 0.9 } }));
+});
+
+test("the retirement fan starts from retirement accounts, is a range, and is labelled mocked", async () => {
+  const { client } = setup();
+  const accounts = await client.listAccounts();
+  const ira = accounts.filter((a) => a.type === "ira").reduce((sum, a) => sum + a.balanceCents, 0);
+  const fan = await client.projectRetirement({ body: { years: 25, monthlyContributionCents: 60_000 } });
+  assert.equal(fan.mocked, true);
+  assert.equal(fan.startingCents, ira);
+  assert.equal(fan.points.length, 26);
+  const last = fan.points.at(-1)!;
+  assert.ok(last.p10Cents < last.p50Cents && last.p50Cents < last.p90Cents);
+  await assert.rejects(client.projectRetirement({ body: { years: 80, monthlyContributionCents: 0 } }));
+});
+
+test("bulk recategorize changes only the listed transactions and refuses a stranger's id before changing any", async () => {
+  const { client } = setup();
+  const all = await client.listTransactions({ query: { limit: 500 } });
+  const [a, b, c] = all.filter((t) => t.amountCents < 0);
+  const res = await client.bulkRecategorizeTransactions({ body: { ids: [a!.id, b!.id], categoryId: "shopping" } });
+  assert.equal(res.updated, 2);
+  const after = await client.listTransactions({ query: { limit: 500 } });
+  assert.equal(after.find((t) => t.id === a!.id)!.category, "shopping");
+  assert.equal(after.find((t) => t.id === c!.id)!.category, c!.category);
+  await assert.rejects(client.bulkRecategorizeTransactions({ body: { ids: [c!.id, "nope"], categoryId: "dining_out" } }));
+  const still = await client.listTransactions({ query: { limit: 500 } });
+  assert.equal(still.find((t) => t.id === c!.id)!.category, c!.category, "nothing changed when one id was bad");
+});
+
+test("a split keeps the ledger total, and refuses parts that do not add up", async () => {
+  const { client } = setup();
+  const before = await client.listTransactions({ query: { limit: 500 } });
+  const target = before.find((t) => t.amountCents <= -2_000 && t.currency === "USD")!;
+  await assert.rejects(client.splitTransaction({ params: { id: target.id }, body: { parts: [{ amountCents: target.amountCents, categoryId: null }, { amountCents: -100, categoryId: null }] } }));
+  const first = Math.round(target.amountCents / 4);
+  const parts = await client.splitTransaction({ params: { id: target.id }, body: { parts: [{ amountCents: first, categoryId: "dining_out" }, { amountCents: target.amountCents - first, categoryId: "shopping" }] } });
+  assert.equal(parts.length, 2);
+  assert.equal(parts[0]!.id, target.id);
+  assert.equal(parts[0]!.amountCents + parts[1]!.amountCents, target.amountCents);
+  const after = await client.listTransactions({ query: { limit: 500 } });
+  const sum = (rows: typeof before) => rows.reduce((s, t) => s + t.amountCents, 0);
+  assert.equal(sum(after), sum(before));
+  assert.equal(after.length, before.length + 1);
+});
+
+test("goal allocation divides the user's monthly savings across goals in priority order and adds up", async () => {
+  const { client } = setup();
+  const [alloc, goals] = await Promise.all([client.getGoalAllocation(), client.listGoals()]);
+  assert.equal(alloc.rows.length, goals.length);
+  const given = alloc.rows.reduce((sum, r) => sum + r.allocatedCents, 0);
+  assert.equal(given + alloc.unallocatedCents, alloc.monthlySavingsCents);
+  const ranks = alloc.rows.map((r) => r.priorityRank);
+  assert.deepEqual(ranks, [...ranks].sort((a, b) => a - b));
+  for (const r of alloc.rows) assert.equal(r.neededCents - r.allocatedCents, r.shortCents);
+  if (alloc.rebalance) assert.ok(alloc.rebalance.movedCents > 0);
 });

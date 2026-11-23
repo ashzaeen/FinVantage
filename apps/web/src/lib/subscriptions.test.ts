@@ -32,10 +32,16 @@ test("each flag is explained with the figures the API sent", () => {
 test("a flag missing its figures still reads as a sentence", () => {
   const sub = { amountCents: -1549, nextDate: "2026-12-03" };
   assert.equal(flagDetail(flag({ type: "price_up" }), sub), "The price went up to $15.49.");
-  // A bill shows its usual amount, so the sentence must use the latest charge the flag carries.
+  // A bill shows its usual amount, so the sentence uses the latest charge the flag carries and says
+  // why the row shows a different figure.
   assert.equal(
     flagDetail(flag({ type: "price_up", previousCents: 8285, currentCents: 8732, changedOn: "2026-11-18" }), { ...sub, amountCents: -10131 }),
-    "Was $82.85, now $87.32 since Nov 18.",
+    "The latest charge was $87.32, up from $82.85 since Nov 18. The $101.31 shown is the bank's usual amount.",
+  );
+  // When the row shows the same figure, nothing needs explaining.
+  assert.equal(
+    flagDetail(flag({ type: "price_up", previousCents: 1199, currentCents: 1549, changedOn: "2026-10-03" }), sub),
+    "Was $11.99, now $15.49 since Oct 3.",
   );
   assert.equal(flagDetail(flag({ type: "possible_duplicate" }), sub), "You may pay for the same thing twice.");
   assert.equal(flagDetail(flag({ type: "still_charging" }), sub), "Charged again after you cancelled.");

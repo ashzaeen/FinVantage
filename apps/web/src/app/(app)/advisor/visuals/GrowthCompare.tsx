@@ -56,7 +56,7 @@ function RateRow({
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl px-2 py-1.5 hover:bg-inset">
       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} aria-hidden />
       <span className="min-w-0 flex-1 truncate text-sm text-ink">{rate.label}</span>
-      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${rate.source === "assumed" ? "bg-warning-bg text-warning-text" : "bg-accent-soft text-accent"}`}>
+      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${rate.source === "assumed" ? "bg-warning-bg text-warning-text" : "bg-accent-soft text-accent-ink"}`}>
         {Icon && <Icon size={10} aria-hidden />} {source.label}
       </span>
       <span className="inline-flex items-center rounded-lg border border-line">
@@ -70,7 +70,7 @@ function RateRow({
           max={50}
           value={rate.annualReturnPercent}
           onChange={(e) => e.target.value !== "" && set(Number(e.target.value))}
-          className="w-12 bg-transparent text-center text-xs tabular-nums text-ink outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+          className="w-12 bg-transparent text-center text-xs tabular-nums text-ink rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
           aria-label={`${rate.label} yearly return, percent`}
         />
         <span className="pr-1 text-xs text-muted">%</span>
@@ -90,8 +90,8 @@ function RateRow({
   );
 }
 
-export function GrowthCompare({ initial }: { initial: GrowthCompareVisual }) {
-  const { visual: v, update, pending, failed } = useVisual(initial);
+export function GrowthCompare({ initial, onVisual }: { initial: GrowthCompareVisual; onVisual?: (v: GrowthCompareVisual) => void }) {
+  const { visual: v, update, pending, failed } = useVisual(initial, onVisual);
   const { inputs, series } = v;
   const rates = inputs.rates;
   const [account, setAccount] = useState<(typeof ACCOUNTS)[number]["id"]>("roth");
@@ -122,13 +122,13 @@ export function GrowthCompare({ initial }: { initial: GrowthCompareVisual }) {
               aria-selected={active}
               onClick={() => setAccount(a.id)}
               className={`rounded-2xl border-2 p-2.5 text-left transition-all ${
-                active ? "border-accent bg-accent-soft/60 shadow-[var(--shadow-hover)]" : "border-dashed border-line hover:border-[var(--ink-light)]"
+                active ? "border-accent-ink bg-accent-soft/60 shadow-[var(--shadow-hover)]" : "border-dashed border-line hover:border-[var(--ink-light)]"
               }`}
             >
-              <span className={`flex items-center gap-1.5 text-xs font-semibold ${active ? "text-accent" : "text-ink"}`}>
+              <span className={`flex items-center gap-1.5 text-xs font-semibold ${active ? "text-accent-ink" : "text-ink"}`}>
                 <Landmark size={13} aria-hidden /> {a.name}
               </span>
-              <span className={`mt-2 flex items-center gap-1.5 truncate rounded-xl px-2.5 py-1.5 text-[11px] font-medium transition-colors ${active ? "bg-accent text-white" : "bg-inset text-[var(--ink-secondary)]"}`}>
+              <span className={`mt-2 flex items-center gap-1.5 truncate rounded-xl px-2.5 py-1.5 text-xs font-medium transition-colors ${active ? "bg-accent text-white" : "bg-inset text-[var(--ink-secondary)]"}`}>
                 <LineChart size={12} aria-hidden /> {held}
               </span>
             </button>
@@ -200,7 +200,7 @@ export function GrowthCompare({ initial }: { initial: GrowthCompareVisual }) {
           ))}
         </ul>
         {rates.length < MAX_RATES && (
-          <button type="button" onClick={addRate} className="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-accent hover:bg-accent-soft">
+          <button type="button" onClick={addRate} className="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-accent-ink hover:bg-accent-soft">
             <Plus size={13} aria-hidden /> Add a Rate
           </button>
         )}
@@ -230,13 +230,13 @@ export function GrowthCompare({ initial }: { initial: GrowthCompareVisual }) {
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="text-xs text-muted">Web rates from</span>
             {(inputs.sources ?? []).map((s) => (
-              <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-accent hover:underline">
+              <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-accent-ink hover:underline">
                 {s.title} <ExternalLink size={11} aria-hidden />
               </a>
             ))}
           </div>
         )}
-        <p className="mt-3 text-[11px] text-muted">
+        <p className="mt-3 text-xs text-muted">
           {hasAssumed ? "Assumed rates are placeholders, not published figures: set your own above. " : ""}
           Past returns don&apos;t predict future ones, and markets can fall. Account rules and limits change; check them before you decide. Educational only, not tax advice.
         </p>

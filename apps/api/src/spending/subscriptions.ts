@@ -14,9 +14,11 @@ import {
   annualCostCents,
   classifyKind,
   duplicateGroups,
+  flaggedAnnualCents,
   monthlyCostCents,
   normalizeMerchant,
   priceChange,
+  priceHistory,
   savedSoFarCents,
   shareOfIncome,
   startedRecently,
@@ -129,13 +131,14 @@ export function buildSubscriptions(input: SubscriptionInput): SubscriptionDetail
       annualCents: annualCostCents(amountCents, charge.cadence),
       lastChargeDate: latest?.date ?? null,
       flags,
+      priceHistory: priceHistory(history),
       history: history.slice(-DETAIL_HISTORY_LIMIT),
     };
   });
 }
 
 /** The overview the page shows: subscriptions and bills by cost, with totals. */
-export function overviewOf(details: SubscriptionDetail[], monthlyIncomeCents: number | null): SubscriptionOverview {
+export function overviewOf(details: SubscriptionDetail[], monthlyIncomeCents: number | null, today: string): SubscriptionOverview {
   // The list leaves out the history; the detail route carries it.
   const rows: Subscription[] = details.map(({ history: _history, ...row }) => row);
   const by = (kind: Subscription["kind"], cancelled: boolean) =>
@@ -147,6 +150,7 @@ export function overviewOf(details: SubscriptionDetail[], monthlyIncomeCents: nu
     rows.filter((r) => r.kind === kind && r.status === "cancelled" && r.flags.some((f) => f.type === "still_charging")).map((r) => ({ ...r, status: "active" as const }));
   const subscriptionTotals = sumCosts([...subscriptions, ...stillCosting("subscription")]);
   return {
+    asOf: today,
     subscriptions,
     bills,
     cancelled: rows.filter((r) => r.status === "cancelled").sort(sortByCost),
@@ -154,6 +158,7 @@ export function overviewOf(details: SubscriptionDetail[], monthlyIncomeCents: nu
     billTotals: sumCosts([...bills, ...stillCosting("bill")]),
     shareOfIncome: shareOfIncome(subscriptionTotals.monthlyCents, monthlyIncomeCents),
     savedSoFarCents: rows.reduce((sum, r) => sum + (r.savedSoFarCents ?? 0), 0),
+    flaggedAnnualCents: flaggedAnnualCents(rows),
   };
 }
 

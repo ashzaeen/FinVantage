@@ -12,6 +12,9 @@ Everything depends on this package, so a change here affects everyone.
 | `src/copilot.ts` | Context, metrics, card, events |
 | `src/advisory.ts` | Situations, recommendations, quarterly reports (`ReportVisuals` includes the nullable `subscriptions` figures) |
 | `src/spending.ts` | Budgets, recurring charges, mocked portfolio and credit |
+| `src/insights.ts` | The Overview's runway and savings rate, the credit cards overview, and goal milestones |
+| `src/planning.ts` | Safe to spend, attention, health score, goal funding, spending pace, budget suggestions, unusual charges, credit what-if, debt payoff, allocation drift, Copilot impact |
+| `src/transaction-insights.ts` | Transaction totals for a set of ids, and a month's spending patterns |
 | `src/subscription.ts` | Subscriptions and bills, their flags, status and totals, the cancellation guide, and the drafted messages |
 | `src/live.ts` | Pushed messages |
 | `src/api.ts` | **The route table** |

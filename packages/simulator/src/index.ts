@@ -2,8 +2,10 @@ import type {
   FanPoint,
   Goal,
   GoalImpact,
+  CashForecast,
   GoalOutcome,
   LifeEvent,
+  RetirementFan,
   SimulationInputs,
   SimulationResult,
 } from "@finvantage/contracts";
@@ -445,4 +447,112 @@ export function evaluatePurchase(
     options,
   );
   return diffOutcomes(inputs.goals, baseline, withPurchase);
+}
+
+// ---------- Forecasts ----------
+
+/** The monthly cash forecast looks this many months ahead. */
+export const FORECAST_MONTHS = 24;
+
+/**
+ * Free cash each month for the next 24 months, as a range. It is the same monthly pool the goal
+ * simulation draws from (base savings, saved raises, spending swings, income disruptions, life
+ * events and any what-if), before any of it goes to a goal. The band is the 10th to 90th
+ * percentile across paths. It uses the same draws, in the same order, as `simulate`, so a
+ * forecast and a run with the same seed see the same months.
+ */
+export function forecastCash(inputs: SimulationInputs, options: SimulateOptions = {}): CashForecast {
+  const { snapshot } = inputs;
+  const seed = options.seed ?? DEFAULT_SEED;
+  const paths = Math.max(3, Math.floor(options.paths ?? DEFAULT_PATHS));
+  const A = ASSUMPTIONS;
+  const horizon = FORECAST_MONTHS;
+  const schedule = buildSchedule(inputs, [...inputs.goals].sort((a, b) => a.priorityRank - b.priorityRank), horizon);
+  const baseSavings = snapshot.monthlySavingsCents + (inputs.whatIf?.monthlySavingsDeltaCents ?? 0);
+  const income = snapshot.monthlyIncomeCents;
+  const spending = snapshot.monthlySpendingCents;
+  const rng = makeRng(seed);
+  const normal = makeNormal(rng);
+  const pools = Array.from({ length: horizon + 1 }, () => new Float64Array(paths));
+
+  for (let p = 0; p < paths; p++) {
+    const level = normal();
+    const raiseMean = A.meanAnnualRaise + level * A.raiseAssumptionSpread;
+    let incomeFactor = 1;
+    let disruptionLeft = 0;
+    pools[0]![p] = schedule.cashOneTime[0] ?? 0;
+    for (let m = 1; m <= horizon; m++) {
+      normal(); // the market draw, unused here, kept so the draws line up with `simulate`
+      const spendZ = normal();
+      const raiseZ = normal();
+      const disruptionRoll = rng();
+      if (m % 12 === 0) incomeFactor *= 1 + raiseMean + raiseZ * A.raiseVolatility;
+      if (disruptionLeft === 0 && disruptionRoll < A.disruptionMonthlyChance) disruptionLeft = A.disruptionMonths;
+      let pool =
+        baseSavings +
+        income * (incomeFactor - 1) * A.raiseSavedShare -
+        spendZ * spending * A.spendingVolatility +
+        (schedule.recurring[m] ?? 0) +
+        (schedule.cashOneTime[m] ?? 0);
+      if (disruptionLeft > 0) {
+        pool -= income * incomeFactor * A.disruptionIncomeLoss;
+        disruptionLeft--;
+      }
+      pools[m]![p] = pool;
+    }
+  }
+
+  const months = pools.slice(1).map((values, i) => {
+    const sorted = values.slice().sort();
+    return {
+      date: addMonths(snapshot.asOf, i + 1),
+      p10Cents: Math.round(percentile(sorted, 0.1)),
+      p50Cents: Math.round(percentile(sorted, 0.5)),
+      p90Cents: Math.round(percentile(sorted, 0.9)),
+    };
+  });
+  return { paths, seed, months };
+}
+
+/**
+ * What a retirement balance could look like at each future year, as a range. Starts from today's
+ * balance, adds the same contribution every month, and grows it at the invested return and
+ * volatility, with the same assumption level shifting each path's average return. It is a
+ * simplification: no taxes, no inflation, a fixed contribution. Pure and seeded like `simulate`.
+ */
+export function projectRetirement(
+  input: { asOf: string; startingCents: number; monthlyContributionCents: number; years: number },
+  options: SimulateOptions = {},
+): RetirementFan {
+  const seed = options.seed ?? DEFAULT_SEED;
+  const paths = Math.max(3, Math.floor(options.paths ?? DEFAULT_PATHS));
+  const years = Math.max(1, Math.min(60, Math.floor(input.years)));
+  const A = ASSUMPTIONS;
+  const rng = makeRng(seed);
+  const normal = makeNormal(rng);
+  const yearly = Array.from({ length: years + 1 }, () => new Float64Array(paths));
+  for (let p = 0; p < paths; p++) {
+    const level = normal();
+    const mean = (A.investedAnnualReturn + level * A.returnAssumptionSpread) / 12;
+    const vol = A.investedAnnualVolatility / Math.sqrt(12);
+    let balance = input.startingCents;
+    yearly[0]![p] = balance;
+    for (let m = 1; m <= years * 12; m++) {
+      balance = Math.max(0, balance * (1 + mean + normal() * vol) + input.monthlyContributionCents);
+      if (m % 12 === 0) yearly[m / 12]![p] = balance;
+    }
+  }
+  const points = yearly.map((values, year) => {
+    const sorted = values.slice().sort();
+    return {
+      year,
+      date: addMonths(input.asOf, year * 12),
+      p10Cents: Math.round(percentile(sorted, 0.1)),
+      p25Cents: Math.round(percentile(sorted, 0.25)),
+      p50Cents: Math.round(percentile(sorted, 0.5)),
+      p75Cents: Math.round(percentile(sorted, 0.75)),
+      p90Cents: Math.round(percentile(sorted, 0.9)),
+    };
+  });
+  return { paths, seed, startingCents: input.startingCents, monthlyContributionCents: input.monthlyContributionCents, points };
 }

@@ -38,7 +38,7 @@ export function ScoreChart({ history }: { history: Array<{ date: string; score: 
     <div className="mt-4 overflow-hidden rounded-2xl bg-surface">
       <div className="flex items-center justify-between px-4 pt-3">
         <p className="text-xs font-semibold text-ink">Score History</p>
-        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${change >= 0 ? "bg-good-bg text-gain" : "bg-critical-bg text-loss"}`}>
+        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${change >= 0 ? "bg-good-bg text-gain" : "bg-critical-bg text-loss"}`}>
           {change >= 0 ? "+" : ""}{change} pts
         </span>
       </div>
@@ -51,27 +51,27 @@ export function ScoreChart({ history }: { history: Array<{ date: string; score: 
       >
         <defs>
           <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="var(--series-1)" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="var(--series-1)" stopOpacity="0.02" />
           </linearGradient>
         </defs>
         {/* Grid lines */}
         {[0.25, 0.5, 0.75].map((frac) => {
           const gy = padTop + frac * (h - padTop - padBot);
-          return <line key={frac} x1={padX} y1={gy} x2={w - padX} y2={gy} stroke="#d4d2f0" strokeWidth="0.5" strokeDasharray="4 3" />;
+          return <line key={frac} x1={padX} y1={gy} x2={w - padX} y2={gy} stroke="var(--border-strong)" strokeWidth="0.5" strokeDasharray="4 3" />;
         })}
         {/* Area fill */}
         <path d={areaPath} fill="url(#scoreGrad)" />
         {/* Line */}
-        <path d={linePath} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" />
+        <path d={linePath} fill="none" stroke="var(--series-1)" strokeWidth="2" strokeLinecap="round" />
         {/* Hover vertical line */}
         {hover !== null && (
-          <line x1={coords[hover].x} y1={padTop} x2={coords[hover].x} y2={h - padBot} stroke="var(--accent)" strokeWidth="1" strokeDasharray="3 2" opacity="0.4" />
+          <line x1={coords[hover].x} y1={padTop} x2={coords[hover].x} y2={h - padBot} stroke="var(--series-1)" strokeWidth="1" strokeDasharray="3 2" opacity="0.4" />
         )}
         {/* Data points */}
         {coords.map((c, i) => (
           <g key={c.date}>
-            <circle cx={c.x} cy={c.y} r={hover === i ? 4.5 : 3} fill={hover === i ? "var(--accent)" : "white"} stroke="var(--accent)" strokeWidth="1.5" className="transition-all duration-150" />
+            <circle cx={c.x} cy={c.y} r={hover === i ? 4.5 : 3} fill={hover === i ? "var(--series-1)" : "var(--surface-raised)"} stroke="var(--series-1)" strokeWidth="1.5" className="transition-all duration-150" />
             {/* Invisible hit area */}
             <rect
               x={c.x - (w / history.length) / 2}
@@ -96,14 +96,14 @@ export function ScoreChart({ history }: { history: Array<{ date: string; score: 
           return (
             <g>
               <rect x={tx} y={ty} width={tooltipW} height={tooltipH} rx="6" fill="var(--ink)" />
-              <text x={tx + tooltipW / 2} y={ty + 13} textAnchor="middle" fontSize="10" fill="var(--ink-muted)" fontFamily="Roboto, sans-serif">{label}</text>
-              <text x={tx + tooltipW / 2} y={ty + 25} textAnchor="middle" fontSize="11" fill="white" fontWeight="bold" fontFamily="Poppins, sans-serif">{c.score}</text>
+              <text x={tx + tooltipW / 2} y={ty + 13} textAnchor="middle" fontSize="12" fill="var(--ink-muted)" fontFamily="Roboto, sans-serif">{label}</text>
+              <text x={tx + tooltipW / 2} y={ty + 25} textAnchor="middle" fontSize="12" fill="white" fontWeight="bold" fontFamily="Poppins, sans-serif">{c.score}</text>
             </g>
           );
         })()}
         {/* Month labels */}
         {coords.map((c, i) => (
-          <text key={`label-${c.date}`} x={c.x} y={h - 8} textAnchor="middle" fontSize="13" fill={hover === i ? "var(--accent)" : "var(--ink-muted)"} fontWeight={hover === i ? "bold" : "normal"} fontFamily="Roboto, sans-serif" className="transition-all">
+          <text key={`label-${c.date}`} x={c.x} y={h - 8} textAnchor="middle" fontSize="13" fill={hover === i ? "var(--accent-ink)" : "var(--ink-muted)"} fontWeight={hover === i ? "bold" : "normal"} fontFamily="Roboto, sans-serif" className="transition-all">
             {new Date(c.date).toLocaleDateString("en-US", { month: "short" })}
           </text>
         ))}

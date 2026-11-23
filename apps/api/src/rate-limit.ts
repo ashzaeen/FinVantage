@@ -24,7 +24,7 @@ export interface RateRule {
 }
 
 const MINUTE = 60_000;
-const MODEL_ROUTES = /^\/v1\/(?:copilot\/evaluate|life-events\/parse|advisory|advisory\/chat|advisory\/conversations\/[^/]+\/messages|reports\/quarterly|subscriptions\/[^/]+\/draft)$/;
+const MODEL_ROUTES = /^\/v1\/(?:copilot\/evaluate|life-events\/parse|advisory|advisory\/chat|advisory\/speak|advisory\/conversations\/[^/]+\/messages|reports\/quarterly|subscriptions\/[^/]+\/draft)$/;
 const ADVISOR_ROUTES = /^\/v1\/advisory\/(?:chat|conversations\/[^/]+\/messages)$/;
 
 /** Before sign-in: counted per address. */
@@ -49,7 +49,7 @@ export const MODEL_RULES: readonly RateRule[] = [
  * about two seconds on the one thread that serves every request, and nothing limited it (security
  * review N6). The dashboard's sliders call these while the user drags, so the allowance is generous.
  */
-const COMPUTE_ROUTES = /^\/v1\/(?:simulations|life-events|life-events\/preview|life-simulator\/analyze|life-simulator\/export\/pdf|advisory\/visuals)$/;
+const COMPUTE_ROUTES = /^\/v1\/(?:simulations|life-events|life-events\/preview|life-simulator\/analyze|life-events\/stress|investments\/retirement|life-simulator\/export\/pdf|advisory\/visuals)$/;
 export const COMPUTE_RULES: readonly RateRule[] = [
   { name: "compute", method: "POST", path: COMPUTE_ROUTES, limit: 60, windowMs: MINUTE, per: "user" },
   { name: "compute-ip", method: "POST", path: COMPUTE_ROUTES, limit: 120, windowMs: MINUTE, per: "ip" },

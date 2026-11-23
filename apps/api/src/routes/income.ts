@@ -1,5 +1,5 @@
 import type { Hono } from "hono";
-import { debtToIncome } from "@finvantage/math-core";
+import { debtToIncome, incomeVariability, nextPayday } from "@finvantage/math-core";
 import { routes, topCategoryId, type IncomeCategoryRow, type IncomeSource, type Transaction } from "@finvantage/contracts";
 import type { AppDeps } from "../deps";
 import { mount, type AppEnv } from "../mount";
@@ -37,6 +37,8 @@ export function registerIncomeRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     const incomeIn = new Map<string, number>();
     const byCategory = new Map<string, { totalCents: number; deposits: number }>();
     const deposits: Transaction[] = [];
+    const sourcesByMonth = new Map<string, Map<string, number>>();
+    const paychecks: Array<{ date: string; amountCents: number }> = [];
 
     for (const t of transactions) {
       const key = monthKey(t.date);
@@ -44,8 +46,13 @@ export function registerIncomeRoutes(app: Hono<AppEnv>, deps: AppDeps) {
       if (isIncome(t)) {
         incomeIn.set(key, (incomeIn.get(key) ?? 0) + t.amountCents);
         deposits.push(t);
+        if (categoryIdOf(t) === "income.paycheck") paychecks.push({ date: t.date, amountCents: t.amountCents });
         if (row) {
           row.incomeCents += t.amountCents;
+          const sourceId = categoryIdOf(t) === "income" ? "income.other" : categoryIdOf(t)!;
+          const monthSources = sourcesByMonth.get(key) ?? new Map<string, number>();
+          monthSources.set(sourceId, (monthSources.get(sourceId) ?? 0) + t.amountCents);
+          sourcesByMonth.set(key, monthSources);
           if (key === month) {
             const id = categoryIdOf(t) === "income" ? "income.other" : categoryIdOf(t)!;
             const entry = byCategory.get(id) ?? { totalCents: 0, deposits: 0 };
@@ -88,6 +95,11 @@ export function registerIncomeRoutes(app: Hono<AppEnv>, deps: AppDeps) {
       .map(([categoryId, v]) => ({ categoryId, ...v, share: (incomeIn.get(month) ?? 0) > 0 ? v.totalCents / incomeIn.get(month)! : 0 }))
       .sort((a, b) => b.totalCents - a.totalCents);
 
+    const incomeSourcesByMonth = months.map((m) => ({
+      month: m,
+      categories: [...(sourcesByMonth.get(m) ?? [])].map(([categoryId, totalCents]) => ({ categoryId, totalCents })).sort((a, b) => b.totalCents - a.totalCents),
+    }));
+
     return {
       month,
       expectedMonthlyCents: profile?.monthlyIncomeCents ?? 0,
@@ -106,6 +118,10 @@ export function registerIncomeRoutes(app: Hono<AppEnv>, deps: AppDeps) {
           : null,
       },
       categories,
+      sourcesByMonth: incomeSourcesByMonth,
+      // Full months only: this month is part-way through, and half a paycheck is not variation.
+      variability: incomeVariability(incomeSourcesByMonth.slice(0, -1)),
+      nextPayday: nextPayday(paychecks, deps.today()),
       sources: [...sources.values()].sort((a, b) => b.totalCents - a.totalCents),
       recent: deposits.sort((a, b) => b.date.localeCompare(a.date)).slice(0, RECENT_DEPOSITS),
     };

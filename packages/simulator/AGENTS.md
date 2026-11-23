@@ -9,6 +9,8 @@ The math engine behind the dashboard and the Copilot. Read the root `AGENTS.md` 
 | `simulate(inputs, { seed, paths })` | `POST /v1/simulations`, life events, dashboard |
 | `evaluatePurchase(inputs, purchase)` | The Copilot route |
 | `diffOutcomes(goals, before, after)` | Run diffs, life-event deltas |
+| `forecastCash(inputs, { seed, paths })` | The Life Events cash forecast and stress test: 24 months of free cash as a 10th to 90th percentile band |
+| `projectRetirement(input, { seed, paths })` | The Investments retirement range: a yearly fan from a balance and a monthly contribution |
 
 How it works, the named assumptions (`ASSUMPTIONS`), and how the probability range is derived are documented at the top of `src/index.ts` and in `docs/DECISIONS.md`. A Copilot evaluation (two runs at 5,000 paths) takes well under a second; a test enforces the 2-second limit.
 

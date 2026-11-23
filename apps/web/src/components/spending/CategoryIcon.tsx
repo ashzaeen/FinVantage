@@ -66,7 +66,7 @@ export function iconForCategory(id: string | null | undefined): LucideIcon {
 /** A category's icon in a soft rounded tile, for lists. `bare` drops the tile. */
 /** Six tones from the design tokens, so a category reads at a glance and themes still apply. */
 const TONES = {
-  purple: { bg: "var(--accent-soft)", fg: "var(--accent)" },
+  purple: { bg: "var(--accent-soft)", fg: "var(--accent-ink)" },
   blue: { bg: "var(--info-bg)", fg: "var(--info)" },
   green: { bg: "var(--good-bg)", fg: "var(--good)" },
   amber: { bg: "var(--warning-bg)", fg: "var(--warning)" },
@@ -121,7 +121,7 @@ export function CategoryIcon({
 }) {
   const Icon = iconForCategory(id);
   const icon = <Icon size={size} strokeWidth={2} aria-hidden="true" />;
-  if (bare) return <span className={`inline-flex shrink-0 ${className}`} style={{ color: "var(--accent)" }}>{icon}</span>;
+  if (bare) return <span className={`inline-flex shrink-0 ${className}`} style={{ color: "var(--accent-ink)" }}>{icon}</span>;
   return (
     <span
       className={`inline-flex shrink-0 items-center justify-center rounded-xl ${className}`}
@@ -129,7 +129,7 @@ export function CategoryIcon({
         width: size + 16,
         height: size + 16,
         background: colored ? categoryTone(id).bg : "var(--accent-soft)",
-        color: colored ? categoryTone(id).fg : "var(--accent)",
+        color: colored ? categoryTone(id).fg : "var(--accent-ink)",
       }}
     >
       {icon}

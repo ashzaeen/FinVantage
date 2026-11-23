@@ -15,7 +15,7 @@ function Dialog({ title, onClose, children }: { title: string; onClose: () => vo
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-[color:var(--scrim)]" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
@@ -47,7 +47,7 @@ export function ManageTools({
   transactions: Transaction[];
 }) {
   const [open, setOpen] = useState<Panel>(null);
-  const button = "rounded-xl border bg-white px-4 py-2 text-sm font-medium transition-colors hover:border-[var(--accent)]";
+  const button = "rounded-xl border bg-raised px-4 py-2 text-sm font-medium transition-colors hover:border-[var(--accent-ink)]";
 
   return (
     <>

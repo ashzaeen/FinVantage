@@ -74,10 +74,10 @@ export function FanChart({
             stroke="var(--ink-muted)"
           />
         )}
-        <text x={PAD.left} y={HEIGHT - 6} fontSize={11} fill="var(--ink-muted)">
+        <text x={PAD.left} y={HEIGHT - 6} fontSize={12} fill="var(--ink-muted)">
           {first.date}
         </text>
-        <text x={WIDTH - PAD.right} y={HEIGHT - 6} fontSize={11} fill="var(--ink-muted)" textAnchor="end">
+        <text x={WIDTH - PAD.right} y={HEIGHT - 6} fontSize={12} fill="var(--ink-muted)" textAnchor="end">
           {last.date}
         </text>
       </svg>
@@ -93,7 +93,7 @@ export function FanChart({
         <summary className="cursor-pointer font-semibold text-ink-secondary">View Projection Data</summary>
         <div className="mt-2 max-h-52 overflow-auto">
           <table className="w-full min-w-[34rem] border-collapse text-left">
-            <thead><tr className="border-b border-[var(--border)] text-[10px] uppercase tracking-wide text-muted"><th className="py-2 pr-3">Date</th><th className="py-2 pr-3">Low</th><th className="py-2 pr-3">Median</th><th className="py-2 pr-3">High</th>{comparisonMedian && <th className="py-2">{comparisonLabel}</th>}</tr></thead>
+            <thead><tr className="border-b border-[var(--border)] text-xs uppercase tracking-wide text-muted"><th className="py-2 pr-3">Date</th><th className="py-2 pr-3">Low</th><th className="py-2 pr-3">Median</th><th className="py-2 pr-3">High</th>{comparisonMedian && <th className="py-2">{comparisonLabel}</th>}</tr></thead>
             <tbody>{points.map((point, index) => <tr key={point.date} className="border-b border-line last:border-0"><td className="py-2 pr-3">{point.date}</td><td className="py-2 pr-3">{formatUsd(point.p10Cents)}</td><td className="py-2 pr-3 font-semibold text-ink">{formatUsd(point.p50Cents)}</td><td className="py-2 pr-3">{formatUsd(point.p90Cents)}</td>{comparisonMedian && <td className="py-2">{comparisonPoints[Math.round(index * (comparisonPoints.length - 1) / (points.length - 1))] ? formatUsd(comparisonPoints[Math.round(index * (comparisonPoints.length - 1) / (points.length - 1))]!.p50Cents) : "—"}</td>}</tr>)}</tbody>
           </table>
         </div>

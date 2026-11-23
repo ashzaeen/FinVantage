@@ -33,7 +33,7 @@ const COLUMNS = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-lp-line bg-white">
+    <footer className="border-t border-lp-line bg-lp-surface">
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-12 px-6 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div>
           <Link href="/" className="flex min-h-11 w-fit items-center gap-2.5">
@@ -48,7 +48,7 @@ export function Footer() {
             <ul className="mt-2">
               {col.links.map((link) => (
                 <li key={link.label}>
-                  <Link href={link.href} className="flex min-h-11 items-center text-sm text-lp-text-2 transition-colors hover:text-lp-primary">
+                  <Link href={link.href} className="flex min-h-11 items-center text-sm text-lp-text-2 transition-colors hover:text-lp-ink">
                     {link.label}
                   </Link>
                 </li>

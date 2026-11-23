@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   ApiError,
@@ -11,6 +12,7 @@ import {
 } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
 import { api } from "@/lib/api";
+import { monthYear } from "@/lib/format";
 
 const BUCKET_HINT: Record<BudgetedBucket, string> = {
   needs: "Housing, bills, groceries, debt payments",
@@ -47,7 +49,7 @@ export function BucketSplit({ initial }: { initial: BucketSummary }) {
   return (
     <Card
       title="Spending Split"
-      subtitle={`${summary.month} · of ${formatUsd(summary.incomeCents)} monthly income`}
+      subtitle={`${monthYear(summary.month)} · of ${formatUsd(summary.incomeCents)} monthly income`}
       action={
         !editing && (
           <button
@@ -78,7 +80,7 @@ export function BucketSplit({ initial }: { initial: BucketSummary }) {
                     step={1}
                     value={draft[bucket]}
                     onChange={(e) => setDraft({ ...draft, [bucket]: Number(e.target.value) })}
-                    className="w-full bg-transparent text-sm tabular-nums outline-none"
+                    className="w-full bg-transparent text-sm tabular-nums rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
                     style={{ color: "var(--ink)" }}
                   />
                   <span style={{ color: "var(--ink-muted)" }}>%</span>
@@ -95,7 +97,7 @@ export function BucketSplit({ initial }: { initial: BucketSummary }) {
               type="submit"
               disabled={saving || total !== 100}
               className="rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              style={{ background: "var(--accent)" }}
+              style={{ background: "var(--series-1)" }}
             >
               {saving ? "Saving…" : "Save Split"}
             </button>
@@ -122,11 +124,11 @@ export function BucketSplit({ initial }: { initial: BucketSummary }) {
                     </span>
                   </span>
                   <span className="tabular-nums text-xs" style={{ color: over ? "var(--loss)" : met ? "var(--gain)" : "var(--ink-muted)" }}>
-                    {met && "✓ "}{formatUsd(row.spentCents)} of {formatUsd(row.targetCents)}
+                    {met && <Check size={12} strokeWidth={3} aria-hidden="true" className="mr-0.5 inline align-[-1px]" />}{formatUsd(row.spentCents)} of {formatUsd(row.targetCents)}
                   </span>
                 </div>
                 <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
-                  <div className="meter-fill h-2.5 rounded-full" style={{ width: `${width}%`, background: over ? "var(--critical)" : met ? "var(--good)" : "var(--accent)" }} />
+                  <div className="meter-fill h-2.5 rounded-full" style={{ width: `${width}%`, background: over ? "var(--critical)" : met ? "var(--good)" : "var(--series-1)" }} />
                 </div>
                 <p className="mt-1 flex justify-between text-xs" style={{ color: "var(--ink-muted)" }}>
                   <span>{BUCKET_HINT[row.bucket]}</span>

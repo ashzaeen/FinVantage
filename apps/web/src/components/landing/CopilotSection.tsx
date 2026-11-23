@@ -1,5 +1,7 @@
 "use client";
 
+// theme-ok-file: the whole section is a dark band, the same in both themes.
+
 import { ArrowRight, Lock } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";

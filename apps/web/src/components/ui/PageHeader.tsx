@@ -2,22 +2,24 @@ import type { ReactNode } from "react";
 
 export function PageHeader({
   title,
-  tier: _tier,
-  prd: _prd,
+  subtitle,
   action,
   showSearch = false,
 }: {
   title: string;
-  tier?: string;
-  prd?: string;
+  /** One sentence under the title. Put it here rather than in a second heading inside the page. */
+  subtitle?: string;
   action?: ReactNode;
   showSearch?: boolean;
 }) {
   return (
     <header className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 sm:mb-8">
-      <h1 className="font-poppins text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-        {title}
-      </h1>
+      <div className="min-w-0">
+        <h1 className="font-poppins text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+          {title}
+        </h1>
+        {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+      </div>
 
       <div className="flex min-w-0 max-w-full items-center gap-3">
         {showSearch && (
@@ -25,7 +27,7 @@ export function PageHeader({
             <input
               type="search"
               placeholder="Search for anything...."
-              className="w-full rounded-2xl border border-line bg-white py-2.5 pl-4 pr-10 font-roboto text-xs font-normal text-ink placeholder-muted outline-none shadow-sm focus:border-accent"
+              className="w-full rounded-2xl border border-line bg-raised py-2.5 pl-4 pr-10 font-roboto text-xs font-normal text-ink placeholder-muted outline-none shadow-sm focus:border-accent-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
             />
             <svg
               width="15"

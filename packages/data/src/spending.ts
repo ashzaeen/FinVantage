@@ -5,6 +5,7 @@ import {
   CategoryRule,
   DEFAULT_SPENDING_SPLIT,
   SpendingSplit,
+  TargetAllocation,
 } from "@finvantage/contracts";
 import { loadDemoProfileFixture } from "./profile";
 
@@ -39,6 +40,8 @@ export const SpendingProfile = z.object({
   overrides: z.array(CategoryOverride),
   budgets: z.array(BudgetLimit),
   rules: z.array(CategoryRule),
+  /** The mix the user wants across asset classes. Absent until they set one. Lives here because this is the user's settings document. */
+  targetAllocation: TargetAllocation.optional(),
 });
 export type SpendingProfile = z.infer<typeof SpendingProfile>;
 

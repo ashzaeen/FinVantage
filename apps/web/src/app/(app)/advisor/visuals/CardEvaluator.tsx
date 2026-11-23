@@ -1,5 +1,7 @@
 "use client";
 
+// theme-ok-file: the card face is artwork, the same in both themes.
+
 import { useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, ExternalLink, Info, XCircle } from "lucide-react";
 import { formatUsd, type CardEvaluator as CardEvaluatorVisual } from "@finvantage/contracts";
@@ -10,7 +12,7 @@ const STATUS = {
   good: { icon: CheckCircle2, color: "text-gain" },
   warning: { icon: AlertTriangle, color: "text-warning-text" },
   critical: { icon: XCircle, color: "text-loss" },
-  info: { icon: Info, color: "text-accent" },
+  info: { icon: Info, color: "text-accent-ink" },
 } as const;
 
 /** The card itself, in the sidebar's purple, with a sheen that follows the pointer. */
@@ -57,14 +59,14 @@ function ValueBar({ label, cents, max, tone, note }: { label: string; cents: num
       </span>
       <span className="text-right tabular-nums text-ink">
         {tone === "good" ? "+" : cents > 0 ? "−" : ""}{formatUsd(cents)}
-        {note && <span className="block text-[10px] text-muted">{note}</span>}
+        {note && <span className="block text-xs text-muted">{note}</span>}
       </span>
     </div>
   );
 }
 
-export function CardEvaluator({ initial }: { initial: CardEvaluatorVisual }) {
-  const { visual: v, update, pending, failed } = useVisual(initial);
+export function CardEvaluator({ initial, onVisual }: { initial: CardEvaluatorVisual; onVisual?: (v: CardEvaluatorVisual) => void }) {
+  const { visual: v, update, pending, failed } = useVisual(initial, onVisual);
   const { inputs, figures } = v;
   const max = Math.max(1, figures.annualRewardsCents, figures.annualFeeCents, figures.annualInterestCents);
   const positive = figures.netCents >= 0;
@@ -115,7 +117,7 @@ export function CardEvaluator({ initial }: { initial: CardEvaluatorVisual }) {
           display={formatUsd(v.monthlySpendCents)}
           onChange={(monthlySpendCents) => update({ ...inputs, monthlySpendCents })}
         />
-        <p className="mt-1 text-[11px] text-muted">
+        <p className="mt-1 text-xs text-muted">
           {v.spendBasis === "cards"
             ? `You spend about ${formatUsd(v.defaultMonthlySpendCents)} a month on your cards now.`
             : `Your cards show no recent purchases, so this starts at your everyday spending: about ${formatUsd(v.defaultMonthlySpendCents)} a month.`}
@@ -137,7 +139,7 @@ export function CardEvaluator({ initial }: { initial: CardEvaluatorVisual }) {
         })}
         {v.creditScore && (
           <li className="flex flex-wrap items-center gap-2.5 rounded-xl bg-inset px-3 py-2 text-xs">
-            <Info size={16} className="shrink-0 text-accent" aria-hidden />
+            <Info size={16} className="shrink-0 text-accent-ink" aria-hidden />
             <span className="font-semibold text-ink">Credit Score {v.creditScore.score}</span>
             <MockedBadge />
             <span className="w-full pl-6 text-[var(--ink-secondary)]">Approval is up to the issuer. A real score would come from your credit report.</span>
@@ -150,7 +152,7 @@ export function CardEvaluator({ initial }: { initial: CardEvaluatorVisual }) {
           <Eyebrow>Terms from the web. Confirm them with the issuer.</Eyebrow>
           <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
             {(inputs.sources ?? []).map((s) => (
-              <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-accent hover:underline">
+              <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-accent-ink hover:underline">
                 {s.title} <ExternalLink size={11} aria-hidden />
               </a>
             ))}

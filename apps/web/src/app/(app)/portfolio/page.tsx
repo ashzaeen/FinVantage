@@ -5,6 +5,6 @@ import { api } from "@/lib/api";
 import { InvestmentsClient } from "./InvestmentsClient";
 
 export default async function PortfolioPage() {
-  const data = await api.getInvestments();
-  return <InvestmentsClient data={data} />;
+  const [data, drift] = await Promise.all([api.getInvestments(), api.getAllocationDrift().catch(() => null)]);
+  return <InvestmentsClient data={data} drift={drift} />;
 }

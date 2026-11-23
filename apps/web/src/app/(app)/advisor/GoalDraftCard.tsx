@@ -6,6 +6,8 @@ import { formatUsd, type GoalImpact, type NewGoal } from "@finvantage/contracts"
 import { ProbabilityRange } from "@/components/finance/ProbabilityRange";
 import { api } from "@/lib/api";
 import { remembered, remember, type DraftState } from "./draft-state";
+import { longDate } from "@/lib/format";
+import { buttonClass } from "@/components/ui/Button";
 
 /**
  * A savings goal the Advisor proposed. Nothing is saved until the user presses Confirm, which
@@ -52,14 +54,14 @@ export function GoalDraftCard({
   return (
     <div className="rounded-2xl border border-line bg-card p-4 shadow-sm">
       <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
           <Target size={18} aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium uppercase tracking-wide text-muted">{state === "saved" ? "Saved Goal" : "Draft Goal"}</p>
           <p className="font-poppins text-base font-semibold text-ink">{goal.name}</p>
           <p className="text-sm text-muted">
-            {formatUsd(goal.targetCents)} by {goal.targetDate}
+            {formatUsd(goal.targetCents)} by {longDate(goal.targetDate)}
             {goal.currentCents > 0 ? ` · ${formatUsd(goal.currentCents)} saved` : ""} · {goal.flexibility === "flexible" ? "Flexible date" : "Fixed date"}
           </p>
         </div>
@@ -88,7 +90,7 @@ export function GoalDraftCard({
             type="button"
             onClick={confirm}
             disabled={state === "saving"}
-            className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            className={buttonClass()}
           >
             {state === "saving" ? "Saving…" : "Confirm and Save"}
           </button>

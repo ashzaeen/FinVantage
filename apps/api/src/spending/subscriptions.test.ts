@@ -163,7 +163,7 @@ test("a charge with no history gets no history flags and says nothing about it",
 
 test("an unknown cadence has no cost and sorts last", () => {
   const built = build({ charges: [charge("Odd Box", 5000, { cadence: "unknown" }), charge("StreamFlix", 1549)] });
-  const overview = overviewOf(built, 500_000);
+  const overview = overviewOf(built, 500_000, TODAY);
   assert.deepEqual(overview.subscriptions.map((s) => s.merchant), ["StreamFlix", "Odd Box"]);
   assert.deepEqual(overview.subscriptionTotals, { monthlyCents: 1549, annualCents: 18_588, count: 2, unknownCadenceCount: 1 });
 });
@@ -178,20 +178,21 @@ test("the overview orders by cost, totals each group, and gives the share of inc
       ],
     }),
     500_000,
+    TODAY,
   );
   assert.deepEqual(overview.subscriptions.map((s) => s.merchant), ["Large", "Small"]);
   assert.deepEqual(overview.bills.map((s) => s.merchant), ["Water"]);
   assert.equal(overview.subscriptionTotals.monthlyCents, 5000);
   assert.equal(overview.billTotals.monthlyCents, 4522);
   assert.equal(overview.shareOfIncome, 0.01);
-  assert.equal(overviewOf(build({ charges: [charge("Small", 500)] }), null).shareOfIncome, null);
+  assert.equal(overviewOf(build({ charges: [charge("Small", 500)] }), null, TODAY).shareOfIncome, null);
   assert.deepEqual(overview.cancelled, []);
 });
 
 test("the list leaves out history, which only the detail carries", () => {
   const built = build({ charges: [charge("StreamFlix", 1549)], transactions: [EARLY, tx("StreamFlix", "2026-11-04", 1549)] });
   assert.equal(built[0]!.history.length, 1);
-  assert.ok(!("history" in overviewOf(built, null).subscriptions[0]!));
+  assert.ok(!("history" in overviewOf(built, null, TODAY).subscriptions[0]!));
 });
 
 test("ids are stable between builds and differ between merchants", () => {
@@ -231,14 +232,14 @@ test("keeping a subscription mutes its flags but not its rival's, and it still c
   const [keptNetflix, keptHulu] = [kept.find((s) => s.merchant === "Netflix")!, kept.find((s) => s.merchant === "Hulu")!];
   assert.deepEqual([keptNetflix.status, keptNetflix.flags], ["keep", []]);
   assert.deepEqual(flagTypes(keptHulu), ["possible_duplicate"]);
-  assert.equal(overviewOf(kept, null).subscriptionTotals.count, 2);
+  assert.equal(overviewOf(kept, null, TODAY).subscriptionTotals.count, 2);
 });
 
 test("a subscription being cancelled still counts and still shows its flags", () => {
   const stream = charge("StreamFlix", 1549);
   const built = build({ charges: [stream], states: [stateFor(stream, { status: "cancelling" })] });
   assert.equal(built[0]!.status, "cancelling");
-  const overview = overviewOf(built, null);
+  const overview = overviewOf(built, null, TODAY);
   assert.deepEqual([overview.subscriptions.length, overview.subscriptionTotals.monthlyCents, overview.cancelled.length], [1, 1549, 0]);
 });
 
@@ -251,7 +252,7 @@ test("a cancelled subscription whose charges stopped moves to the cancelled list
   });
   // The last charge was 4 October. By 20 November one more would have posted (47 days, a month apart).
   assert.deepEqual([built[0]!.status, built[0]!.cancelledOn, built[0]!.flags, built[0]!.savedSoFarCents], ["cancelled", "2026-10-10", [], 1549]);
-  const overview = overviewOf(built, 500_000);
+  const overview = overviewOf(built, 500_000, TODAY);
   assert.deepEqual([overview.subscriptions, overview.cancelled.length], [[], 1]);
   assert.deepEqual(overview.subscriptionTotals, { monthlyCents: 0, annualCents: 0, count: 0, unknownCadenceCount: 0 });
   assert.equal(overview.savedSoFarCents, 1549);
@@ -267,7 +268,7 @@ test("a cancelled subscription that charges again is flagged with the date, and 
   // 3 October is inside the month's grace, 3 November is not.
   assert.deepEqual(built[0]!.flags, [{ type: "still_charging", previousCents: null, currentCents: null, changedOn: "2026-11-03", group: null }]);
   assert.equal(built[0]!.savedSoFarCents, null);
-  const overview = overviewOf(built, null);
+  const overview = overviewOf(built, null, TODAY);
   assert.equal(overview.savedSoFarCents, 0);
   // It is listed as cancelled, but it still costs $15.49 a month, so the totals still count it.
   assert.deepEqual([overview.subscriptions.length, overview.cancelled.length], [0, 1]);

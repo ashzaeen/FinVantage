@@ -1,5 +1,6 @@
 export {
   createLlmClient,
+  pcm16ToWav,
   type LlmChatRequest,
   type LlmChatResponse,
   type LlmClient,
@@ -8,6 +9,8 @@ export {
   type LlmRequest,
   type LlmToolDecl,
   type ModelTier,
+  type SpeakRequest as LlmSpeakRequest,
+  type SpeechAudio,
   type WebSearchRequest,
   type WebSearchResult,
 } from "./client";
@@ -38,6 +41,7 @@ export {
 export { generateOptions, type AdvisoryInput } from "./advisory";
 export {
   ADVISOR_SYSTEM_PROMPT,
+  ADVISOR_VOICE_STYLE,
   runAdvisorTurn,
   safeAdvisorAnswer,
   type AdvisorTool,

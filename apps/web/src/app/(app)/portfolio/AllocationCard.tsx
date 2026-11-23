@@ -11,7 +11,7 @@ function SliceTooltip({ slice }: { slice: AllocationSlice | undefined }) {
   if (!slice) return null;
   return (
     <div className="rounded-xl bg-ink px-3 py-2 text-xs text-white shadow-lg">
-      <p className="text-subtle">{ASSET_CLASS_LABEL[slice.assetClass]}</p>
+      <p className="text-muted">{ASSET_CLASS_LABEL[slice.assetClass]}</p>
       <p className="font-poppins text-sm font-bold tabular-nums">{formatUsd(slice.valueCents)}</p>
     </div>
   );
@@ -39,7 +39,7 @@ export function AllocationCard({ view }: { view: InvestmentView }) {
           </div>
           <ul className="min-w-0 flex-1 space-y-1.5">
             {view.allocation.map((slice) => (
-              <li key={slice.assetClass} className="flex items-center justify-between gap-2 text-[13px]">
+              <li key={slice.assetClass} className="flex items-center justify-between gap-2 text-sm">
                 <span className="flex min-w-0 items-center gap-2 text-ink-secondary">
                   <i aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: ASSET_CLASS_COLOR[slice.assetClass] }} />
                   <span className="truncate">{ASSET_CLASS_LABEL[slice.assetClass]}</span>

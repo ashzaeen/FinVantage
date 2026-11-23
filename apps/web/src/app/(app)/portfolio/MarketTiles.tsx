@@ -1,11 +1,13 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { formatUsd, type InvestmentsOverview, type MarketQuote, type NewsHeadline } from "@finvantage/contracts";
 import { Card } from "@/components/ui/Card";
 import { MockedBadge } from "@/components/ui/MockedBadge";
 import { WatchToggle, type Watchlist } from "./useWatchlist";
 import { Change, Chevron, compactUsd, DetailStat, ExpandPanel, MiniChart, Pills, shortDate } from "./parts";
+import { buttonClass } from "@/components/ui/Button";
 
 /* ── Markets ──────────────────────────────────────────────────────────── */
 
@@ -138,18 +140,18 @@ function NewsReader({ articles, index, live, onNavigate, onClose }: {
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between gap-3 border-b border-line px-6 py-4">
           {live ? <span /> : <MockedBadge />}
-          <button type="button" aria-label="Close Article" onClick={onClose} className="h-9 w-9 rounded-full text-muted transition-colors max-lg:h-11 max-lg:w-11 hover:bg-inset hover:text-ink">
-            <span aria-hidden="true">✕</span>
+          <button type="button" aria-label="Close Article" onClick={onClose} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors max-lg:h-11 max-lg:w-11 hover:bg-inset hover:text-ink">
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
         <div ref={body} key={article.id} className="invest-fade min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-6">
-          <p className="text-xs font-semibold text-accent">{article.source} · {shortDate(article.publishedOn)}</p>
+          <p className="text-xs font-semibold text-accent-ink">{article.source} · {shortDate(article.publishedOn)}</p>
           <h2 id="news-reader-title" className="mt-2 font-poppins text-2xl font-bold leading-8 text-ink">{article.title}</h2>
           <div className="mt-4 space-y-4 text-[15px] leading-7 text-ink-secondary">
             {article.body.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
           </div>
           {article.url ? (
-            <a href={article.url} target="_blank" rel="noreferrer" className="mt-6 inline-flex rounded-full bg-accent px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--accent-hover)]">
+            <a href={article.url} target="_blank" rel="noreferrer" className={buttonClass({}, "mt-6")}>
               Read at Source
             </a>
           ) : live ? null : (
@@ -175,10 +177,10 @@ function NewsCard({ news, live }: { news: NewsHeadline[]; live: boolean }) {
           <li key={headline.id} className="border-t border-line first:border-t-0">
             <button type="button" onClick={() => setReading(index)} className="group flex w-full items-start justify-between gap-3 rounded-xl px-2 py-2.5 text-left transition-colors hover:bg-inset">
               <span className="min-w-0">
-                <span className="block text-sm font-medium leading-5 text-ink transition-colors group-hover:text-accent">{headline.title}</span>
+                <span className="block text-sm font-medium leading-5 text-ink transition-colors group-hover:text-accent-ink">{headline.title}</span>
                 <span className="mt-0.5 block text-xs text-muted">{headline.source} · {shortDate(headline.publishedOn)}</span>
               </span>
-              <span aria-hidden="true" className="mt-0.5 text-sm text-muted transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-accent motion-reduce:transition-none">→</span>
+              <span aria-hidden="true" className="mt-0.5 text-sm text-muted transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-accent-ink motion-reduce:transition-none">→</span>
             </button>
           </li>
         ))}
