@@ -17,6 +17,7 @@ import { registerLifeScenarioRoutes } from "./routes/life-scenarios";
 import { registerLifeSimulatorRoutes } from "./routes/life-simulator";
 import { registerLiveRoutes } from "./routes/live";
 import { registerMockedRoutes } from "./routes/mocked";
+import { registerPlanningRoutes } from "./routes/planning";
 import { registerProfileRoutes } from "./routes/profile";
 import { registerSimulationRoutes } from "./routes/simulations";
 import { registerIncomeRoutes } from "./routes/income";
@@ -50,6 +51,12 @@ export function originMatcher(list: string): (origin: string) => boolean {
 const DEMO_TOKEN_WRITES: ReadonlyArray<{ method: string; path: RegExp }> = [
   { method: "POST", path: /^\/v1\/copilot\/evaluate$/ },
   { method: "POST", path: /^\/v1\/copilot\/events\/[^/]+\/action$/ },
+  // A read sent as a POST, because it takes a long list of ids. It changes nothing.
+  { method: "POST", path: /^\/v1\/transactions\/summary$/ },
+  // Also a read: it changes nothing.
+  { method: "POST", path: /^\/v1\/credit\/what-if$/ },
+  { method: "POST", path: /^\/v1\/life-events\/stress$/ },
+  { method: "POST", path: /^\/v1\/investments\/retirement$/ },
 ];
 
 /** The only routes that accept `?token=`. */
@@ -151,6 +158,7 @@ export function createApp(deps: AppDeps, env: NodeJS.ProcessEnv = process.env) {
   registerAccountRoutes(app, deps);
   registerTransactionRoutes(app, deps);
   registerSpendingRoutes(app, deps);
+  registerPlanningRoutes(app, deps);
   registerSubscriptionRoutes(app, deps);
   registerIncomeRoutes(app, deps);
   registerGoalRoutes(app, deps);

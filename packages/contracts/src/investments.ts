@@ -78,6 +78,11 @@ export const InvestmentView = z.object({
   dividendsYtdCents: Cents,
   allocation: z.array(AllocationSlice),
   holdings: z.array(InvestmentHolding),
+  /** The three largest holdings and what share of the view they make up (0.6 is 60%). */
+  concentration: z.object({
+    top: z.array(z.object({ symbol: z.string(), name: z.string(), share: Rate })),
+    topShare: Rate,
+  }).default({ top: [], topShare: 0 }),
   performance: z.object({
     "1D": RangePerformance,
     "1W": RangePerformance,
@@ -136,6 +141,14 @@ export const InvestmentsOverview = z.object({
   pricesAsOf: IsoDate,
   /** `views[0]` is always the All view. */
   views: z.array(InvestmentView).min(1),
+  /** Where the money sits: tax-advantaged accounts (retirement) against taxable ones. */
+  accountMix: z.object({
+    taxAdvantagedCents: Cents,
+    taxableCents: Cents,
+    /** Tax-advantaged over the total (0.7 is 70%). Zero with nothing invested. */
+    taxAdvantagedShare: Rate,
+    accounts: z.array(z.object({ id: z.string(), label: z.string(), valueCents: Cents, taxTreatment: z.enum(["tax_advantaged", "taxable"]) })),
+  }).default({ taxAdvantagedCents: 0, taxableCents: 0, taxAdvantagedShare: 0, accounts: [] }),
   markets: z.array(MarketQuote.extend({ label: z.string() })),
   topMovers: z.array(MarketQuote),
   topGainers: z.array(MarketQuote),
@@ -154,6 +167,8 @@ export type InvestmentsOverview = z.infer<typeof InvestmentsOverview>;
 export interface InvestmentAccountRef {
   id: string;
   name: string;
+  /** Retirement accounts are tax-advantaged. Anything not marked is taken as taxable. */
+  taxTreatment?: "tax_advantaged" | "taxable";
 }
 
 export interface InvestmentPosition {

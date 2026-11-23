@@ -2,6 +2,7 @@ import {
   createBankProvider,
   createMarketData,
   createStores,
+  demoSafeToday,
   type BankDataProvider,
   type BankTokenStore,
   type DocumentStore,
@@ -80,7 +81,8 @@ export function createDeps(env: NodeJS.ProcessEnv = process.env): AppDeps {
           token: env.SPACETIME_TOKEN,
         })
       : new MemoryCredentialStore(),
-    today: () => now().slice(0, 10),
+    // The demo's data ends on a fixed day, so the clock never runs behind it (see DEMO_DATA_ENDS_ON).
+    today: () => demoSafeToday(now().slice(0, 10)),
     now,
     reportEmailOverride: env.REPORT_EMAIL_OVERRIDE ?? null,
     schedulerSecret: env.SCHEDULER_SECRET ?? null,

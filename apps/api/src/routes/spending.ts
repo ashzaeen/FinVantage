@@ -12,6 +12,7 @@ import {
   type BudgetedBucket,
   type Transaction,
 } from "@finvantage/contracts";
+import { liquidCashCents, overviewInsights, spendingPatterns } from "@finvantage/math-core";
 import type { SpendingProfile } from "@finvantage/data";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
@@ -34,6 +35,13 @@ function daysInMonth(month: string) {
   return new Date(Date.UTC(y, m, 0)).getUTCDate();
 }
 
+/** The middle value: one unusually big month cannot drag it the way it drags an average. */
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
+}
+
 /** Spent so far, where the month is heading, and a suggested limit from recent months. */
 function budgetRow(
   category: string,
@@ -45,14 +53,14 @@ function budgetRow(
   const month = monthKey(today);
   const recent = new Set(Array.from({ length: SUGGESTION_MONTHS }, (_, i) => shiftMonth(month, -(i + 1))));
   let spentCents = 0;
-  let recentCents = 0;
+  const recentByMonth = new Map<string, number>([...recent].map((key) => [key, 0]));
   let recentSeen = false;
   for (const t of transactions) {
     if (!isSpending(catalog, t) || !countsToward(category, t)) continue;
     const key = monthKey(t.date);
     if (key === month) spentCents += Math.abs(t.amountCents);
     else if (recent.has(key)) {
-      recentCents += Math.abs(t.amountCents);
+      recentByMonth.set(key, (recentByMonth.get(key) ?? 0) + Math.abs(t.amountCents));
       recentSeen = true;
     }
   }
@@ -65,16 +73,88 @@ function budgetRow(
     remainingCents: limitCents - spentCents,
     projectedCents,
     status: spentCents > limitCents ? "over" : projectedCents > limitCents ? "at_risk" : "on_track",
-    suggestedLimitCents: recentSeen ? Math.round(recentCents / SUGGESTION_MONTHS) : null,
+    suggestedLimitCents: recentSeen ? Math.round(median([...recentByMonth.values()])) : null,
   };
 }
 
-export function registerSpendingRoutes(app: Hono<AppEnv>, deps: AppDeps) {
+/**
+ * What the spending and planning routes share: the user's spending profile and category catalog,
+ * their transactions, and the six-month summary built from them.
+ */
+export function spendingContext(deps: AppDeps) {
   const transactionsOf = (userId: string) => deps.ledger.listTransactions(userId, 5000);
   const load = async (userId: string) => {
     const profile = await deps.spending.get(userId);
     return { profile, catalog: buildCatalog(profile) };
   };
+
+  /** Six months of income, spending and saving, this month's categories, and each category's six-month line. */
+  const summaryFor = async (userId: string) => {
+    const [{ catalog }, transactions] = await Promise.all([load(userId), transactionsOf(userId)]);
+    const month = monthKey(deps.today());
+    const previousMonth = shiftMonth(month, -1);
+    const current = new Map<string, number>();
+    const prior = new Map<string, number>();
+    const trendKeys = Array.from({ length: 6 }, (_, offset) => shiftMonth(month, offset - 5));
+    const monthlyTrend = new Map(trendKeys.map((key) => [key, { incomeCents: 0, spendingCents: 0, savedCents: 0 }]));
+    const byCategory = new Map<string, Map<string, number>>();
+    for (const t of transactions) {
+      // Income is money in the Income category; spending leaves out transfers between the user's
+      // own accounts and money moved to savings or investments, which is saving, not spending.
+      const trend = monthlyTrend.get(monthKey(t.date));
+      const spending = isSpending(catalog, t);
+      const saving = spending && bucketOf(catalog, t) === "savings";
+      if (trend) {
+        const id = categoryIdOf(t);
+        if (t.amountCents > 0 && id !== null && topCategoryId(id) === "income") trend.incomeCents += t.amountCents;
+        else if (saving) trend.savedCents += Math.abs(t.amountCents);
+        else if (spending) trend.spendingCents += Math.abs(t.amountCents);
+        if (spending && !saving && t.category) {
+          const category = canonicalCategoryId(t.category);
+          const months = byCategory.get(category) ?? new Map<string, number>();
+          months.set(monthKey(t.date), (months.get(monthKey(t.date)) ?? 0) + Math.abs(t.amountCents));
+          byCategory.set(category, months);
+        }
+      }
+      if (!spending || !t.category) continue;
+      const key = monthKey(t.date);
+      const target = key === month ? current : key === previousMonth ? prior : null;
+      const category = canonicalCategoryId(t.category);
+      if (target) target.set(category, (target.get(category) ?? 0) + Math.abs(t.amountCents));
+    }
+    const categories = new Set([...current.keys(), ...prior.keys()]);
+    const thisMonth = monthlyTrend.get(month)!;
+    return {
+      month,
+      spentCents: thisMonth.spendingCents,
+      savedCents: thisMonth.savedCents,
+      monthlyTrend: trendKeys.map((key) => ({ month: key, ...monthlyTrend.get(key)! })),
+      categoryTrend: Object.fromEntries([...byCategory].map(([category, months]) => [category, trendKeys.map((key) => months.get(key) ?? 0)])),
+      categories: [...categories]
+        .map((category) => {
+          const spentCents = current.get(category) ?? 0;
+          return { category, spentCents, changeVsPriorMonthCents: spentCents - (prior.get(category) ?? 0) };
+        })
+        .sort((a, b) => b.spentCents - a.spentCents),
+    };
+  };
+
+  /** The user's budgets with what is spent, left and projected, in the order of the category list. */
+  const budgetsFor = async (userId: string): Promise<Budget[]> => {
+    const [{ profile, catalog }, transactions] = await Promise.all([load(userId), transactionsOf(userId)]);
+    const order = new Map(catalog.list.map((c, i) => [c.id, i]));
+    return profile.budgets
+      .map((b) => ({ ...b, category: canonicalCategoryId(b.category) }))
+      .filter((b) => catalog.byId.has(b.category))
+      .sort((a, b) => (order.get(a.category) ?? 0) - (order.get(b.category) ?? 0))
+      .map((b) => budgetRow(b.category, b.monthlyLimitCents, transactions, catalog, deps.today()));
+  };
+
+  return { transactionsOf, load, summaryFor, budgetsFor };
+}
+
+export function registerSpendingRoutes(app: Hono<AppEnv>, deps: AppDeps) {
+  const { transactionsOf, load, summaryFor, budgetsFor } = spendingContext(deps);
   const requireCategory = (catalog: Catalog, id: string) => {
     const category = catalog.byId.get(id);
     if (!category) throw new HttpError(404, "not_found", "That category does not exist.");
@@ -195,15 +275,7 @@ export function registerSpendingRoutes(app: Hono<AppEnv>, deps: AppDeps) {
 
   /* ─── Budgets ──────────────────────────────────────────────────────────── */
 
-  mount(app, deps, routes.listBudgets, async ({ userId }) => {
-    const [{ profile, catalog }, transactions] = await Promise.all([load(userId), transactionsOf(userId)]);
-    const order = new Map(catalog.list.map((c, i) => [c.id, i]));
-    return profile.budgets
-      .map((b) => ({ ...b, category: canonicalCategoryId(b.category) }))
-      .filter((b) => catalog.byId.has(b.category))
-      .sort((a, b) => (order.get(a.category) ?? 0) - (order.get(b.category) ?? 0))
-      .map((b) => budgetRow(b.category, b.monthlyLimitCents, transactions, catalog, deps.today()));
-  });
+  mount(app, deps, routes.listBudgets, ({ userId }) => budgetsFor(userId));
 
   mount(app, deps, routes.setBudget, async ({ userId, body }) => {
     const [{ profile, catalog }, transactions] = await Promise.all([load(userId), transactionsOf(userId)]);
@@ -242,6 +314,8 @@ export function registerSpendingRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     const month = monthKey(deps.today());
     return transactions
       .filter((t) => monthKey(t.date) === month && isSpending(catalog, t))
+      // A purchase is a choice made this time: not saving, and not a charge that repeats on its own.
+      .filter((t) => query.kind === "all" || (!t.isRecurring && bucketOf(catalog, t) !== "savings"))
       .sort((a, b) => a.amountCents - b.amountCents)
       .slice(0, query.limit);
   });
@@ -300,41 +374,28 @@ export function registerSpendingRoutes(app: Hono<AppEnv>, deps: AppDeps) {
       .sort((a, b) => a.nextDate.localeCompare(b.nextDate));
   });
 
+  /* ─── Patterns: days, weekdays, merchants ─────────────────────────────── */
+
+  mount(app, deps, routes.getSpendingPatterns, async ({ userId, query }) => {
+    const [{ catalog }, transactions] = await Promise.all([load(userId), transactionsOf(userId)]);
+    const today = deps.today();
+    const month = query.month ?? monthKey(today);
+    if (month > monthKey(today)) throw new HttpError(400, "future_month", "That month has not happened yet.");
+    // The same idea of "spending" as the monthly summary: not income, not transfers, not savings.
+    const rows = transactions
+      .filter((t) => isSpending(catalog, t) && bucketOf(catalog, t) !== "savings")
+      .map((t) => ({ date: t.date, merchant: t.merchant, cents: Math.abs(t.amountCents) }));
+    return spendingPatterns(rows, month, today);
+  });
+
   /* ─── Monthly summary ─────────────────────────────────────────────────── */
 
-  mount(app, deps, routes.getSpendingSummary, async ({ userId }) => {
-    const [{ catalog }, transactions] = await Promise.all([load(userId), transactionsOf(userId)]);
-    const month = monthKey(deps.today());
-    const previousMonth = shiftMonth(month, -1);
-    const current = new Map<string, number>();
-    const prior = new Map<string, number>();
-    const trendKeys = Array.from({ length: 6 }, (_, offset) => shiftMonth(month, offset - 5));
-    const monthlyTrend = new Map(trendKeys.map((key) => [key, { incomeCents: 0, spendingCents: 0 }]));
-    for (const t of transactions) {
-      // Income is money in the Income category; spending leaves out transfers between the user's
-      // own accounts and money moved to savings or investments, which is saving, not spending.
-      const trend = monthlyTrend.get(monthKey(t.date));
-      if (trend) {
-        const id = categoryIdOf(t);
-        if (t.amountCents > 0 && id !== null && topCategoryId(id) === "income") trend.incomeCents += t.amountCents;
-        else if (isSpending(catalog, t) && bucketOf(catalog, t) !== "savings") trend.spendingCents += Math.abs(t.amountCents);
-      }
-      if (!isSpending(catalog, t) || !t.category) continue;
-      const key = monthKey(t.date);
-      const target = key === month ? current : key === previousMonth ? prior : null;
-      const category = canonicalCategoryId(t.category);
-      if (target) target.set(category, (target.get(category) ?? 0) + Math.abs(t.amountCents));
-    }
-    const categories = new Set([...current.keys(), ...prior.keys()]);
-    return {
-      month,
-      monthlyTrend: trendKeys.map((key) => ({ month: key, ...monthlyTrend.get(key)! })),
-      categories: [...categories]
-        .map((category) => {
-          const spentCents = current.get(category) ?? 0;
-          return { category, spentCents, changeVsPriorMonthCents: spentCents - (prior.get(category) ?? 0) };
-        })
-        .sort((a, b) => b.spentCents - a.spentCents),
-    };
+  mount(app, deps, routes.getSpendingSummary, ({ userId }) => summaryFor(userId));
+
+  /* ─── Overview: runway and savings rate ───────────────────────────────── */
+
+  mount(app, deps, routes.getOverviewInsights, async ({ userId }) => {
+    const [summary, accounts] = await Promise.all([summaryFor(userId), deps.ledger.listAccounts(userId)]);
+    return overviewInsights(liquidCashCents(accounts), summary.monthlyTrend);
   });
 }

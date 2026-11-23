@@ -1,4 +1,5 @@
 import {
+  FLAGS_WORTH_ACTING_ON,
   canonicalCategoryId,
   type BillingChannel,
   categoryBucket,
@@ -332,4 +333,24 @@ export function billingChannel(merchant: string): BillingChannel {
   if (/^google\s*\*|google\s*play|googleplay/.test(m)) return "google_play";
   if (/^paypal\b/.test(m)) return "paypal";
   return "direct";
+}
+
+/** How many past charges the price line draws. */
+export const PRICE_HISTORY_POINTS = 12;
+
+/** The last charges as positive amounts, oldest first: what a price line draws. Refunds are ignored. */
+export function priceHistory(history: readonly SubscriptionCharge[], limit = PRICE_HISTORY_POINTS): number[] {
+  return paidCharges(history).slice(-limit).map((c) => c.cents);
+}
+
+/** A bill cannot simply be cancelled, so only subscriptions count. */
+const WORTH_ACTING_ON = new Set<string>(FLAGS_WORTH_ACTING_ON);
+
+/** What a year costs across the subscriptions (not bills) that carry a flag worth acting on. */
+export function flaggedAnnualCents(
+  rows: readonly { kind: "subscription" | "bill"; status: string; annualCents: number | null; flags: readonly { type: string }[] }[],
+): number {
+  return rows
+    .filter((r) => r.kind === "subscription" && r.status !== "cancelled" && r.flags.some((f) => WORTH_ACTING_ON.has(f.type)))
+    .reduce((sum, r) => sum + (r.annualCents ?? 0), 0);
 }

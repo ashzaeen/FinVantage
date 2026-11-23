@@ -61,6 +61,18 @@ export type DemoProfile = z.infer<typeof DemoProfile>;
 
 export const DEMO_USER_ID = "user_demo";
 
+/**
+ * The last day of the demo data (`generate-demo.ts --as-of`). The app's clock never runs behind it,
+ * so nothing in the demo is dated after "today". Once the real date passes it, this has no effect.
+ * Change it together with the fixture.
+ */
+export const DEMO_DATA_ENDS_ON = "2026-12-03";
+
+/** `today`, but never earlier than the end of the demo data. ISO dates compare as text. */
+export function demoSafeToday(realToday: string): string {
+  return realToday < DEMO_DATA_ENDS_ON ? DEMO_DATA_ENDS_ON : realToday;
+}
+
 /** The raw fixture: bank data still in Plaid's format. */
 export function loadDemoProfileSource(name = "planner"): DemoProfileSource {
   const fixture = FIXTURES[name];
@@ -151,7 +163,12 @@ export function demoInvestments(name = "planner"): { accounts: InvestmentAccount
   const accounts = bank.flatMap((item) =>
     item.accounts
       .filter((a) => a.type === "investment" || a.type === "brokerage")
-      .map((a) => ({ id: a.account_id, name: a.name })),
+      .map((a): InvestmentAccountRef => ({
+        id: a.account_id,
+        name: a.name,
+        // Plaid's subtype says what the account is. Retirement and education accounts shelter the growth.
+        taxTreatment: /^(roth|401k|403b|ira|sep ira|simple ira|529|hsa|pension)/.test((a.subtype ?? "").toLowerCase()) ? "tax_advantaged" : "taxable",
+      })),
   );
   const positions = bank.flatMap((item) => {
     const securities = new Map(item.investments.securities.map((s) => [s.security_id, s]));

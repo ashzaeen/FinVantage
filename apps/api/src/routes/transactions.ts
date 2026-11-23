@@ -1,5 +1,6 @@
 import type { Hono } from "hono";
 import { assignCategory, routes, UNKNOWN_CATEGORY_ID, topCategoryId, type NewTransaction, type Transaction } from "@finvantage/contracts";
+import { transactionSummary } from "@finvantage/math-core";
 import type { AppDeps } from "../deps";
 import { HttpError, mount, type AppEnv } from "../mount";
 import { buildCatalog, ruleCategoryFor } from "../spending/catalog";
@@ -35,6 +36,14 @@ async function normalizeToUsd(transaction: NewTransaction & Pick<Transaction, "c
 }
 
 export function registerTransactionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
+  // Totals for exactly the rows the page is showing, by id, so a filter in the browser and the
+  // figures beside it can never disagree. Reads only.
+  mount(app, deps, routes.summarizeTransactions, async ({ userId, body }) => {
+    const wanted = new Set(body.ids);
+    const all = await deps.ledger.listTransactions(userId, 5000);
+    return transactionSummary(all.filter((t) => wanted.has(t.id)), deps.today());
+  });
+
   mount(app, deps, routes.listTransactions, ({ userId, query }) =>
     deps.ledger.listTransactions(userId, query.limit),
   );
@@ -55,6 +64,41 @@ export function registerTransactionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     if (!updated) throw new HttpError(404, "not_found", "Transaction or account not found.");
     deps.live.publish(userId, { type: "transaction.added", transactionId: updated.id });
     return updated;
+  });
+
+  mount(app, deps, routes.bulkRecategorizeTransactions, async ({ userId, body }) => {
+    const wanted = new Set(body.ids);
+    const found = (await deps.ledger.listTransactions(userId, 5000)).filter((t) => wanted.has(t.id));
+    // Nothing is changed unless every id is the user's and the category exists.
+    if (found.length !== wanted.size) throw new HttpError(404, "not_found", "One of those transactions was not found.");
+    if (body.categoryId && !buildCatalog(await deps.spending.get(userId)).byId.has(body.categoryId)) throw new HttpError(404, "not_found", "That category does not exist.");
+    for (const { id, ...rest } of found) {
+      await deps.ledger.updateTransaction(userId, id, { ...rest, ...assignCategory(body.categoryId) });
+      deps.live.publish(userId, { type: "transaction.added", transactionId: id });
+    }
+    return { updated: found.length };
+  });
+
+  mount(app, deps, routes.splitTransaction, async ({ userId, params, body }) => {
+    const original = (await deps.ledger.listTransactions(userId, 5000)).find((t) => t.id === params.id);
+    if (!original) throw new HttpError(404, "not_found", "Transaction not found.");
+    if (original.currency !== "USD") throw new HttpError(400, "unsupported", "Only US dollar transactions can be split.");
+    const total = body.parts.reduce((sum, p) => sum + p.amountCents, 0);
+    if (total !== original.amountCents) throw new HttpError(400, "parts_do_not_add_up", "The parts must add up to the original amount.");
+    const sign = Math.sign(original.amountCents);
+    if (body.parts.some((p) => p.amountCents === 0 || Math.sign(p.amountCents) !== sign)) throw new HttpError(400, "bad_part", "Every part must be above zero, on the same side as the original.");
+    const catalog = buildCatalog(await deps.spending.get(userId));
+    if (body.parts.some((p) => p.categoryId && !catalog.byId.has(p.categoryId))) throw new HttpError(404, "not_found", "That category does not exist.");
+    const { id, ...rest } = original;
+    const fields = (part: (typeof body.parts)[number]) => ({ ...rest, amountCents: part.amountCents, originalAmountCents: part.amountCents, ...assignCategory(part.categoryId) });
+    const [first, ...others] = body.parts;
+    const saved: Transaction[] = [];
+    const kept = await deps.ledger.updateTransaction(userId, id, fields(first!));
+    if (!kept) throw new HttpError(404, "not_found", "Transaction not found.");
+    saved.push(kept);
+    for (const part of others) saved.push(await deps.ledger.addTransaction(fields(part)));
+    deps.live.publish(userId, { type: "transaction.added", transactionId: id });
+    return saved;
   });
 
   /** Moves a transaction to any category the user has, including their own subcategories. */

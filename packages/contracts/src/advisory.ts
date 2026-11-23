@@ -121,7 +121,11 @@ export const AdvisorConversationDetail = AdvisorConversation.extend({ messages: 
 export type AdvisorConversationDetail = z.infer<typeof AdvisorConversationDetail>;
 
 export const CreateAdvisorConversation = z.object({ situation: Situation.nullable().optional() });
-export const SendAdvisorMessage = z.object({ content: z.string().trim().min(1).max(4000) });
+export const SendAdvisorMessage = z.object({
+  content: z.string().trim().min(1).max(4000),
+  /** "voice" when the answer will be read aloud: the Advisor then answers in a few short sentences. Omit for text. */
+  modality: z.enum(["text", "voice"]).optional(),
+});
 export const AdvisorTurn = z.object({ userMessage: AdvisorMessage, reply: AdvisorMessage });
 export type AdvisorTurn = z.infer<typeof AdvisorTurn>;
 

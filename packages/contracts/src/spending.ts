@@ -28,7 +28,7 @@ export const Budget = z.object({
   projectedCents: Cents,
   /** Over the limit already, heading over it, or within it. */
   status: z.enum(["on_track", "at_risk", "over"]),
-  /** The average of the last three full months, as a starting point. Null with no history. */
+  /** The median of the last three full months, as a starting point: one odd month cannot skew it. Null with no history. */
   suggestedLimitCents: Cents.nullable(),
 });
 export type Budget = z.infer<typeof Budget>;
@@ -48,6 +48,14 @@ export type RecurringCharge = z.infer<typeof RecurringCharge>;
 
 export const SpendingSummary = z.object({
   month: z.string(),
+  /**
+   * What left the user's accounts this month for spending: money out, minus transfers between their
+   * own accounts and money moved to savings or investments. Debt payments count. This is the one
+   * definition of "spent" every tab quotes.
+   */
+  spentCents: Cents.default(0),
+  /** What went to savings and investing this month. Shown next to spent, never inside it. */
+  savedCents: Cents.default(0),
   categories: z.array(
     z.object({
       category: z.string(),
@@ -55,7 +63,12 @@ export const SpendingSummary = z.object({
       changeVsPriorMonthCents: Cents,
     }),
   ),
-  monthlyTrend: z.array(z.object({ month: z.string(), incomeCents: Cents, spendingCents: Cents })).default([]),
+  monthlyTrend: z.array(z.object({ month: z.string(), incomeCents: Cents, spendingCents: Cents, savedCents: Cents.default(0) })).default([]),
+  /**
+   * Spent in each category over the same six months as `monthlyTrend`, oldest first, keyed by the
+   * category id. Savings are left out, as in `spentCents`.
+   */
+  categoryTrend: z.record(z.string(), z.array(Cents)).default({}),
 });
 export type SpendingSummary = z.infer<typeof SpendingSummary>;
 
@@ -114,6 +127,12 @@ export const IncomeSummary = z.object({
   /** Monthly debt payments against monthly income, both from the profile. Ratio is null with no income. */
   debtToIncome: z.object({ monthlyDebtCents: Cents, monthlyIncomeCents: Cents, ratio: z.number().nullable() }),
   categories: z.array(IncomeCategoryRow),
+  /** Income by category for each of the last six months, oldest first. */
+  sourcesByMonth: z.array(z.object({ month: z.string(), categories: z.array(z.object({ categoryId: z.string(), totalCents: Cents })) })).default([]),
+  /** The next likely payday and the usual size of a paycheck, worked out from recent paychecks. Null when there are none. */
+  /** Sources whose monthly total moves a lot, with their usual range. Steady ones (a paycheck) are left out. */
+  variability: z.array(z.object({ categoryId: z.string(), lowCents: Cents, highCents: Cents, typicalCents: Cents, months: z.number().int().nonnegative() })).default([]),
+  nextPayday: z.object({ date: IsoDate, expectedCents: Cents, daysAway: z.number().int().positive() }).nullable().default(null),
   sources: z.array(IncomeSource),
   recent: z.array(Transaction),
 });

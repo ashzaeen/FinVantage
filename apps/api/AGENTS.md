@@ -11,7 +11,7 @@ Hono on Node. Read the root `AGENTS.md` first. Brief: `docs/workstreams/platform
 | `src/deps.ts` | **All stub-or-real wiring**, from env |
 | `src/mount.ts` | Registers a contract route with validation on both sides |
 | `src/services.ts` | Shared logic: `loadInputs`, `runSimulation` |
-| `src/routes/*.ts` | One file per area, so teams rarely collide |
+| `src/routes/*.ts` | One file per area, so teams rarely collide. `routes/planning.ts` holds the planning routes (safe to spend, attention, health score, goal funding, spending pace, budget suggestions, unusual charges, credit what-if, debt payoff, allocation drift, Copilot impact). `spendingContext(deps)` in `routes/spending.ts` is their shared source |
 | `src/spending/` | Category catalog and rules (`catalog.ts`, `rules-ledger.ts`), the recurring-charge sources shared by Spending and Subscriptions (`recurring.ts`), and `subscriptions.ts`, the pure builder behind `GET /v1/subscriptions` |
 | `src/advisor/` | The Advisor's brief, its tools, the in-process read client they use, and `eval.ts` (`npm run eval:advisor`) |
 | `src/app.test.ts` | End-to-end tests through the real typed client |

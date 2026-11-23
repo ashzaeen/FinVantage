@@ -125,7 +125,8 @@ test("a linked user's report runs on their bank, even with no saved simulation",
   // The synthetic bank's history: paychecks in October 2026, spending in November.
   const report = await client.generateReport({ body: { quarter: "2026-Q4", email: false } });
   assert.equal(report.visuals.dataSource, "bank");
-  assert.equal(report.visuals.outlookAsOf, deps.today());
+  // The outlook date is when the run was made (a real timestamp), not the demo's clock.
+  assert.equal(report.visuals.outlookAsOf, deps.now().slice(0, 10));
 
   // The run made for the report was simulated on the bank's accounts and cash flow.
   const [run] = await deps.docs.listSimulationRuns(user.id);

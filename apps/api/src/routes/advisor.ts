@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Hono } from "hono";
-import { formatUsd, routes, type AdvisorMessage, type Situation } from "@finvantage/contracts";
+import { formatUsd, routes, speechChunks, type AdvisorMessage, type Situation, type SpeakResponse } from "@finvantage/contracts";
 import { generateOptions, runAdvisorTurn } from "@finvantage/llm";
 import { buildAdvisorBrief } from "../advisor/brief";
 import { advisorReadApi, forModel, oddsRange, type AdvisorReadApi } from "../advisor/read-api";
@@ -58,6 +58,7 @@ export async function advisorAnswer(
   authorization: string,
   history: Array<{ role: "user" | "assistant"; content: string }>,
   situation: Situation | null,
+  voice = false,
 ) {
   const api = advisorReadApi(app, deps, userId, authorization);
   const [brief, openedAbout, user] = await Promise.all([
@@ -75,12 +76,17 @@ export async function advisorAnswer(
     briefLines: brief.lines,
     history,
     tools,
+    voice,
   });
   if (result.source === "fallback" && deps.llm.provider !== "mock") {
     console.warn(`Advisor: safe answer used (${result.trace.fallbackReason}); tools ${result.trace.toolCalls.join(", ") || "none"}; rejected ${result.trace.rejected.join(" | ") || "none"}`);
   }
   return result;
 }
+
+/** Audio already made for a reply part, so a replay or a retry does not pay for it twice. Oldest out first. */
+const SPEECH_CACHE_LIMIT = 40;
+const speechCache = new Map<string, SpeakResponse>();
 
 function titleFrom(text: string): string {
   const oneLine = text.replace(/\s+/g, " ").trim();
@@ -147,7 +153,7 @@ export function registerAdvisorRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     const history = [...earlier, userMessage]
       .slice(-HISTORY_LIMIT)
       .map((m) => ({ role: m.role, content: m.content }));
-    const result = await advisorAnswer(app, deps, userId, authorization, history, conversation.situation);
+    const result = await advisorAnswer(app, deps, userId, authorization, history, conversation.situation, body.modality === "voice");
 
     const reply = await deps.docs.appendAdvisorMessage(userId, {
       id: randomUUID(),
@@ -175,6 +181,36 @@ export function registerAdvisorRoutes(app: Hono<AppEnv>, deps: AppDeps) {
       updatedAt: reply.createdAt,
     });
     return { userMessage, reply };
+  });
+
+  // Speaks a saved reply, one chunk at a time. It never takes free text, so only an answer that
+  // already passed the number guardrail can be voiced, and the endpoint is no general speech proxy.
+  mount(app, deps, routes.speakAdvisorReply, async ({ userId, body }) => {
+    if (!deps.llm.speak) throw new HttpError(503, "voice_unavailable", "Spoken replies are not available.");
+    const conversation = await deps.docs.getAdvisorConversation(userId, body.conversationId);
+    if (!conversation) throw new HttpError(404, "not_found", "Conversation not found.");
+    const message = (await deps.docs.listAdvisorMessages(userId, conversation.id)).find(
+      (m) => m.id === body.messageId && m.role === "assistant",
+    );
+    if (!message) throw new HttpError(404, "not_found", "Reply not found.");
+    const chunks = speechChunks(message.content);
+    const text = chunks[body.part];
+    if (text === undefined) throw new HttpError(404, "not_found", "That part of the reply does not exist.");
+
+    const key = `${userId}:${message.id}:${body.part}`;
+    const cached = speechCache.get(key);
+    if (cached) return cached;
+    let audio;
+    try {
+      audio = await deps.llm.speak({ text });
+    } catch (error) {
+      console.warn(`Advisor speech: ${error instanceof Error ? error.message : String(error)}`);
+      throw new HttpError(503, "voice_unavailable", "Spoken replies are not available right now.");
+    }
+    const response: SpeakResponse = { audioBase64: audio.audioBase64, mimeType: audio.mimeType, part: body.part, parts: chunks.length };
+    speechCache.set(key, response);
+    if (speechCache.size > SPEECH_CACHE_LIMIT) speechCache.delete(speechCache.keys().next().value!);
+    return response;
   });
 
   mount(app, deps, routes.renderAdvisorVisual, ({ userId, body, authorization }) =>

@@ -8,9 +8,11 @@ import {
   cancelGraceDays,
   classifyKind,
   duplicateGroups,
+  flaggedAnnualCents,
   monthlyCostCents,
   normalizeMerchant,
   priceChange,
+  priceHistory,
   savedSoFarCents,
   shareOfIncome,
   startedRecently,
@@ -282,4 +284,29 @@ test("a charge through Apple, Google Play or PayPal is cancelled there", () => {
 
 test("anything else is billed directly, including names that only look like a store", () => {
   for (const raw of ["Netflix", "Google One", "Applebee's", "Pineapple Fitness", "Amazon Prime", "StreamFlix", ""]) assert.equal(billingChannel(raw), "direct", raw);
+});
+
+test("a price line draws the last charges as positive amounts, oldest first, and skips refunds", () => {
+  const charge = (date: string, amountCents: number) => ({ date, amountCents });
+  const history = [charge("2026-08-03", -1199), charge("2026-09-03", -1199), charge("2026-09-20", 500), charge("2026-10-03", -1549), charge("2026-11-03", -1549)];
+  assert.deepEqual(priceHistory(history), [1199, 1199, 1549, 1549]);
+  assert.deepEqual(priceHistory(history, 2), [1549, 1549]);
+  assert.deepEqual(priceHistory([]), []);
+});
+
+test("flagged annual cost counts only subscriptions with a flag worth acting on", () => {
+  const row = (kind: "subscription" | "bill", annualCents: number | null, flags: string[], status = "active") => ({ kind, status, annualCents, flags: flags.map((type) => ({ type })) });
+  assert.equal(
+    flaggedAnnualCents([
+      row("subscription", 18_588, ["price_up"]),
+      row("subscription", 11_988, ["possible_duplicate", "started_recently"]), // counted once
+      row("subscription", 9_999, ["annual_coming"]),
+      row("subscription", 5_000, []), // no flag
+      row("bill", 121_572, ["price_up"]), // a bill cannot just be dropped
+      row("subscription", 7_000, ["price_up"], "cancelled"), // already cancelled
+      row("subscription", null, ["price_up"]), // unknown cadence
+      row("subscription", 4_000, ["still_charging"]), // a different problem
+    ]),
+    18_588 + 11_988 + 9_999,
+  );
 });

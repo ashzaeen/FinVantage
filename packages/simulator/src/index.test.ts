@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { LifeEvent, SimulationInputs } from "@finvantage/contracts";
-import { evaluatePurchase, simulate } from "./index";
+import { evaluatePurchase, forecastCash, projectRetirement, simulate } from "./index";
 
 const inputs: SimulationInputs = {
   snapshot: {
@@ -136,4 +136,37 @@ test("benchmark: Copilot evaluation at 5,000 paths with three goals is under 2 s
   evaluatePurchase(three, { amountCents: 149_900, monthlyCents: 0 }, { paths: 5_000 });
   const ms = performance.now() - start;
   assert.ok(ms < 2_000, `took ${Math.round(ms)} ms`);
+});
+
+test("the cash forecast covers 24 months, is a widening range, and repeats for the same seed", () => {
+  const a = forecastCash(inputs, { seed: 7, paths: 600 });
+  const b = forecastCash(inputs, { seed: 7, paths: 600 });
+  assert.deepEqual(a, b);
+  assert.equal(a.months.length, 24);
+  for (const m of a.months) assert.ok(m.p10Cents <= m.p50Cents && m.p50Cents <= m.p90Cents);
+  // With no life events the middle month is about the monthly savings.
+  assert.ok(Math.abs(a.months[0]!.p50Cents - inputs.snapshot.monthlySavingsCents) < 40_000);
+});
+
+test("a monthly life event lowers the cash forecast from its start month", () => {
+  const rent: LifeEvent = { ...housePurchase, id: "rent", recurrence: "recurring", dollarImpactCents: -50_000, durationMonths: null, date: "2027-03-01" };
+  const base = forecastCash(inputs, { seed: 7, paths: 600 });
+  const withRent = forecastCash({ ...inputs, lifeEvents: [rent] }, { seed: 7, paths: 600 });
+  assert.equal(withRent.months[0]!.p50Cents, base.months[0]!.p50Cents, "before the event nothing changes");
+  assert.ok(withRent.months[10]!.p50Cents < base.months[10]!.p50Cents - 40_000);
+});
+
+test("the retirement fan grows with contributions, widens with time, and repeats for the same seed", () => {
+  const input = { asOf: "2026-11-07", startingCents: 5_000_000, monthlyContributionCents: 50_000, years: 30 };
+  const a = projectRetirement(input, { seed: 3, paths: 800 });
+  assert.deepEqual(a, projectRetirement(input, { seed: 3, paths: 800 }));
+  assert.equal(a.points.length, 31);
+  assert.equal(a.points[0]!.p50Cents, 5_000_000);
+  const last = a.points.at(-1)!;
+  assert.ok(last.p10Cents < last.p50Cents && last.p50Cents < last.p90Cents);
+  assert.ok(last.p50Cents > 5_000_000 + 30 * 12 * 50_000, "growth adds to what was put in");
+  const early = a.points[5]!;
+  assert.ok(last.p90Cents - last.p10Cents > early.p90Cents - early.p10Cents);
+  const more = projectRetirement({ ...input, monthlyContributionCents: 100_000 }, { seed: 3, paths: 800 });
+  assert.ok(more.points.at(-1)!.p50Cents > last.p50Cents);
 });

@@ -144,3 +144,23 @@ export const SimulationDiff = z.object({
   goals: z.array(GoalImpact),
 });
 export type SimulationDiff = z.infer<typeof SimulationDiff>;
+
+/* ─── Forecasts ──────────────────────────────────────────────────────────── */
+
+/** Free cash for each of the next months, before any of it goes to a goal. A range, never one number. */
+export const CashForecast = z.object({
+  paths: z.number().int(),
+  seed: z.number().int(),
+  months: z.array(z.object({ date: IsoDate, p10Cents: Cents, p50Cents: Cents, p90Cents: Cents })),
+});
+export type CashForecast = z.infer<typeof CashForecast>;
+
+/** A retirement balance by year, as percentile bands. */
+export const RetirementFan = z.object({
+  paths: z.number().int(),
+  seed: z.number().int(),
+  startingCents: Cents,
+  monthlyContributionCents: Cents,
+  points: z.array(FanPoint.extend({ year: z.number().int().nonnegative() })),
+});
+export type RetirementFan = z.infer<typeof RetirementFan>;
