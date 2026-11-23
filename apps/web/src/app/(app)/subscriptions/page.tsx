@@ -1,7 +1,6 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { formatUsd } from "@finvantage/contracts";
-import { DotCalendar, type CalendarEvent } from "@/components/charts/DotCalendar";
 import { CategoryIcon } from "@/components/spending/CategoryIcon";
 import { CategoryPie } from "@/components/spending/CategoryPie";
 import { Card } from "@/components/ui/Card";
@@ -16,7 +15,6 @@ import { SubscriptionsClient } from "./SubscriptionsClient";
 /** How far ahead the Upcoming Charges card looks. */
 const UPCOMING_DAYS = 30;
 /** The calendar shows five weeks, a little more than the list. */
-const CALENDAR_DAYS = 35;
 
 function Tile({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
@@ -43,12 +41,6 @@ export default async function SubscriptionsPage() {
     .map((s) => ({ categoryId: s.category ?? "other", spentCents: s.monthlyCents! }));
   const upcoming = upcomingWithin(all, today, UPCOMING_DAYS);
   const { subscriptionTotals: totals } = overview;
-  const calendarEvents: CalendarEvent[] = all.map((item) => ({
-    date: item.nextDate,
-    tone: item.flags.some((f) => f.type === "annual_coming") ? "warn" : item.kind === "bill" ? "info" : "out",
-    label: item.merchant,
-    amountCents: item.amountCents,
-  }));
 
   if (all.length === 0) {
     return (
@@ -146,11 +138,7 @@ export default async function SubscriptionsPage() {
         />
 
         <Card title="Upcoming Charges" subtitle={`The next ${UPCOMING_DAYS} days, soonest first`} lift={false}>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]">
-            <div>
-              <DotCalendar from={today} days={CALENDAR_DAYS} events={calendarEvents} label={`Charges due in the next ${CALENDAR_DAYS} days`} />
-              <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted"><span><i className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--flow-out)" }} />Subscription</span><span><i className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--series-5)" }} />Bill</span><span><i className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--warning)" }} />Annual renewal</span></p>
-            </div>
+          <div>
             <div className="min-w-0">
           {upcoming.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--ink-muted)" }}>Nothing is due in the next {UPCOMING_DAYS} days.</p>

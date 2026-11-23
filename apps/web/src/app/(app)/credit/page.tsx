@@ -6,7 +6,6 @@ import { api } from "@/lib/api";
 import { formatUsd, formatPercent, type CreditCardsOverview } from "@finvantage/contracts";
 import { CardsAtAGlance } from "./CardsAtAGlance";
 import { CreditWhatIf } from "./CreditWhatIf";
-import { DebtPayoffCard } from "./DebtPayoffCard";
 import { ScoreChart } from "./ScoreChart";
 import { ScoreGauge } from "./ScoreGauge";
 import { VisualCard } from "./VisualCard";
@@ -84,11 +83,10 @@ function factorsFrom(overview: CreditCardsOverview) {
 /* ── Page ───────────────────────────────────────────────────────────── */
 
 export default async function CreditPage() {
-  const [credit, accounts, overview, payoff] = await Promise.all([
+  const [credit, accounts, overview] = await Promise.all([
     api.getCreditScore(),
     api.listAccounts(),
     api.getCreditCards(),
-    api.getDebtPayoff({ query: { extraCents: 0 } }).catch(() => null),
   ]);
 
   const cards = accounts.filter((a) => a.type === "credit_card");
@@ -134,10 +132,7 @@ export default async function CreditPage() {
 
         <CardsAtAGlance overview={overview} />
 
-        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
-          <CreditWhatIf cards={overview.cards} />
-          {payoff && <DebtPayoffCard initial={payoff} />}
-        </div>
+        <CreditWhatIf cards={overview.cards} />
 
         {/* ── Credit cards ─────────────────────────────── */}
         <section id="credit-cards" className="scroll-mt-6">

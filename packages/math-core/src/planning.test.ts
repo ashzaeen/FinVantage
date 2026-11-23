@@ -235,6 +235,7 @@ test("debt payoff covers cards and loans, not a mortgage, fills a missing minimu
   assert.equal(p.plans.length, 2);
   assert.ok(p.plans.every((x) => x.months !== null));
   assert.equal(p.avalancheSavesCents, Math.max(0, p.plans[1]!.totalInterestCents - p.plans[0]!.totalInterestCents));
+  assert.equal(p.avalancheFinishesSoonerMonths, Math.max(0, (p.plans[1]!.months ?? 0) - (p.plans[0]!.months ?? 0)));
   assert.equal(p.extraPerMonthCents, 10_000);
   assert.deepEqual(debtPayoff([account({ id: "chk", type: "checking", balanceCents: 5 })], 0, "2026-12-03").plans, []);
 });
@@ -302,8 +303,9 @@ test("only a source that moves a lot month to month counts as variable", () => {
 });
 
 test("copilot impact counts checks that would slip a goal or dip under the cushion", () => {
-  const event = (price: number, delays: Array<number | null>, after: number | null) => ({
+  const event = (price: number, delays: Array<number | null>, after: number | null, createdAt = "2026-12-03T12:00:00.000Z") => ({
     extractedPriceCents: price,
+    createdAt,
     metrics: { goalImpacts: delays.map((d) => ({ goalId: "g", goalName: "G", probabilityLowDelta: 0, probabilityHighDelta: 0, probabilityLowAfter: 0, probabilityHighAfter: 0, delayMonths: d })), liquidBufferAfterCents: after, bufferTargetCents: 250_000 },
   }) as unknown as Parameters<typeof copilotImpact>[0][number];
   const impact = copilotImpact([
@@ -311,9 +313,15 @@ test("copilot impact counts checks that would slip a goal or dip under the cushi
     event(149_900, [3, 1], 300_000), // slips a goal by 3
     event(9_900, [0], 100_000), // under the cushion, no slip
     event(5_000, [-2], null), // an earlier date is not a slip
-  ]);
-  assert.deepEqual(impact, { checked: 4, flagged: 2, flaggedCents: 159_800, goalMonthsAtStake: 3 });
-  assert.deepEqual(copilotImpact([]), { checked: 0, flagged: 0, flaggedCents: 0, goalMonthsAtStake: 0 });
+  ], "2026-12-03");
+  assert.deepEqual({ ...impact, weeks: undefined }, { checked: 4, flagged: 2, flaggedCents: 159_800, goalMonthsAtStake: 3, weeks: undefined });
+  const empty = copilotImpact([], "2026-12-03");
+  assert.equal(empty.checked, 0);
+  assert.equal(empty.weeks.length, 8);
+  assert.equal(empty.weeks.at(-1)!.weekStart, "2026-11-30"); // the Monday of the week that holds Dec 3
+  // The four checks above were all on Dec 3, so they land in the last week.
+  assert.deepEqual(impact.weeks.at(-1), { weekStart: "2026-11-30", checked: 4, flagged: 2 });
+  assert.equal(impact.weeks.slice(0, -1).every((w) => w.checked === 0 && w.flagged === 0), true);
 });
 
 test("the money calendar adds paydays and takes away bills and card minimums, day by day", () => {

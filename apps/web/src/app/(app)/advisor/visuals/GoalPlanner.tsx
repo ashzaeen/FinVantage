@@ -7,6 +7,7 @@ import { ProbabilityRange } from "@/components/finance/ProbabilityRange";
 import { api } from "@/lib/api";
 import { remember, remembered } from "../draft-state";
 import { Chips, Eyebrow, FanArea, Ring, Slider, Strip, TableToggle, Ticker, useVisual, VisualCard } from "./shared";
+import { buttonClass } from "@/components/ui/Button";
 
 const MONTH = new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 const DAY = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
@@ -116,8 +117,8 @@ export function GoalPlanner({ initial, id, onVisual }: { initial: GoalPlanVisual
             {fundFirst ? "It goes to the top of your goals, and the others move down one." : "It goes after your other goals."} Nothing is saved until you confirm.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <button type="button" onClick={save} disabled={saveState === "saving"} className="min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold text-white disabled:opacity-50">{saveState === "saving" ? "Saving…" : "Confirm"}</button>
-            <button type="button" onClick={() => setSaveState("idle")} disabled={saveState === "saving"} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-muted">Not Now</button>
+            <button type="button" onClick={save} disabled={saveState === "saving"} className={buttonClass({ variant: "primary" })}>{saveState === "saving" ? "Saving…" : "Confirm"}</button>
+            <button type="button" onClick={() => setSaveState("idle")} disabled={saveState === "saving"} className={buttonClass({ variant: "quiet" })}>Not Now</button>
           </div>
         </div>
       )}

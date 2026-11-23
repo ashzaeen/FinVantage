@@ -29,11 +29,11 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { href: "/accounts", label: "Accounts" },
       { href: "/transactions", label: "Transactions" },
-      { href: "/goals", label: "Goals" },
       { href: "/income", label: "Income" },
       { href: "/spending", label: "Spending" },
-      { href: "/portfolio", label: "Investments" },
+      { href: "/goals", label: "Goals" },
       { href: "/credit", label: "Credit" },
+      { href: "/portfolio", label: "Investments" },
     ],
   },
 ];

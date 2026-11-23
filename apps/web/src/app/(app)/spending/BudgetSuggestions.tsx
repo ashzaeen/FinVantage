@@ -6,6 +6,7 @@ import { formatUsd, type BudgetSuggestion } from "@finvantage/contracts";
 import { CategoryIcon } from "@/components/spending/CategoryIcon";
 import { Card } from "@/components/ui/Card";
 import { api } from "@/lib/api";
+import { buttonClass } from "@/components/ui/Button";
 
 /** Limits worth setting, from the last three full months. Nothing is saved until Add This Limit is pressed. */
 export function BudgetSuggestions({ suggestions, labels }: { suggestions: BudgetSuggestion[]; labels: Record<string, string> }) {
@@ -50,7 +51,7 @@ export function BudgetSuggestions({ suggestions, labels }: { suggestions: Budget
                 disabled={busy !== null}
                 onClick={() => void add(s)}
                 aria-label={`Add a ${formatUsd(s.suggestedLimitCents)} limit for ${name}`}
-                className="min-h-11 rounded-xl px-4 text-sm font-semibold text-accent-ink hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink disabled:opacity-50"
+                className={buttonClass({ variant: "quiet" })}
               >
                 {busy === s.category ? "Saving…" : "Add This Limit"}
               </button>

@@ -187,6 +187,8 @@ export const DebtPayoff = z.object({
   plans: z.array(PayoffPlan),
   /** Interest the avalanche saves over the snowball. Zero when they tie or there are no debts. */
   avalancheSavesCents: Cents,
+  /** Months sooner the avalanche order finishes than the snowball order. Zero when they tie or either never finishes. */
+  avalancheFinishesSoonerMonths: z.number().int().nonnegative(),
 });
 export type DebtPayoff = z.infer<typeof DebtPayoff>;
 
@@ -269,6 +271,8 @@ export const CopilotImpact = z.object({
   flaggedCents: Cents,
   /** Months by which goals would have slipped, summed over the flagged checks, using each check's worst-hit goal. */
   goalMonthsAtStake: z.number().int().nonnegative(),
+  /** The last eight weeks, oldest first, each starting on a Monday: how many checks and how many flagged. */
+  weeks: z.array(z.object({ weekStart: IsoDate, checked: z.number().int().nonnegative(), flagged: z.number().int().nonnegative() })),
 });
 export type CopilotImpact = z.infer<typeof CopilotImpact>;
 

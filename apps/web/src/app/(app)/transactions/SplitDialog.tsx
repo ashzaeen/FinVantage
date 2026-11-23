@@ -4,6 +4,7 @@ import { useState } from "react";
 import { formatUsd, type SpendingCategory, type Transaction } from "@finvantage/contracts";
 import { api } from "@/lib/api";
 import { CategorySelect } from "./CategorySelect";
+import { buttonClass } from "@/components/ui/Button";
 
 /** Split one purchase into two parts that add up to it. The API checks the sum; nothing is saved until Split. */
 export function SplitDialog({ transaction, categories, onSplit, onClose }: {
@@ -58,8 +59,8 @@ export function SplitDialog({ transaction, categories, onSplit, onClose }: {
         {!valid && <p className="mt-3 text-xs text-muted">Part one must be above $0 and below {formatUsd(total)}.</p>}
         {error && <p role="alert" className="mt-3 text-sm" style={{ color: "var(--critical)" }}>{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
-          <button type="button" disabled={busy} onClick={onClose} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-muted">Cancel</button>
-          <button type="button" disabled={busy || !valid} onClick={() => void split()} className="min-h-11 rounded-xl px-5 text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--accent)" }}>{busy ? "Splitting…" : "Split"}</button>
+          <button type="button" disabled={busy} onClick={onClose} className={buttonClass({ variant: "quiet" })}>Cancel</button>
+          <button type="button" disabled={busy || !valid} onClick={() => void split()} className={buttonClass({ variant: "primary" })}>{busy ? "Splitting…" : "Split"}</button>
         </div>
       </div>
     </div>

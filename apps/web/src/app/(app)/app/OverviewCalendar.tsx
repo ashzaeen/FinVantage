@@ -15,18 +15,18 @@ function BalanceLine({ cal }: { cal: MoneyCalendar }) {
   const y = (v: number) => PAD.top + (1 - (v - lo) / (hi - lo)) * (H - PAD.top - PAD.bottom);
   const lowIndex = cal.balanceByDay.indexOf(cal.lowestCents);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`Projected checking balance over ${cal.days} days. Lowest point ${formatUsd(cal.lowestCents)} on ${shortDate(cal.lowestDate)}.`}>
+    <div className="overflow-x-auto"><svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[30rem] max-w-[44rem]" role="img" aria-label={`Projected checking balance over ${cal.days} days. Lowest point ${formatUsd(cal.lowestCents)} on ${shortDate(cal.lowestDate)}.`}>
       {[hi, lo].map((v) => (
         <g key={v}>
           <line x1={PAD.left} x2={W - PAD.right} y1={y(v)} y2={y(v)} stroke="var(--border)" />
           <text x={PAD.left - 6} y={y(v) + 4} textAnchor="end" fontSize={12} fill="var(--ink-muted)">{compactUsd(v)}</text>
         </g>
       ))}
-      {lo < 0 && <line x1={PAD.left} x2={W - PAD.right} y1={y(0)} y2={y(0)} stroke="var(--flow-out)" strokeDasharray="4 3" />}
+      {lo < 0 && <line x1={PAD.left} x2={W - PAD.right} y1={y(0)} y2={y(0)} stroke="var(--warning)" strokeDasharray="4 3" />}
       <polyline points={cal.balanceByDay.map((v, i) => `${x(i)},${y(v)}`).join(" ")} fill="none" stroke="var(--series-1)" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={x(lowIndex)} cy={y(cal.lowestCents)} r={3.5} fill="var(--flow-out)" />
+      <circle cx={x(lowIndex)} cy={y(cal.lowestCents)} r={3.5} fill="var(--warning)" />
       <text x={PAD.left} y={H - 3} fontSize={12} fill="var(--ink-muted)">{shortDate(cal.asOf)}</text>
-    </svg>
+    </svg></div>
   );
 }
 

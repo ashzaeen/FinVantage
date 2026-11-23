@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { formatUsd, type AdvisorVisual as Visual } from "@finvantage/contracts";
 import { compareRows, difference } from "@/lib/visualCompare";
 import { CardEvaluator } from "./CardEvaluator";
 import { GoalPlanner } from "./GoalPlanner";
 import { GrowthCompare } from "./GrowthCompare";
 import { LoanExplorer } from "./LoanExplorer";
+import { buttonClass } from "@/components/ui/Button";
 
 /** Picks the interactive visual for an Advisor answer. */
 function Single({ visual, id, onVisual }: { visual: Visual; id: string; onVisual?: (v: Visual) => void }) {
@@ -41,7 +43,7 @@ function Difference({ a, b }: { a: Visual; b: Visual }) {
                 <td className="py-1.5 text-right tabular-nums text-ink">{row.a === null ? "N/A" : formatUsd(row.a)}</td>
                 <td className="py-1.5 text-right tabular-nums text-ink">{row.b === null ? "N/A" : formatUsd(row.b)}</td>
                 <td className="py-1.5 text-right font-semibold tabular-nums text-ink">
-                  {diff === null ? "N/A" : diff === 0 ? "Same" : `${diff > 0 ? "▲ " : "▼ "}${formatUsd(Math.abs(diff))}`}
+                  {diff === null ? "N/A" : diff === 0 ? "Same" : <span className="inline-flex items-center gap-1">{diff > 0 ? <ArrowUp size={14} aria-hidden="true" /> : <ArrowDown size={14} aria-hidden="true" />}{formatUsd(Math.abs(diff))}</span>}
                   <span className="sr-only">{diff === null ? "" : diff > 0 ? " higher in B" : diff < 0 ? " lower in B" : ""}</span>
                 </td>
               </tr>
@@ -83,7 +85,7 @@ export function AdvisorVisual({ visual, id }: { visual: Visual; id: string }) {
         type="button"
         aria-pressed={comparing}
         onClick={() => { setSeed(a); setB(a); setComparing((on) => !on); }}
-        className="min-h-11 rounded-xl border border-line bg-raised px-4 text-sm font-semibold text-ink-secondary hover:border-accent-ink hover:text-accent-ink"
+        className={buttonClass({ variant: "secondary" })}
       >
         {comparing ? "Show One Scenario" : "Compare Two Scenarios"}
       </button>
