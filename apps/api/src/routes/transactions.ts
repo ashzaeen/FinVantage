@@ -45,8 +45,24 @@ export function registerTransactionRoutes(app: Hono<AppEnv>, deps: AppDeps) {
   });
 
   mount(app, deps, routes.listTransactions, ({ userId, query }) =>
-    deps.ledger.listTransactions(userId, query.limit),
+    deps.ledger.listTransactions(userId, query.limit, { includeHidden: query.includeHidden }),
   );
+
+  // Deleting a transaction the user entered removes it. A synced bank transaction is hidden instead:
+  // it leaves lists and totals, survives bank syncs, and can be restored.
+  mount(app, deps, routes.removeTransaction, async ({ userId, params }) => {
+    const result = await deps.ledger.removeTransaction(userId, params.id ?? "");
+    if (result === "not_found") throw new HttpError(404, "not_found", "Transaction not found.");
+    deps.live.publish(userId, { type: "transaction.added", transactionId: params.id ?? "" });
+    return { result };
+  });
+
+  mount(app, deps, routes.restoreTransaction, async ({ userId, params }) => {
+    const restored = await deps.ledger.restoreTransaction(userId, params.id ?? "");
+    if (!restored) throw new HttpError(404, "not_found", "There is no hidden transaction with that id.");
+    deps.live.publish(userId, { type: "transaction.added", transactionId: restored.id });
+    return restored;
+  });
 
   mount(app, deps, routes.addTransaction, async ({ userId, body }) => {
     // STUB(transactions): the LLM fallback for merchants with no category and no rule. Until then they are Unknown.

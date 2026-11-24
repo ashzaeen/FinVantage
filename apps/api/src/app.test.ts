@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   ApiError,
   createApiClient,
+  formatUsd,
   readClaims,
   type ApiClient,
   type CopilotContext,

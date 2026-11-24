@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { AdvisorCallProvider } from "./advisor/AdvisorCallProvider";
 import { ViewerProvider } from "@/components/ui/ViewerProvider";
 import { TOKEN_COOKIE } from "@/lib/token";
 import { isDemoViewer } from "@/lib/viewer";
@@ -23,7 +24,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const isDemo = isDemoViewer((await cookies()).get(TOKEN_COOKIE)?.value);
   return (
     <ViewerProvider isDemo={isDemo}>
-      <AppShell>{children}</AppShell>
+      {/* The voice call lives here, above every page, so opening another page does not end it. */}
+      <AdvisorCallProvider>
+        <AppShell>{children}</AppShell>
+      </AdvisorCallProvider>
     </ViewerProvider>
   );
 }

@@ -29,10 +29,10 @@ export function preferLinkedBanks(ledger: LedgerStore): LedgerStore {
         };
       }
       if (prop === "listTransactions") {
-        return async (userId: string, limit: number) => {
-          if (!(await hasLinkedBank(userId))) return target.listTransactions(userId, limit);
+        return async (userId: string, limit: number, options?: { includeHidden?: boolean }) => {
+          if (!(await hasLinkedBank(userId))) return target.listTransactions(userId, limit, options);
           // Ask for everything, then trim, so hidden demo transactions don't eat into the limit.
-          const all = await target.listTransactions(userId, Number.MAX_SAFE_INTEGER);
+          const all = await target.listTransactions(userId, Number.MAX_SAFE_INTEGER, options);
           return all.filter((t) => !isDemoCopy(userId, t.accountId)).slice(0, limit);
         };
       }

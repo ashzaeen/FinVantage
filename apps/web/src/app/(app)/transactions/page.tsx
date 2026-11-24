@@ -5,7 +5,8 @@ import { TransactionsClient } from "./TransactionsClient";
 export default async function TransactionsPage({ searchParams }: { searchParams: Promise<{ search?: string }> }) {
   const { search = "" } = await searchParams;
   const [transactions, accounts, categories, unusual] = await Promise.all([
-    api.listTransactions({ query: { limit: 500 } }),
+    // Hidden bank transactions come too, flagged `hidden`, for the Hidden tab. The client keeps them out of the main list and its totals.
+    api.listTransactions({ query: { limit: 500, includeHidden: "true" } }),
     api.listAccounts(),
     api.listSpendingCategories(),
     api.listUnusualCharges().catch(() => []),

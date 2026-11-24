@@ -1,6 +1,18 @@
 /** Whether the user saved or dismissed an Advisor draft card, remembered in this browser. */
 export type DraftState = "draft" | "saving" | "saved" | "dismissed" | "error";
 
+/** Safe to call from the server or a browser with storage blocked. */
+export const draftPersistence = {
+  get: (id: string): DraftState | null => {
+    try {
+      return remembered(id);
+    } catch {
+      return null;
+    }
+  },
+  set: (id: string, state: DraftState) => remember(id, state),
+};
+
 const STORAGE_KEY = "finvantage.advisor.drafts";
 
 function read(): Record<string, DraftState> {

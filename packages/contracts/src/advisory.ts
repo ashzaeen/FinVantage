@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Cents, Id, IsoDate, IsoDateTime, Probability } from "./common";
 import { AdvisorVisual } from "./advisor-visuals";
+import { ChangeDraft } from "./changes";
 import { NewGoal } from "./goal";
 import { LifeEventDraft } from "./life-event";
 import { GoalImpact } from "./simulation";
@@ -77,6 +78,25 @@ export const AdvisorAttachment = z.discriminatedUnion("kind", [
   }),
   /** An interactive result: a loan explorer, goal planner, growth comparison, or card evaluator. */
   z.object({ kind: z.literal("visual"), visual: AdvisorVisual }),
+  /** A page of the app to open. The href is always one of `APP_PAGES`, checked by `isAppHref`. On a call it opens by itself. */
+  z.object({ kind: z.literal("navigate"), href: z.string(), label: z.string() }),
+  /** A change the Advisor proposes to the user's data. Saved only when the user confirms it. */
+  ChangeDraft,
+  /**
+   * The figures behind something the Advisor read out, written in code from a tool result: a total
+   * and a short list. Shown beside the answer so a spoken or written number can be checked.
+   */
+  z.object({
+    kind: z.literal("data_card"),
+    title: z.string(),
+    /** Where the figures came from, such as "Spending, Oct 1 to Oct 31". */
+    source: z.string(),
+    /** `valueText` is shown instead of the dollar amount for a figure that is not money, such as a score or a share. */
+    total: z.object({ label: z.string(), valueCents: Cents, valueText: z.string().optional() }).nullable(),
+    rows: z.array(z.object({ label: z.string(), detail: z.string().nullable(), valueCents: Cents, valueText: z.string().optional() })).max(30),
+    /** Rows that exist but are not listed. */
+    moreCount: z.number().int().nonnegative(),
+  }),
   /** Web pages a search drew on. Figures from them are the publisher's, not FinVantage's. */
   z.object({
     kind: z.literal("web_sources"),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { speechChunks, type AdvisorMessage, type SpeakResponse } from "@finvantage/contracts";
+import { speakable, speechChunks, type AdvisorMessage, type SpeakResponse } from "@finvantage/contracts";
 import { api } from "@/lib/api";
 
 const STORAGE_KEY = "fv-voice-replies";
@@ -16,7 +16,7 @@ function browserSpeak(chunks: string[], isCurrent: () => boolean): Promise<void>
     let i = 0;
     const next = () => {
       if (!isCurrent() || i >= chunks.length) return resolve();
-      const utterance = new SpeechSynthesisUtterance(chunks[i++]);
+      const utterance = new SpeechSynthesisUtterance(speakable(chunks[i++]!));
       utterance.onend = next;
       utterance.onerror = () => resolve();
       synth.speak(utterance);
@@ -33,7 +33,7 @@ export interface SpokenReplies {
   /** Call inside the click that sends a message, so the browser lets audio play when the reply comes. */
   prime: () => void;
   /** Reads a saved reply aloud: Gemini's voice through the API, or the browser's voice if that fails. */
-  speak: (conversationId: string, message: AdvisorMessage) => Promise<void>;
+  speak: (conversationId: string, message: AdvisorMessage, options?: { local?: boolean }) => Promise<void>;
   stop: () => void;
 }
 
@@ -76,12 +76,22 @@ export function useSpokenReplies(): SpokenReplies {
     audio.current.play().catch(() => {});
   }, []);
 
-  const speak = useCallback(async (conversationId: string, message: AdvisorMessage) => {
+  const speak = useCallback(async (conversationId: string, message: AdvisorMessage, options: { local?: boolean } = {}) => {
     if (!audio.current) audio.current = new Audio();
     const player = audio.current;
     const id = ++run.current;
     const isCurrent = () => run.current === id;
     setSpeaking(true);
+
+    // Something the app said itself is not a saved reply, so the server cannot voice it.
+    if (options.local) {
+      try {
+        await browserSpeak(speechChunks(message.content), isCurrent);
+      } finally {
+        if (isCurrent()) setSpeaking(false);
+      }
+      return;
+    }
 
     const fetchPart = (part: number): Promise<SpeakResponse | null> =>
       api.speakAdvisorReply({ body: { conversationId, messageId: message.id, part } }).catch(() => null);

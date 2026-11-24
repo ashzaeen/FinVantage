@@ -108,15 +108,22 @@ export const ADVISOR_VOICE_STYLE = [
   "",
   "VOICE REPLY",
   "This answer will be read aloud. Reply in at most three short, plain sentences, about 50 words. No lists, no markdown, no symbols or emoji. Lead with the answer. If there is more detail, say it is on screen. Every figure rule above still applies: say only amounts from the brief, a tool result, or the user's own words, naturally, such as \"$1,240\".",
+  "LISTS: when the answer is a list (top expenses, subscriptions, categories, transactions), say the total and the top three only, then say the rest are on screen. A card with the figures is shown automatically. If the user asks you to read the rest, call the same tool again and read them: no more than five at a time, then offer to continue. For a past month or range, call get_period_totals and name the period you used in the answer.",
 ].join("\n");
 
 /** One interactive visual of each kind per answer: the last one wins, since it saw the most. */
 function uniqueVisuals(attachments: AdvisorAttachment[]): AdvisorAttachment[] {
   const lastVisual = new Map<string, number>();
+  const lastCard = new Map<string, number>();
   attachments.forEach((a, i) => {
     if (a.kind === "visual") lastVisual.set(a.visual.kind, i);
+    // The same figures read twice are one card. A comparison (two months) keeps both, up to three.
+    if (a.kind === "data_card") lastCard.set(`${a.title}|${a.source}`, i);
   });
-  return attachments.filter((a, i) => a.kind !== "visual" || lastVisual.get(a.visual.kind) === i);
+  const keepCards = new Set([...lastCard.values()].slice(-3));
+  return attachments.filter((a, i) =>
+    a.kind === "visual" ? lastVisual.get(a.visual.kind) === i : a.kind === "data_card" ? keepCards.has(i) : true,
+  );
 }
 
 function citationsFrom(results: AdvisorToolResult[]): AdvisorCitation[] {

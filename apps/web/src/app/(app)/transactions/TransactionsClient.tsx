@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState, useCallback, type FormEvent, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
 import { assignCategory, formatUsd, type Account, type CurrencyCode, type SpendingCategory, type UnusualCharge, type Transaction } from "@finvantage/contracts";
-import { ArrowDownLeft, ArrowUpRight, Check, Download, Plus, Repeat, Search, SearchX, X } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Check, Download, EyeOff, Plus, Repeat, Search, SearchX, Trash2, Undo2, X } from "lucide-react";
 import { CategoryIcon } from "@/components/spending/CategoryIcon";
 import { api } from "@/lib/api";
 import { TransactionSummaryBar } from "./TransactionSummaryBar";
@@ -135,7 +136,14 @@ function formatCurrency(amountCents: number, currency: CurrencyCode) {
 }
 
 export function TransactionsClient({ transactions: initialTransactions, accounts, categories: spendingCategories, initialQuery = "", unusual = {} }: { unusual?: Record<string, UnusualCharge>; transactions: Transaction[]; accounts: Account[]; categories: SpendingCategory[]; initialQuery?: string }) {
-  const [transactions, setTransactions] = useState(initialTransactions);
+  const router = useRouter();
+  const [transactions, setTransactions] = useState(() => initialTransactions.filter((t) => !t.hidden));
+  // Bank transactions the user hid: out of the list and every total, kept until restored.
+  const [hiddenRows, setHiddenRows] = useState(() => initialTransactions.filter((t) => t.hidden));
+  const [view, setView] = useState<"all" | "hidden">("all");
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [restoreError, setRestoreError] = useState("");
   const [query, setQuery] = useState(initialQuery);
   const [type, setType] = useState<"all" | "income" | "expense">("all");
   const [category, setCategory] = useState("all");
@@ -182,7 +190,8 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
       };
       if (isCreating) {
         const saved = await api.addTransaction({ body });
-        setTransactions((current) => [saved, ...current]);
+        // In date order, so a transaction dated before the newest one doesn't split a month into two groups.
+        setTransactions((current) => [saved, ...current].sort((a, b) => b.date.localeCompare(a.date)));
       } else {
         const saved = await api.updateTransaction({ params: { id: editing.id }, body });
         setTransactions((current) => current.map((transaction) => transaction.id === saved.id ? saved : transaction));
@@ -192,6 +201,36 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Could not save this transaction.");
     } finally { setSaving(false); }
+  }
+
+  // One you entered by hand is deleted. One from the bank is hidden instead, so it can come back.
+  async function removeEditing() {
+    if (!editing || removing) return;
+    setRemoving(true);
+    setSaveError("");
+    try {
+      const { result } = await api.removeTransaction({ params: { id: editing.id } });
+      const removed = editing;
+      setTransactions((current) => current.filter((t) => t.id !== removed.id));
+      if (result === "hidden") setHiddenRows((current) => [{ ...removed, hidden: true }, ...current]);
+      setEditing(null);
+      setConfirmRemove(false);
+      router.refresh(); // The cards beside the list are computed on the server and leave out hidden rows.
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not remove this transaction.");
+    } finally { setRemoving(false); }
+  }
+
+  async function restoreHidden(tx: Transaction) {
+    setRestoreError("");
+    try {
+      const restored = await api.restoreTransaction({ params: { id: tx.id } });
+      setHiddenRows((current) => current.filter((t) => t.id !== tx.id));
+      setTransactions((current) => [restored, ...current].sort((a, b) => b.date.localeCompare(a.date)));
+      router.refresh();
+    } catch {
+      setRestoreError("That transaction couldn't be restored. Try again.");
+    }
   }
 
   const [shown, setShown] = useState(PAGE_SIZE);
@@ -228,10 +267,25 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
     <section className="page-cascade-single overflow-hidden rounded-3xl border border-line bg-card shadow-[0_2px_12px_0_rgba(22,25,44,0.03)]">
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 sm:px-6">
         <div>
-          <h2 className="font-poppins text-base font-bold text-ink">All Transactions</h2>
+          <h2 className="font-poppins text-base font-bold text-ink">{view === "hidden" ? "Hidden Transactions" : "All Transactions"}</h2>
           <p aria-live="polite" className="mt-0.5 text-xs text-muted">
-            {hasFilters ? `${filtered.length} of ${transactions.length} match` : `${transactions.length} transactions`}
+            {view === "hidden"
+              ? `${hiddenRows.length} hidden`
+              : hasFilters ? `${filtered.length} of ${transactions.length} match` : `${transactions.length} transactions`}
           </p>
+          <div className="mt-2 inline-flex rounded-xl bg-inset p-1" role="group" aria-label="Transaction view">
+            {([["all", "All", transactions.length], ["hidden", "Hidden", hiddenRows.length]] as const).map(([value, name, count]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={view === value}
+                onClick={() => { setView(value); setRestoreError(""); }}
+                className={`min-h-9 rounded-lg px-3 py-1.5 text-sm font-medium transition max-lg:min-h-11 ${view === value ? "bg-card text-accent-ink shadow-sm" : "text-muted hover:text-ink"}`}
+              >
+                {name} <span className="text-xs tabular-nums text-muted">{count}</span>
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
         <button
@@ -262,6 +316,45 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
         </div>
       </div>
 
+      {view === "hidden" ? (
+        <div className="px-5 pb-5 pt-4 sm:px-6">
+          <p className="text-sm text-muted">Hidden transactions are left out of your totals and charts. They stay on file, and restoring one brings it back.</p>
+          {restoreError && <p role="alert" className="mt-3 text-sm text-loss">{restoreError}</p>}
+          {hiddenRows.length ? (
+            <ul className="mt-3 divide-y divide-line rounded-2xl border border-line">
+              {hiddenRows.map((tx) => (
+                <li key={tx.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-ink">{tx.merchant}</span>
+                    <span className="block truncate text-xs text-muted">
+                      {new Date(`${tx.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · {label(tx.subcategory ?? tx.category)}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-3">
+                    <span className={`text-sm font-semibold tabular-nums ${tx.amountCents >= 0 ? "text-gain" : "text-loss"}`}>
+                      {tx.amountCents >= 0 ? "+" : "−"}{formatUsd(Math.abs(tx.amountCents))}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => restoreHidden(tx)}
+                      aria-label={`Restore transaction from ${tx.merchant}`}
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-line bg-card px-3 text-sm font-semibold text-ink transition hover:border-accent-ink hover:text-accent-ink lg:min-h-9"
+                    >
+                      <Undo2 size={14} aria-hidden /> Restore
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="px-2 py-12 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-inset text-muted"><EyeOff size={22} aria-hidden /></div>
+              <h3 className="mt-3 font-poppins font-semibold text-ink">Nothing Hidden</h3>
+              <p className="mt-1 text-sm text-muted">Open a bank transaction and choose Hide Transaction, and it waits here until you restore it.</p>
+            </div>
+          )}
+        </div>
+      ) : <>
       <div className="flex flex-col gap-2 px-5 pb-4 pt-4 sm:px-6 lg:flex-row lg:items-center">
         <label className="relative min-w-0 flex-1">
           <span className="sr-only">Search Transactions</span>
@@ -326,7 +419,7 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
                     <li key={tx.id} className={`row-cascade ${selectMode && selected.has(tx.id) ? "rounded-xl bg-accent-soft" : ""}`} style={{ "--i": i } as CSSProperties}>
                       <button
                         type="button"
-                        onClick={() => { if (selectMode) { toggleSelected(tx.id); return; } setEditing(tx); setEditCategory(tx.subcategory ?? tx.category); setIsCreating(false); setSaveError(""); }}
+                        onClick={() => { if (selectMode) { toggleSelected(tx.id); return; } setEditing(tx); setEditCategory(tx.subcategory ?? tx.category); setIsCreating(false); setSaveError(""); setConfirmRemove(false); }}
                         aria-pressed={selectMode ? selected.has(tx.id) : undefined}
                         aria-label={selectMode ? `${selected.has(tx.id) ? "Deselect" : "Select"} transaction from ${tx.merchant}` : `Edit transaction from ${tx.merchant}`}
                         className="tile-lift grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 rounded-xl px-3 py-3 text-left hover:bg-inset focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-ink sm:grid-cols-[minmax(0,1fr)_140px_130px_96px] sm:gap-4 sm:px-4"
@@ -390,6 +483,7 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
           )}
         </div>
       )}
+      </>}
     </section>
     {selectMode && selected.size > 0 && (
       <BulkEditBar
@@ -431,6 +525,25 @@ export function TransactionsClient({ transactions: initialTransactions, accounts
             {!isCreating && editing.currency === "USD" && Math.abs(editing.amountCents) >= 2 && (
               <button type="button" disabled={saving} onClick={() => { setSplitting(editing); setEditing(null); }} className="min-h-11 rounded-xl border border-line bg-raised text-sm font-semibold text-ink-secondary">Split This Purchase</button>
             )}
+            {!isCreating && (confirmRemove ? (
+              <div role="group" aria-label="Confirm removing this transaction" className="rounded-xl border border-line bg-inset p-4">
+                <p className="text-sm text-ink">
+                  {editing.manual
+                    ? "Delete this transaction? It was added by you, so it is removed for good."
+                    : "Hide this transaction? It comes from your bank, so it stays on file but leaves your totals. Restore it any time from the Hidden tab."}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" disabled={removing} onClick={removeEditing} className="min-h-11 rounded-xl border border-critical bg-critical-bg px-4 text-sm font-bold text-loss disabled:opacity-60">
+                    {removing ? "Working…" : editing.manual ? "Yes, Delete" : "Yes, Hide"}
+                  </button>
+                  <button type="button" disabled={removing} onClick={() => setConfirmRemove(false)} className="min-h-11 rounded-xl border border-line bg-raised px-4 text-sm font-semibold text-ink-secondary">Keep It</button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" disabled={saving} onClick={() => setConfirmRemove(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line bg-raised text-sm font-semibold text-loss hover:bg-critical-bg">
+                {editing.manual ? <><Trash2 size={15} aria-hidden /> Delete Transaction</> : <><EyeOff size={15} aria-hidden /> Hide Transaction</>}
+              </button>
+            ))}
           </div>
         </form>
       </div>

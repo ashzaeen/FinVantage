@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AdvisorVisual, AdvisorVisualRequest } from "./advisor-visuals";
 import { SpeakRequest, SpeakResponse } from "./speech";
+import { PeriodQuery, PeriodSummary } from "./period";
 import { Account, BankItemSummary, CreateTransaction, NetWorth, NewAccount, NewTransaction, Transaction } from "./account";
 import {
   EmailSchedule,
@@ -149,9 +150,24 @@ export const routes = {
   listTransactions: route({
     method: "GET",
     path: "/v1/transactions",
-    query: z.object({ limit: z.coerce.number().int().positive().max(500).default(50) }),
+    query: z.object({
+      limit: z.coerce.number().int().positive().max(500).default(50),
+      /** Also return the transactions the user hid. They are flagged `hidden`. */
+      includeHidden: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+    }),
     response: z.array(Transaction),
   }),
+  /**
+   * Delete a transaction. One the user entered by hand is deleted for real; one synced from the
+   * bank is hidden instead (left out of lists and totals, kept through syncs) and can be restored.
+   */
+  removeTransaction: route({
+    method: "DELETE",
+    path: "/v1/transactions/:id",
+    response: z.object({ result: z.enum(["deleted", "hidden"]) }),
+  }),
+  /** Brings a hidden bank transaction back into lists and totals. */
+  restoreTransaction: route({ method: "POST", path: "/v1/transactions/:id/restore", response: Transaction }),
   addTransaction: route({
     method: "POST",
     path: "/v1/transactions",
@@ -480,6 +496,13 @@ export const routes = {
   getCreditCards: route({ method: "GET", path: "/v1/credit/cards", response: CreditCardsOverview }),
   /** The quarter marks of each goal. */
   getGoalMilestones: route({ method: "GET", path: "/v1/goals/milestones", response: z.array(GoalMilestones) }),
+  /** What was spent, earned or saved between two dates, optionally for one category or merchant. The same rules as the monthly summary. */
+  getPeriodSummary: route({
+    method: "GET",
+    path: "/v1/spending/period",
+    query: PeriodQuery,
+    response: PeriodSummary,
+  }),
   /** How a month's spending falls across days, weekdays and merchants. `month` defaults to the current one. */
   getSpendingPatterns: route({
     method: "GET",

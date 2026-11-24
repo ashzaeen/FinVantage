@@ -1,9 +1,12 @@
 "use client";
 
 import { Fragment, useRef, useState, type ReactNode } from "react";
-import { Calculator, Globe, ShieldCheck, Sparkles } from "lucide-react";
-import type { AdvisorAttachment, AdvisorMessage as Message } from "@finvantage/contracts";
+import Link from "next/link";
+import { ArrowRight, Calculator, Globe, ShieldCheck, Sparkles } from "lucide-react";
+import { isAppHref, type AdvisorAttachment, type AdvisorMessage as Message } from "@finvantage/contracts";
 import { MockedBadge } from "@/components/ui/MockedBadge";
+import { ChangeDraftCard } from "./ChangeDraftCard";
+import { DataCard } from "./DataCard";
 import { GoalDraftCard } from "./GoalDraftCard";
 import { LifeEventDraftCard } from "./LifeEventDraftCard";
 import { AdvisorVisual } from "./visuals/AdvisorVisual";
@@ -133,7 +136,17 @@ export function AdvisorMessage({ message }: { message: Message }) {
               ? <AdvisorVisual key={i} id={`${message.id}:${i}`} visual={attachment.visual} />
               : attachment.kind === "goal_draft"
               ? <GoalDraftCard key={i} id={`${message.id}:${i}`} goal={attachment.goal} probabilityLow={attachment.probabilityLow} probabilityHigh={attachment.probabilityHigh} goalChanges={attachment.goalChanges} />
-              : null,
+              : attachment.kind === "data_card"
+                ? <DataCard key={i} card={attachment} />
+                : attachment.kind === "change_draft"
+                  ? <ChangeDraftCard key={i} id={`${message.id}:${i}`} draft={attachment} />
+                  : attachment.kind === "navigate" && isAppHref(attachment.href)
+                    ? (
+                      <Link key={i} href={attachment.href} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-line bg-card px-4 text-sm font-semibold text-accent-ink transition hover:bg-inset">
+                        Open {attachment.label} <ArrowRight size={15} aria-hidden />
+                      </Link>
+                    )
+                    : null,
         )}
         {(() => {
           const calculations = message.attachments.filter((a): a is Calculation => a.kind === "calculation");

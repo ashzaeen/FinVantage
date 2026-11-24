@@ -3,7 +3,7 @@ import { createApiClient, formatUsd, type ApiClient, type SimulationRun } from "
 import type { AppDeps } from "../deps";
 import type { AppEnv } from "../mount";
 
-/** The routes the Advisor may read. All are GETs, so nothing it does can change the user's data. */
+/** The routes the Advisor may read. All are GETs, except `creditWhatIf`, a POST that only computes and saves nothing. */
 const READ_ROUTES = [
   "getMe",
   "listAccounts",
@@ -23,9 +23,21 @@ const READ_ROUTES = [
   "getBucketSummary",
   "getIncomeSummary",
   "getSpendingBreakdown",
+  "getPeriodSummary",
   "listTopExpenses",
   "getPortfolio",
   "getCreditScore",
+  "getSafeToSpend",
+  "getMoneyCalendar",
+  "getAttention",
+  "getHealthScore",
+  "getSpendingPace",
+  "listUnusualCharges",
+  "getDebtPayoff",
+  "getCreditCards",
+  "listBudgetSuggestions",
+  "listCategoryRules",
+  "creditWhatIf",
 ] as const satisfies ReadonlyArray<keyof ApiClient>;
 
 export type AdvisorReadApi = Pick<ApiClient, (typeof READ_ROUTES)[number]> & {
