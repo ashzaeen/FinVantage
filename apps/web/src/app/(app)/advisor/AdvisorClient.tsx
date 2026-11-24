@@ -11,6 +11,7 @@ import {
   MessagesSquare,
   Mic,
   PanelLeft,
+  Phone,
   Plane,
   Sparkles,
   Square,
@@ -20,11 +21,14 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { ApiError, type AdvisorConversation, type AdvisorMessage as Message, type Situation } from "@finvantage/contracts";
+import { type AdvisorConversation, type AdvisorMessage as Message, type Situation } from "@finvantage/contracts";
 import { api } from "@/lib/api";
 import { appendDictation } from "@/lib/dictation";
+import { sendErrorText } from "@/lib/advisor-errors";
 import { useSpeechRecognition } from "@/lib/useSpeechRecognition";
 import { useSpokenReplies } from "@/lib/useSpokenReplies";
+import { changes } from "./change-drafts";
+import { useAdvisorCall } from "./AdvisorCallProvider";
 import type { PersonalPrompt } from "@/lib/advisorPrompts";
 import { AdvisorMessage } from "./AdvisorMessage";
 import { buttonClass } from "@/components/ui/Button";
@@ -61,16 +65,6 @@ function openingQuestion(situation: Situation): string {
   return situation.question;
 }
 
-/** What went wrong sending a message, in words the visitor can act on. */
-function sendErrorText(err: unknown): string {
-  if (err instanceof ApiError) {
-    if (err.status === 429) return "You're sending messages quickly. Wait a minute, then try again.";
-    if (err.status === 401 || err.code === "demo_read_only") return "Your session ended. Reload the page to start a new one, then send your message again.";
-    if (err.status === 400 || err.status === 413) return "That message couldn't be sent. Try shortening or rewording it.";
-  }
-  return "I couldn't reach the Advisor. Please try sending your message again.";
-}
-
 function setConversationInUrl(id: string | null) {
   const url = new URL(window.location.href);
   url.search = id ? `?c=${encodeURIComponent(id)}` : "";
@@ -103,6 +97,7 @@ export function AdvisorClient({ initialConversationId, situation, personalPrompt
     setShowList(false);
     try {
       const detail = await api.getAdvisorConversation({ params: { id } });
+      activeRef.current = detail.id;
       setActiveId(detail.id);
       setMessages(detail.messages);
       setConversationInUrl(detail.id);
@@ -115,9 +110,17 @@ export function AdvisorClient({ initialConversationId, situation, personalPrompt
   // Replies are read aloud only after the visitor dictated, and only while the speaker is on.
   const { enabled: repliesOn, setEnabled: setRepliesOn, speaking, prime, speak: speakReply, stop: stopReply } = useSpokenReplies();
 
-  const send = useCallback(async (text: string, conversationId: string | null, newSituation: Situation | null = null, voice = false) => {
+  // The call sends from a long-lived closure, so it reads the conversation id from here.
+  const activeRef = useRef<string | null>(null);
+
+  const send = useCallback(async (
+    text: string,
+    conversationId: string | null,
+    newSituation: Situation | null = null,
+    { voice = false, autoSpeak = voice, restoreDraft = true }: { voice?: boolean; autoSpeak?: boolean; restoreDraft?: boolean } = {},
+  ): Promise<{ conversationId: string; reply: Message } | { error: string }> => {
     const content = text.trim();
-    if (!content) return;
+    if (!content) return { error: "" };
     setLoading(true);
     setError("");
     const pending: Message = {
@@ -137,6 +140,7 @@ export function AdvisorClient({ initialConversationId, situation, personalPrompt
       if (!id) {
         const created = await api.createAdvisorConversation({ body: { situation: newSituation } });
         id = created.id;
+        activeRef.current = id;
         setActiveId(id);
         setConversationInUrl(id);
       }
@@ -144,11 +148,14 @@ export function AdvisorClient({ initialConversationId, situation, personalPrompt
       setMessages((m) => [...m.filter((x) => x.id !== "pending"), turn.userMessage, turn.reply]);
       scrollDown();
       void refreshList();
-      if (voice) void speakReply(id, turn.reply);
+      if (voice && autoSpeak) void speakReply(id, turn.reply);
+      return { conversationId: id, reply: turn.reply };
     } catch (err) {
       setMessages((m) => m.filter((x) => x.id !== "pending"));
-      setDraft(content);
-      setError(sendErrorText(err));
+      if (restoreDraft) setDraft(content);
+      const message = sendErrorText(err);
+      setError(message);
+      return { error: message };
     } finally {
       setLoading(false);
     }
@@ -209,16 +216,51 @@ export function AdvisorClient({ initialConversationId, situation, personalPrompt
     dictated.current = false;
     stopReply();
     if (voice) prime(); // Inside this click, so the browser lets the reply play.
-    void send(text, activeId, null, voice);
+    void send(text, activeId, null, { voice, autoSpeak: voice });
   }
 
+  // The voice call runs in the app layout, so it keeps going when another page opens. This page
+  // only starts it, and shows what was said once each turn is saved.
+  const call = useAdvisorCall();
+  function startCall() {
+    speech.cancel();
+    dictationLive.current = false;
+    stopReply();
+    setError("");
+    call.start({ conversationId: activeRef.current }); // Inside this click, so the browser lets the voice play.
+  }
+  useEffect(
+    () =>
+      call.subscribe((event) => {
+        if (!event.conversationId) return;
+        // Follow the call's chat unless the visitor has moved to a different one.
+        if (activeRef.current === null || activeRef.current === event.conversationId) void open(event.conversationId);
+        void refreshList();
+      }),
+    [call, open, refreshList],
+  );
+
+  // Leaving a chat that was just deleted, from a tap on its card or a spoken request.
+  const startNewRef = useRef<() => void>(() => {});
+  useEffect(
+    () =>
+      changes.onApplied((request) => {
+        if (request.action !== "delete_conversation") return;
+        if (request.id === activeRef.current) startNewRef.current();
+        void refreshList();
+      }),
+    [refreshList],
+  );
+
   function startNew() {
+    activeRef.current = null;
     setActiveId(null);
     setMessages([]);
     setError("");
     setShowList(false);
     setConversationInUrl(null);
   }
+  startNewRef.current = startNew;
 
   async function remove(id: string) {
     try {
@@ -319,6 +361,11 @@ export function AdvisorClient({ initialConversationId, situation, personalPrompt
                   <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted">
                     Ask about anything in FinVantage: a budget, a goal, a report, or a purchase you&apos;re weighing. Every figure comes from your data.
                   </p>
+                  {speech.supported && (
+                    <button type="button" onClick={startCall} className={`${buttonClass()} mt-4`}>
+                      <Phone size={16} aria-hidden /> Talk to Your Advisor
+                    </button>
+                  )}
                 </div>
                 {personalPrompts.length > 0 && (
                   <section aria-labelledby="personal-prompts" className="mt-7">
@@ -415,10 +462,21 @@ export function AdvisorClient({ initialConversationId, situation, personalPrompt
               {speech.supported && (
                 <button
                   type="button"
+                  onClick={startCall}
+                  aria-label="Start Voice Call"
+                  title="Talk to your Advisor"
+                  className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted transition hover:bg-accent-soft hover:text-accent-ink max-lg:h-11 max-lg:w-11"
+                >
+                  <Phone size={18} aria-hidden />
+                </button>
+              )}
+              {speech.supported && (
+                <button
+                  type="button"
                   onClick={() => (speaking ? stopReply() : setRepliesOn(!repliesOn))}
                   aria-label={speaking ? "Stop Speaking" : repliesOn ? "Mute Spoken Replies" : "Read Replies Aloud"}
                   title={speaking ? "Stop speaking" : repliesOn ? "Replies are read aloud after you dictate. Click to mute." : "Replies are muted. Click to read them aloud after you dictate."}
-                  className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition max-lg:h-11 max-lg:w-11 ${
+                  className={`relative hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl transition sm:flex max-lg:h-11 max-lg:w-11 ${
                     speaking ? "bg-accent-soft text-accent-ink" : "text-muted hover:bg-accent-soft hover:text-accent-ink"
                   }`}
                 >
@@ -435,6 +493,17 @@ export function AdvisorClient({ initialConversationId, situation, personalPrompt
                 <ArrowUp size={18} aria-hidden />
               </button>
             </form>
+            {speech.supported && (
+              // The speaker button in the row needs the room on phones, so its job moves here.
+              <button
+                type="button"
+                onClick={() => (speaking ? stopReply() : setRepliesOn(!repliesOn))}
+                className="mx-auto mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted hover:text-accent-ink sm:hidden"
+              >
+                {repliesOn ? <Volume2 size={14} aria-hidden /> : <VolumeX size={14} aria-hidden />}
+                {speaking ? "Stop Speaking" : `Spoken Replies: ${repliesOn ? "On" : "Off"}`}
+              </button>
+            )}
             {(speech.listening || speech.error) && (
               <p role={speech.error ? "alert" : "status"} className={`mt-2 text-center text-xs ${speech.error ? "text-loss" : "text-muted"}`}>
                 {speech.error || "Listening. Press the stop button when you're done, then review and send. Your browser's speech service hears the audio."}

@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { Hono } from "hono";
-import { formatUsd, routes, speechChunks, type AdvisorMessage, type Situation, type SpeakResponse } from "@finvantage/contracts";
+import { formatUsd, routes, speakable, speechChunks, speechForHref, type AdvisorMessage, type Situation, type SpeakResponse } from "@finvantage/contracts";
 import { generateOptions, runAdvisorTurn } from "@finvantage/llm";
 import { buildAdvisorBrief } from "../advisor/brief";
+import { voiceConfirmation } from "../advisor/changes";
 import { advisorReadApi, forModel, oddsRange, type AdvisorReadApi } from "../advisor/read-api";
 import { advisorTools } from "../advisor/tools";
 import { buildVisual } from "../advisor/visuals";
@@ -59,6 +60,7 @@ export async function advisorAnswer(
   history: Array<{ role: "user" | "assistant"; content: string }>,
   situation: Situation | null,
   voice = false,
+  conversationId: string | null = null,
 ) {
   const api = advisorReadApi(app, deps, userId, authorization);
   const [brief, openedAbout, user] = await Promise.all([
@@ -70,7 +72,7 @@ export async function advisorAnswer(
   const userTexts = history.filter((m) => m.role === "user").map((m) => m.content);
   // Account names are bank product names ("PNC Checking"), which are fine to search for.
   const privateNames = [user?.displayName ?? "", user?.email ?? ""].filter(Boolean);
-  const tools = advisorTools({ api, deps, userId, brief, userTexts, privateNames });
+  const tools = advisorTools({ api, deps, userId, brief, userTexts, privateNames, conversationId });
   const result = await runAdvisorTurn(deps.llm, {
     brief: brief.brief,
     briefLines: brief.lines,
@@ -153,13 +155,19 @@ export function registerAdvisorRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     const history = [...earlier, userMessage]
       .slice(-HISTORY_LIMIT)
       .map((m) => ({ role: m.role, content: m.content }));
-    const result = await advisorAnswer(app, deps, userId, authorization, history, conversation.situation, body.modality === "voice");
+    const result = await advisorAnswer(app, deps, userId, authorization, history, conversation.situation, body.modality === "voice", conversation.id);
 
+    // A change the Advisor proposed is read back from the draft itself on a voice turn, not in the
+    // model's words, so what is said always has every figure and how to answer.
+    const proposed = body.modality === "voice" ? [...result.attachments].reverse().find((a) => a.kind === "change_draft") : undefined;
+    // Opening a page is said in the app's own words too: "Opening Subscriptions."
+    const opening = body.modality === "voice" && !proposed ? [...result.attachments].reverse().find((a) => a.kind === "navigate") : undefined;
+    const openingSpeech = opening && opening.kind === "navigate" ? speechForHref(opening.href) : null;
     const reply = await deps.docs.appendAdvisorMessage(userId, {
       id: randomUUID(),
       conversationId: conversation.id,
       role: "assistant",
-      content: result.answer,
+      content: proposed && proposed.kind === "change_draft" ? voiceConfirmation(proposed) : (openingSpeech ?? result.answer),
       source: result.source,
       citations: result.citations,
       attachments: result.attachments,
@@ -202,7 +210,8 @@ export function registerAdvisorRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     if (cached) return cached;
     let audio;
     try {
-      audio = await deps.llm.speak({ text });
+      // Said with amounts and dates in spoken form; the saved reply keeps the exact text.
+      audio = await deps.llm.speak({ text: speakable(text) });
     } catch (error) {
       console.warn(`Advisor speech: ${error instanceof Error ? error.message : String(error)}`);
       throw new HttpError(503, "voice_unavailable", "Spoken replies are not available right now.");

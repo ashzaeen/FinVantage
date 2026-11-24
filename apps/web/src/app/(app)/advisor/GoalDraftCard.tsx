@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Target } from "lucide-react";
+import { Target, Undo2 } from "lucide-react";
 import { formatUsd, type GoalImpact, type NewGoal } from "@finvantage/contracts";
 import { ProbabilityRange } from "@/components/finance/ProbabilityRange";
-import { api } from "@/lib/api";
-import { remembered, remember, type DraftState } from "./draft-state";
+import { changes, useCanUndo, useChangeState } from "./change-drafts";
 import { longDate } from "@/lib/format";
 import { buttonClass } from "@/components/ui/Button";
 
@@ -26,28 +24,12 @@ export function GoalDraftCard({
   probabilityHigh: number | null;
   goalChanges: GoalImpact[];
 }) {
-  const [state, setState] = useState<DraftState>("draft");
-
-  useEffect(() => {
-    const prior = remembered(id);
-    if (prior === "saved" || prior === "dismissed") setState(prior);
-  }, [id]);
-
-  async function confirm() {
-    setState("saving");
-    try {
-      await api.createGoal({ body: goal });
-      setState("saved");
-      remember(id, "saved");
-    } catch {
-      setState("error");
-    }
-  }
-
-  function dismiss() {
-    setState("dismissed");
-    remember(id, "dismissed");
-  }
+  // The same state a spoken yes uses, so confirming here or by voice saves the goal once.
+  const change = useChangeState(id);
+  const canUndo = useCanUndo(change);
+  const state = change.phase === "undoing" ? "saving" : change.phase;
+  const confirm = () => void changes.confirm(id, { action: "create_goal", body: goal });
+  const dismiss = () => changes.dismiss(id);
 
   if (state === "dismissed") return <p className="pl-1 text-xs text-muted">Draft dismissed. Nothing was saved.</p>;
 
@@ -84,7 +66,7 @@ export function GoalDraftCard({
         </div>
       )}
 
-      {state !== "saved" ? (
+      {state !== "saved" && state !== "undone" ? (
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -105,7 +87,14 @@ export function GoalDraftCard({
           {state === "error" && <p role="alert" className="text-xs text-loss">That didn&apos;t save. Please try again.</p>}
         </div>
       ) : (
-        <p className="mt-3 text-xs text-gain">Saved to your goals.</p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <p className={`text-xs ${state === "saved" ? "text-gain" : "text-muted"}`}>{state === "saved" ? "Saved to your goals." : "Undone. The goal was removed again."}</p>
+          {canUndo && (
+            <button type="button" onClick={() => void changes.undo(id)} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-line px-3 text-sm font-medium text-ink transition hover:bg-inset lg:min-h-9">
+              <Undo2 size={14} aria-hidden /> Undo
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

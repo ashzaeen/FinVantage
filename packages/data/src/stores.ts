@@ -50,9 +50,17 @@ export interface LedgerStore {
   createAccount(userId: string, account: NewAccount): Promise<Account>;
   updateAccount(userId: string, id: string, account: NewAccount): Promise<Account | null>;
   replaceAccounts(userId: string, accounts: Account[]): Promise<void>;
-  listTransactions(userId: string, limit: number): Promise<Transaction[]>;
+  /** Newest first. Transactions the user hid are left out unless `includeHidden`, so every total skips them. Rows carry `manual` and `hidden` when true. */
+  listTransactions(userId: string, limit: number, options?: { includeHidden?: boolean }): Promise<Transaction[]>;
   addTransaction(transaction: Omit<Transaction, "id">): Promise<Transaction>;
   updateTransaction(userId: string, id: string, transaction: Omit<Transaction, "id">): Promise<Transaction | null>;
+  /**
+   * A transaction the user entered by hand is deleted. A synced bank one is hidden instead, and
+   * stays hidden through syncs. `not_found` when it is not theirs.
+   */
+  removeTransaction(userId: string, id: string): Promise<"deleted" | "hidden" | "not_found">;
+  /** Un-hides a bank transaction. Null when there is no hidden one with that id. */
+  restoreTransaction(userId: string, id: string): Promise<Transaction | null>;
   listGoals(userId: string): Promise<Goal[]>;
   createGoal(userId: string, goal: NewGoal): Promise<Goal>;
   updateGoal(userId: string, id: string, goal: NewGoal): Promise<Goal | null>;

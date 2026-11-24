@@ -112,11 +112,21 @@ export const Transaction = z.object({
   categoryDetailed: z.string().nullable().default(null),
   paymentChannel: z.enum(["online", "in_store", "other"]).nullable().default(null),
   logoUrl: z.string().nullable().default(null),
+  /**
+   * Entered by hand in FinVantage, so it can be deleted for real. Worked out when listing, never
+   * stored or accepted from a request. Absent means false.
+   */
+  manual: z.boolean().optional(),
+  /**
+   * A synced bank transaction the user hid. Hidden rows are left out of lists and totals unless
+   * asked for, and stay hidden through bank syncs. Worked out when listing. Absent means false.
+   */
+  hidden: z.boolean().optional(),
 });
 export type Transaction = z.infer<typeof Transaction>;
 
 /** Fields accepted when creating or editing a transaction; normalized values are server-owned. */
-export const NewTransaction = Transaction.omit({ id: true, category: true, isRecurring: true, originalAmountCents: true, exchangeRateToUsd: true, exchangeRateDate: true });
+export const NewTransaction = Transaction.omit({ id: true, category: true, isRecurring: true, originalAmountCents: true, exchangeRateToUsd: true, exchangeRateDate: true, manual: true, hidden: true });
 export type NewTransaction = z.infer<typeof NewTransaction>;
 
 export const CreateTransaction = NewTransaction.extend({

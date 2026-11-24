@@ -195,6 +195,18 @@ const appTransaction = table(
   },
 );
 
+/**
+ * Bank transactions the user hid. The bank's row stays as it is; reads leave a hidden one out of
+ * lists and totals. A row here survives bank syncs, so a hidden transaction stays hidden.
+ */
+const hiddenTransaction = table(
+  { name: "hidden_transaction" },
+  {
+    transactionId: t.string().primaryKey(),
+    userId: t.string().index("btree"),
+  },
+);
+
 // ── Bank data, mirroring Plaid ──────────────────────────────────────────────
 
 /** One bank login (a Plaid Item). The access token is never stored here. */
@@ -373,6 +385,7 @@ const spacetimedb = schema({
   balanceSnapshot,
   appAccount,
   appTransaction,
+  hiddenTransaction,
   bankItem,
   bankItemSecret,
   bankAccount,
@@ -632,6 +645,24 @@ export const saveAppTransaction = spacetimedb.reducer({ transaction: appTransact
   else ctx.db.appTransaction.insert(row);
 });
 
+/** Deletes a hand-entered transaction. The caller has checked it is not a bank one. */
+export const deleteAppTransaction = spacetimedb.reducer({ id: t.string() }, (ctx, { id }) => {
+  requireAdmin(ctx);
+  ctx.db.appTransaction.id.delete(id);
+});
+
+/** Hides a bank transaction for a user. Hiding twice is fine. */
+export const hideTransaction = spacetimedb.reducer({ userId: t.string(), transactionId: t.string() }, (ctx, { userId, transactionId }) => {
+  requireAdmin(ctx);
+  if (!ctx.db.hiddenTransaction.transactionId.find(transactionId)) ctx.db.hiddenTransaction.insert({ transactionId, userId });
+});
+
+/** Brings a hidden transaction back. */
+export const unhideTransaction = spacetimedb.reducer({ transactionId: t.string() }, (ctx, { transactionId }) => {
+  requireAdmin(ctx);
+  ctx.db.hiddenTransaction.transactionId.delete(transactionId);
+});
+
 // ── Bank sync, one call per Plaid endpoint ───────────────────────────────────
 
 export const upsertBankItem = spacetimedb.reducer(
@@ -759,6 +790,7 @@ export const loadProfile = spacetimedb.reducer(
     for (const row of [...ctx.db.budget.userId.filter(userId)]) ctx.db.budget.id.delete(row.id);
     for (const row of [...ctx.db.accountDetail.userId.filter(userId)]) ctx.db.accountDetail.accountId.delete(row.accountId);
     for (const row of [...ctx.db.appTransaction.userId.filter(userId)]) ctx.db.appTransaction.id.delete(row.id);
+    for (const row of [...ctx.db.hiddenTransaction.userId.filter(userId)]) ctx.db.hiddenTransaction.transactionId.delete(row.transactionId);
     for (const row of [...ctx.db.appAccount.userId.filter(userId)]) ctx.db.appAccount.id.delete(row.id);
 
     putUser(ctx, user);
@@ -794,6 +826,7 @@ export const deleteUserData = spacetimedb.reducer({ userId: t.string() }, (ctx, 
   for (const row of [...ctx.db.budget.userId.filter(userId)]) ctx.db.budget.id.delete(row.id);
   for (const row of [...ctx.db.accountDetail.userId.filter(userId)]) ctx.db.accountDetail.accountId.delete(row.accountId);
   for (const row of [...ctx.db.appTransaction.userId.filter(userId)]) ctx.db.appTransaction.id.delete(row.id);
+  for (const row of [...ctx.db.hiddenTransaction.userId.filter(userId)]) ctx.db.hiddenTransaction.transactionId.delete(row.transactionId);
   for (const row of [...ctx.db.appAccount.userId.filter(userId)]) ctx.db.appAccount.id.delete(row.id);
   for (const row of [...ctx.db.balanceSnapshot.userId.filter(userId)]) ctx.db.balanceSnapshot.id.delete(row.id);
   for (const row of [...ctx.db.liveEvent.userId.filter(userId)]) ctx.db.liveEvent.id.delete(row.id);
@@ -855,6 +888,7 @@ export const applyBankUpdate = spacetimedb.reducer(
     for (const id of args.removedTransactionIds) {
       ctx.db.bankTransaction.transactionId.delete(id);
       ctx.db.appTransaction.id.delete(id);
+      ctx.db.hiddenTransaction.transactionId.delete(id);
     }
     replaceItemLiabilities(ctx, item.itemId, args.liabilities.filter((l) => accounts.has(l.accountId)).map((l) => ({ ...l, userId })));
     replaceItemStreams(ctx, item.itemId, args.streams.filter((s) => accounts.has(s.accountId)).map((s) => ({ ...s, userId })));

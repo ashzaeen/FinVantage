@@ -4,7 +4,16 @@ Read `docs/workstreams/voice.md` (the plan and rules) and the "Advisor voice" se
 
 ## State in one paragraph
 
-Phase 1 (dictation) and phase 2 (spoken replies) are built, tested and verified in a browser. Phase 3 (the voice call) is **half built**: the call's logic is written and tested, but there is **no UI yet and nothing is wired into the Advisor page**. `npm run check` passed after phase 2. After the phase 3 files were added, `npm run typecheck -w @finvantage/web` and `npm test -w @finvantage/web` passed; the full `npm run check` has not been re-run. **Nothing is committed.** The working tree also holds unrelated changes by teammates (charts, planning, insights, theme work): do not revert or commit those as part of this work.
+Phases 1 (dictation), 2 (spoken replies) and 3 (the voice call) are built. `npm run check` passes and the theme audit count did not rise. Phase 3 was driven end to end in headless Edge with a fake microphone and a fake speech engine at 320, 390 and 1280px, in light and dark: opening the sheet, hearing, silence ending a turn, the reply captioned and spoken in chunks, Mute, tap to send, Space to interrupt, the 30 second warning, the 5 minute goodbye and close, and Esc. **Nothing is committed.** The working tree also holds unrelated changes by teammates: do not revert or commit those as part of this work.
+
+Phase 4 (reading data by voice) and phase 5 (changing data by voice, plus eight read-only briefings) are built too. `npm run check` passes. Nothing is committed, and the working tree also holds unrelated changes by teammates: do not revert or commit those as part of this work. Where to look:
+
+- **Read side:** `apps/api/src/advisor/briefings.ts`, `cards.ts`, `GET /v1/spending/period` and `get_period_totals`, `speakable()` in `packages/contracts/src/speech.ts`.
+- **Write side:** `packages/contracts/src/changes.ts` (the `change_draft` attachment), `apps/api/src/advisor/changes.ts`, `changes-more.ts`, `changes-tap.ts` (tools that only propose), `apps/web/src/lib/changes.ts` (saves a confirmed draft and builds its undo), `apps/web/src/app/(app)/advisor/change-store.ts`, `ChangeDraftCard.tsx`, `apps/web/src/lib/voice-intents.ts`, and `answerByVoice` in `AdvisorClient.tsx`.
+- **Safety net:** `apps/api/src/advisor/voice-parity.test.ts` fails when a write route has no tool and no stated exclusion.
+- **Also built along the way:** deleting and hiding transactions (a Hidden tab). The Spacetime module needs `spacetime publish` before hide and delete work on Maincloud (`apps/spacetime/README.md`).
+
+Phase 6 (voice navigation) is built too: the call now lives in `AdvisorCallProvider` in the app layout and follows you as a pill; see `docs/DECISIONS.md`, "phase 6". **All six phases are built.** What remains is real-world checking (a real microphone, real Gemini choosing the tools, Gemini's voice with `GEMINI_MODEL_TTS`) and small follow-ups: a way to start a call from pages other than the Advisor, and deep links to a specific goal or subscription.
 
 ## What exists
 
@@ -21,8 +30,10 @@ Phase 1 (dictation) and phase 2 (spoken replies) are built, tested and verified 
 | 2 | `apps/web/src/lib/useSpokenReplies.ts` | Plays a reply through one persistent `Audio` element, prefetching the next chunk, with a browser-voice fallback. Exposes `enabled`, `setEnabled`, `speaking`, `prime`, `speak(conversationId, message)`, `stop` |
 | 2 | `AdvisorClient.tsx` | Mic button, speaker toggle, `dictated` ref, replies spoken only after dictation |
 | 3 | `apps/web/src/lib/voice-call.ts` (+ test) | **Done.** Pure reducer `callReducer` with phases `listening \| thinking \| speaking \| ending`, constants `CALL_LIMIT_MS` (5 min), `CALL_WARN_MS` (30 s), `SILENCE_MS` (1.5 s), `GOODBYE`, `formatClock` |
-| 3 | `apps/web/src/lib/useVoiceCall.ts` | **Written, never run.** Drives the reducer: recognition, silence timer, send, speak, goodbye, clock |
-| 3 | `apps/web/src/lib/useMicLevel.ts` | **Written, never run.** Writes mic loudness to a `--level` CSS variable for the orb |
+| 3 | `apps/web/src/lib/useVoiceCall.ts` | Drives the reducer: recognition, silence timer, send, speak, goodbye, clock |
+| 3 | `apps/web/src/lib/useMicLevel.ts` | Writes mic loudness to a `--level` CSS variable for the orb |
+| 3 | `apps/web/src/app/(app)/advisor/VoiceCall.tsx`, `apps/web/src/components/voice/AdvisorOrb.tsx`, end of `globals.css` | The call sheet and the orb (`.voice-*` styles, tokens only). The sheet is a dialog with a focus trap, Esc to end, Space to interrupt, and a body scroll lock |
+| 3 | `AdvisorClient.tsx` | `send` now takes `{ voice, autoSpeak, restoreDraft }` and returns the saved reply or `{ error }`. `startCall`, `sendTurn`, `speakTurn` and `closeCall` drive the sheet. Call button in the input row, "Talk to Your Advisor" on the empty state, and below 640px the speaker toggle becomes a text button under the form |
 
 ## Decisions already made (do not re-ask)
 
@@ -38,53 +49,9 @@ Phase 1 and 2: see `docs/DECISIONS.md`. Phase 3, chosen by the dashboard owner o
 | Entry points | A Call button in the input row **and** a hero "Talk to Your Advisor" button on the empty state |
 | The cap | 5 minutes. A timer ring, a notice at 30 seconds left, then a spoken goodbye and the call closes |
 
-Record these in `docs/DECISIONS.md` ("Advisor voice, phase 3") when the UI ships. Not yet recorded there.
+These are recorded in `docs/DECISIONS.md` ("Advisor voice, phase 3").
 
 The owner wants every decision put to them through the `AskUserQuestion` multiple-choice prompt (their user-level `~/.claude/CLAUDE.md` says so). A new real fork in the road means asking that way.
-
-## What is left for phase 3, in order
-
-### 1. `AdvisorClient.tsx`: make `send` usable by the call
-
-`send(text, conversationId, newSituation, voice)` currently returns nothing. Change it to:
-
-- Take an options object as the 4th argument: `{ voice?: boolean; autoSpeak?: boolean; restoreDraft?: boolean }`, defaults `voice = false`, `autoSpeak = voice`, `restoreDraft = true`. Update the two existing callers (`submit` passes `{ voice, autoSpeak: voice }`; the opening-question effect passes nothing).
-- Return `Promise<{ conversationId: string; reply: Message } | { error: string }>`. Success: the id and the saved reply. Failure (the `catch`): `{ error: sendErrorText(err) }`. An empty message returns `{ error: "" }`.
-- Only call `setDraft(content)` on failure when `restoreDraft` is true (the call must not refill the text box).
-- Only call `speakReply` when `voice && autoSpeak`.
-- Keep an `activeRef` mirror of `activeId` (set when a conversation is created inside `send`, and in `open` and `startNew`), because the call's `sendTurn` runs from a long-lived closure.
-- Add `calling` state, `startCall()` (`prime()`, `stopReply()`, `setCalling(true)`), and:
-  - `sendTurn = (text) => send(text, activeRef.current, null, { voice: true, autoSpeak: false, restoreDraft: false })`
-  - `speakTurn = (turn) => speakReply(turn.conversationId, turn.reply)`
-- Render `{calling && <VoiceCall ... />}` with `sendTurn`, `speakTurn`, `stopSpeaking={stopReply}` and `onClose={() => { setCalling(false); scrollDown(); }}`.
-
-### 2. UI for the call
-
-- **`apps/web/src/components/voice/AdvisorOrb.tsx`**: a `div.voice-orb` with `data-state` (`listening | thinking | speaking | muted`) and children `__glow`, `__core`, `__swirl`, plus two `__ripple` rings for speaking. It takes a ref so `useMicLevel(wantMic, ref)` can set `--level`.
-- **Orb CSS**: append a "Voice call" block at the **end** of `apps/web/src/app/globals.css` (other people are editing that file, so append, don't rewrite). Use only token variables and `color-mix()` (no hex, no `rgba(`, or `npm run theme:audit` fails). States: listening breathes and scales with `--level`; thinking spins a conic swirl; speaking pulses with ripples; muted dims. Honour `prefers-reduced-motion`. Add a `.voice-sheet` background wash.
-- **`apps/web/src/app/(app)/advisor/VoiceCall.tsx`**: the sheet. Use `useVoiceCall`. Layout:
-  - `role="dialog" aria-modal="true"`, fixed to the screen, above the app shell (`z-[70]`), padded with `env(safe-area-inset-*)`, `dvh` not `vh`.
-  - Header: "Advisor" and a time-left chip from `formatClock(CALL_LIMIT_MS - elapsedMs)`.
-  - Center: the orb **as a `<button>`** (autofocus it) calling `tapOrb`, inside an SVG progress ring (`pathLength=100`, stroke `var(--accent-ink)`, switching to `var(--warning)` in the last 30 s). State label under it ("Listening…", "Thinking…", "Speaking…", "Muted"), with a hint ("Tap to send now" or "Tap to interrupt").
-  - Captions: the visitor's live words (`state.heard`, muted style) and the Advisor's (`state.advisor`).
-  - Cards: for `turn?.reply.attachments` of `kind === "visual"`, render `<AdvisorVisual key id={`${reply.id}:${i}`} visual={a.visual} />` (see `AdvisorMessage.tsx` line ~111). Scrollable region on phones.
-  - Footer: Mute button (`Mic` / `MicOff`), a clearly red End Call button, and the line "Educational guidance, not financial advice."
-  - `state.notice` in a `role="status"` line; `micError` in a `role="alert"` line (the call cannot continue then, so End Call should be obvious).
-  - Esc ends the call. **Do not autofocus End Call**: Space on a focused button activates it, and Space is meant to interrupt. Autofocus the orb button instead.
-  - Lock page scroll while open; restore on close.
-  - Labels in Title Case (`apps/web/AGENTS.md`), 44px touch targets on phones (`max-lg:h-11 max-lg:w-11`), token classes only.
-- **Entry points in `AdvisorClient.tsx`**:
-  - A `Phone` icon button in the input row, after the mic, `aria-label="Start Voice Call"`, shown only when `speech.supported`.
-  - A prominent "Talk to Your Advisor" button on the empty state (above the starter cards), same condition.
-  - **Phone width problem:** at 390px the row holds the textarea plus buttons in 327px. Three 44px buttons fit with the placeholder "Ask your Advisor…" (already shortened). A fourth does not. So hide the speaker toggle in the row below `sm` (`hidden sm:flex`) and add a small `sm:hidden` text button under the form ("Spoken Replies: On/Off", `min-h-11`) that does the same job. Check it at 320, 390 and 768px.
-
-### 3. Tests, docs, checks
-
-- `npm run check` from the repo root must pass.
-- `npm run theme:audit -w @finvantage/web` runs inside `npm test`; the hardcoded-colour count must not rise.
-- Add to `apps/web/AGENTS.md`'s layout table: `voice-call.ts`, `useVoiceCall.ts`, `useMicLevel.ts`, `VoiceCall.tsx`, `AdvisorOrb.tsx`.
-- Add the "Advisor voice, phase 3" decisions table to `docs/DECISIONS.md` and flip phase 3 to Done in `docs/workstreams/voice.md`.
-- Say plainly in the final report what is still a stub (see "Not verified", below).
 
 ## Gotchas
 
@@ -101,31 +68,19 @@ The owner wants every decision put to them through the `AskUserQuestion` multipl
 
 ## How to verify in a browser
 
-The Playwright browser used here has **no** `SpeechRecognition` and **no** `speechSynthesis`, so the mic and call buttons are hidden (correctly). Inject fakes, then remount the page with a client-side navigation so the hooks re-detect support:
-
-```js
-class Fake { start(){ window.__fake = this; } stop(){ this.onend && this.onend(); } abort(){ this.onend && this.onend(); } }
-window.webkitSpeechRecognition = Fake;
-window.SpeechSynthesisUtterance = function (t) { this.text = t; };
-window.speechSynthesis = { speak: (u) => setTimeout(() => u.onend && u.onend(), 50), cancel: () => {} };
-window.next.router.push('/goals'); // wait ~2.5s
-window.next.router.push('/advisor'); // wait ~2.5s
-// then drive speech:
-window.__fake.onresult({ resultIndex: 0, results: [{ isFinal: true, 0: { transcript: "how are my budgets" } }] });
-```
-
-Pushing the router right after load can cause a harmless "state update before mount" console error; reload and check a clean load before trusting it. The "Viewport argument key interactive-widget" error is pre-existing. Take screenshots at 390px and desktop, in light and dark mode (`localStorage` key `fv-theme`). Delete screenshots you save in the repo root.
+There is no browser tool in every session, and headless Chromium has no real microphone. A working approach that needs only Node 24 and Edge: start Edge with `--headless=new --remote-debugging-port=9333 --use-fake-device-for-media-stream --use-fake-ui-for-media-stream`, connect with Node's built-in `WebSocket` to the DevTools protocol, and use `Page.addScriptToEvaluateOnNewDocument` to install a fake `webkitSpeechRecognition` (store the instance on `window.__fake` and drive it with `onresult({ resultIndex: 0, results: [{ isFinal: false, 0: { transcript: "..." } }] })`) and a fake speech synthesis. `window.speechSynthesis` is read-only, so install the fake with `Object.defineProperty(window, "speechSynthesis", { configurable: true, value: ... })`; assigning to it is silently ignored and the real one then rejects your fake utterance. Set `localStorage["fv-theme"]` for dark mode. To test the 30 second warning and the cap without waiting, shift `Date.now` forward by about 272 and 301 seconds; `useVoiceCall` reads the clock from it. Delay each fake utterance's `onend` by about a second or the whole reply finishes before you look. Dev servers must be running (`npm run dev`). The "Viewport argument key interactive-widget" console error is pre-existing, and the round "N" badge is Next's dev overlay.
 
 ## Not verified yet
 
-- Anything with a **real microphone** or real speech recognition (Chrome or Edge; Safari untested).
+- Anything with a **real microphone** or real speech recognition (Chrome or Edge; Safari untested). In particular, whether the second measure-only mic stream in `useMicLevel` coexists with recognition on every browser. If not, drop it and give the orb a synthetic idle animation.
 - **Gemini TTS against the real API.** The request shape (`responseModalities: ["AUDIO"]`, a prebuilt voice, raw PCM wrapped as WAV) is unit-tested against a fake, not Google. The model name must be confirmed at the Google Cloud sponsor table (`packages/llm/AGENTS.md`).
-- `useVoiceCall`, `useMicLevel`: type-checked only, never executed. The reducer they drive is tested.
-- Phase 3 UI at 320, 390, 768 and in dark mode: nothing built to look at yet.
+- A call with a **real model reply that includes chart cards**: the dev setup uses the mock model, so the cards region was not exercised with an `AdvisorVisual`.
+- The tap-the-orb behaviour while *thinking* (it does nothing, by design) and a 429 during a call.
+- 768px width and the call on a touch device.
 
 ## Later phases (see `voice.md`)
 
-4: read actions by voice; 5: write actions by voice (propose, then confirm, like `draft_goal`; a parity test so every write route has a voice tool or a stated exclusion); 6: voice navigation. Open question from `voice.md`: which writes may be confirmed by saying "yes" and which need a tap.
+5: write actions by voice (propose, then confirm, like `draft_goal`; a parity test so every write route has a voice tool or a stated exclusion); 6: voice navigation. Open question from `voice.md`: which writes may be confirmed by saying "yes" and which need a tap.
 
 ## Commands
 
@@ -137,3 +92,30 @@ npm test -w @finvantage/llm
 npm test -w @finvantage/contracts
 npm run dev                         # API :4000, web :3000
 ```
+
+## Phase 5 plan (decided 2026-11-23, built the same day; kept for the reasoning)
+
+- **The Advisor never writes.** Each write is a tool that returns a `change_draft` attachment (a validated request plus a read-back sentence); the browser saves it through the ordinary route on Confirm, as `GoalDraftCard` does today. Needed: a `change_draft` attachment in `advisory.ts`, a card in chat and on the call sheet, an executor and an undo, and a spoken "yes" or "no" handled locally in the call (not sent to the model) only for non-destructive drafts.
+- **Actions:** add expense or income (`addTransaction`), edit or recategorize a transaction (`updateTransaction`), set or remove a budget, create (`draft_goal` exists), change or remove a goal, set a subscription's status. Removing a goal or budget is tap-only.
+- **Ambiguity is decided in code:** an edit tool takes selectors (merchant, date range, amount), not an id. Zero or several matches return a candidates card and the Advisor asks which; one match returns a draft. Earlier tool results are not replayed in history, so a follow-up re-searches.
+- **Read-back is code-written:** in voice mode the reply for a drafting turn is the draft's `readBack` sentence plus "Say yes to save it, or no to cancel", not the model's wording.
+- **Undo:** adds are undone with `removeTransaction` (it deletes manual rows); edits restore the previous body (carry it on the draft); budget and goal changes likewise.
+- **Amounts must be stated by the user** (as `draft_life_event` does with `isGrounded`). Edits are full-body `PATCH`es, so read the row first.
+- **Parity test** `apps/api/src/advisor/voice-parity.test.ts`: every write route in the contract has a voice tool or a named exclusion with a reason.
+- A shared demo token is read-only, so a write returns `demo_read_only`; say so plainly.
+
+### Phase 5 final scope (chosen 2026-11-23, after the first plan; all three slices are built)
+
+Write actions, all propose then confirm, in three slices:
+
+| Slice | Actions | Confirm |
+| --- | --- | --- |
+| 1 | Add expense or income; edit or recategorize a transaction; set or remove a budget; create, change or remove a goal; set a subscription's status | Yes or tap; removing a goal or budget is tap-only |
+| 2 | Add money to a goal; reprioritize goals; always categorize a merchant (`createCategoryRule`); bulk recategorize a merchant's charges (`bulkRecategorizeTransactions`, read back the row count); split a transaction (`splitTransaction`); update an account's APR or minimum payment (`updateAccount`); set several budgets at once from `listBudgetSuggestions` (one batch card) | Yes or tap |
+| 3 | Email the quarterly report; delete an Advisor chat; clear Copilot history; delete a life event | Tap only |
+
+Read-only briefings to add to the Advisor's tools (phase 4 style, with a data card): safe to spend (`getSafeToSpend`), upcoming bills and the money calendar, health score and the attention feed, debt payoff (`getDebtPayoff`) and credit what-if (credit parts mocked, so say so and show `MockedBadge`), unusual charges and spending pace.
+
+Left out: bank link, sync setup and removal, sign-in, custom category management, investment target mix. Refresh-bank, Copilot on or off and drafting a cancellation message were offered as safe extras but not chosen.
+
+The parity test lists the routes above as covered and every other write route as excluded with a reason.

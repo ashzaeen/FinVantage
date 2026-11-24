@@ -8,6 +8,8 @@ import { CALL_LIMIT_MS, CALL_WARN_MS, callReducer, GOODBYE, initialCallState, SI
 export interface CallTurn {
   conversationId: string;
   reply: AdvisorMessage;
+  /** Said by the app itself, such as "Saved", and not a saved Advisor reply. It is spoken with the browser's voice. */
+  local?: boolean;
 }
 
 export interface VoiceCallOptions {
@@ -109,7 +111,8 @@ export function useVoiceCall(options: VoiceCallOptions): VoiceCall {
   useEffect(() => {
     if (state.phase !== "speaking" || !turn) return;
     let live = true;
-    void latest.current.speakTurn(turn).finally(() => {
+    // A voice that fails must not strand the call: carry on to the next turn either way.
+    void latest.current.speakTurn(turn).catch(() => {}).finally(() => {
       if (live) dispatch({ type: "spokeDone" });
     });
     return () => {

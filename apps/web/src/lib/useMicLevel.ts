@@ -10,7 +10,7 @@ import { useEffect, type RefObject } from "react";
  * Best effort: if the browser will not give a second microphone stream, the orb simply stays
  * calm. Speech recognition does not depend on this.
  */
-export function useMicLevel(active: boolean, target: RefObject<HTMLElement | null>) {
+export function useMicLevel(active: boolean, target: RefObject<HTMLElement | null>, rekey?: unknown) {
   useEffect(() => {
     const el = target.current;
     if (!active || !el || typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) return;
@@ -55,5 +55,5 @@ export function useMicLevel(active: boolean, target: RefObject<HTMLElement | nul
       void context?.close();
       el.style.setProperty("--level", "0");
     };
-  }, [active, target]);
+  }, [active, target, rekey]);
 }

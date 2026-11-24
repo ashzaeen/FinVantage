@@ -131,6 +131,45 @@ for (const backend of backends) {
       assert.equal(await store.updateTransaction(newUser(), grocery.id, grocery), null);
     });
 
+    test("a transaction entered by hand is deleted for real; one from the bank is hidden and can be restored", async () => {
+      const store = backend.make();
+      const userId = newUser();
+      await store.loadDemoProfile(userId);
+      const list = await store.listTransactions(userId, 1000);
+      assert.ok(list.every((t) => !t.manual && !t.hidden), "nothing synced is manual or hidden to begin with");
+
+      // Entered by hand: flagged, still flagged after an edit, and deleted for real.
+      const mine = await store.addTransaction({
+        accountId: list[0]!.accountId, date: "2099-01-02", amountCents: -4_200, currency: "USD", originalAmountCents: null,
+        exchangeRateToUsd: null, exchangeRateDate: null, merchant: "Corner Cafe", category: "dining", subcategory: null, isRecurring: false,
+        pending: false, categoryDetailed: null, paymentChannel: null, logoUrl: null,
+      });
+      assert.equal(mine.manual, true);
+      assert.equal((await store.listTransactions(userId, 1000)).find((t) => t.id === mine.id)?.manual, true);
+      assert.equal((await store.updateTransaction(userId, mine.id, { ...mine, amountCents: -4_800 }))?.manual, true);
+      assert.equal(await store.removeTransaction(userId, mine.id), "deleted");
+      assert.equal((await store.listTransactions(userId, 1000, { includeHidden: true })).some((t) => t.id === mine.id), false);
+
+      // From the bank: hidden, so lists and totals skip it, and it stays on file.
+      const synced = list[1]!;
+      assert.equal(await store.removeTransaction(userId, synced.id), "hidden");
+      const after = await store.listTransactions(userId, 1000);
+      assert.equal(after.some((t) => t.id === synced.id), false);
+      assert.equal(after.length, list.length - 1);
+      assert.equal((await store.listTransactions(userId, 1000, { includeHidden: true })).find((t) => t.id === synced.id)?.hidden, true);
+
+      // Restoring brings it back unchanged and un-flagged; a second restore finds nothing.
+      const restored = await store.restoreTransaction(userId, synced.id);
+      assert.equal(restored?.id, synced.id);
+      assert.equal(restored?.hidden, undefined);
+      assert.equal((await store.listTransactions(userId, 1000)).length, list.length);
+      assert.equal(await store.restoreTransaction(userId, synced.id), null);
+
+      // Not theirs, or not there.
+      assert.equal(await store.removeTransaction(newUser(), synced.id), "not_found");
+      assert.equal(await store.removeTransaction(userId, "no-such-transaction"), "not_found");
+    });
+
     test("editing a bank account's terms keeps it, and unknown ids return null", async () => {
       const store = backend.make();
       const userId = newUser();
