@@ -11,8 +11,8 @@ export function withCategoryRules(ledger: LedgerStore, spending: SpendingStore):
   return new Proxy(ledger, {
     get(target, prop, receiver) {
       if (prop === "listTransactions") {
-        return async (userId: string, limit: number): Promise<Transaction[]> => {
-          const [transactions, { rules }] = await Promise.all([target.listTransactions(userId, limit), spending.get(userId)]);
+        return async (userId: string, limit: number, options?: { includeHidden?: boolean }): Promise<Transaction[]> => {
+          const [transactions, { rules }] = await Promise.all([target.listTransactions(userId, limit, options), spending.get(userId)]);
           if (rules.length === 0) return transactions;
           return transactions.map((t) => {
             const plaid = categorizePlaidDetailed(t.categoryDetailed);

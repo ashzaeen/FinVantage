@@ -13,7 +13,7 @@ Hono on Node. Read the root `AGENTS.md` first. Brief: `docs/workstreams/platform
 | `src/services.ts` | Shared logic: `loadInputs`, `runSimulation` |
 | `src/routes/*.ts` | One file per area, so teams rarely collide. `routes/planning.ts` holds the planning routes (safe to spend, attention, health score, goal funding, spending pace, budget suggestions, unusual charges, credit what-if, debt payoff, allocation drift, Copilot impact). `spendingContext(deps)` in `routes/spending.ts` is their shared source |
 | `src/spending/` | Category catalog and rules (`catalog.ts`, `rules-ledger.ts`), the recurring-charge sources shared by Spending and Subscriptions (`recurring.ts`), and `subscriptions.ts`, the pure builder behind `GET /v1/subscriptions` |
-| `src/advisor/` | The Advisor's brief, its tools, the in-process read client they use, and `eval.ts` (`npm run eval:advisor`) |
+| `src/advisor/` | The Advisor's brief, its tools, the in-process read client they use, `cards.ts` (the data cards shown beside answers, built in code from tool results), `changes.ts`, `changes-more.ts` and `changes-tap.ts` (tools that only **propose** a change; the browser saves it on confirm, so the Advisor never writes), `briefings.ts` (read-only briefings), `navigation.ts` (the `open_page` tool: only the pages in `APP_PAGES`), `tool-kit.ts` (the `tool()` helper), `voice-parity.test.ts` (every write route is covered by a tool, planned, or excluded with a reason: **add a new write route there**), and `eval.ts` (`npm run eval:advisor`) |
 | `src/app.test.ts` | End-to-end tests through the real typed client |
 
 ## Rules

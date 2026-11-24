@@ -309,6 +309,73 @@ export function registerSpendingRoutes(app: Hono<AppEnv>, deps: AppDeps) {
     return [...totals].map(([categoryId, spentCents]) => ({ categoryId, spentCents })).sort((a, b) => b.spentCents - a.spentCents);
   });
 
+  // Totals for any date range, by the same rules as the monthly summary: spent leaves out
+  // transfers and saving, saved is the money moved to savings or investing, income is money in
+  // under Income. The Advisor reads this so a past month's figure is computed here, in code.
+  mount(app, deps, routes.getPeriodSummary, async ({ userId, query }) => {
+    if (query.from > query.to) throw new HttpError(400, "bad_range", "The start date is after the end date.");
+    const months: string[] = [];
+    for (let m = monthKey(query.from); m <= monthKey(query.to) && months.length <= 36; m = shiftMonth(m, 1)) months.push(m);
+    if (months.length > 36) throw new HttpError(400, "range_too_long", "Ask for three years or less at a time.");
+
+    const [{ catalog }, transactions] = await Promise.all([load(userId), transactionsOf(userId)]);
+    const wanted = query.category?.toLowerCase();
+    const matched = wanted
+      ? catalog.list.filter((c) => c.label.toLowerCase().includes(wanted) || c.id.toLowerCase().includes(wanted))
+      : [];
+    if (wanted && matched.length === 0) throw new HttpError(404, "not_found", `No category matches "${query.category}".`);
+    const merchant = query.merchant?.toLowerCase();
+    const labelOf = (t: { category: string | null; subcategory: string | null }) => {
+      const id = categoryIdOf(t);
+      return id ? (catalog.byId.get(id)?.label ?? catalog.byId.get(topCategoryId(id))?.label ?? id) : "Uncategorized";
+    };
+
+    const monthly = new Map(months.map((m) => [m, 0]));
+    const categories = new Map<string, { label: string; totalCents: number; count: number }>();
+    const merchants = new Map<string, { totalCents: number; count: number }>();
+    const hits: Array<{ date: string; merchant: string; amountCents: number; label: string }> = [];
+    let totalCents = 0;
+    let count = 0;
+    for (const t of transactions) {
+      if (t.date < query.from || t.date > query.to) continue;
+      if (merchant && !t.merchant.toLowerCase().includes(merchant)) continue;
+      if (matched.length > 0 && !matched.some((c) => countsToward(c.id, t))) continue;
+      const id = categoryIdOf(t);
+      const spending = isSpending(catalog, t);
+      const saving = spending && bucketOf(catalog, t) === "savings";
+      const counts =
+        query.kind === "income" ? t.amountCents > 0 && id !== null && topCategoryId(id) === "income"
+        : query.kind === "saved" ? saving
+        : spending && !saving;
+      if (!counts) continue;
+      const amountCents = Math.abs(t.amountCents);
+      const label = labelOf(t);
+      totalCents += amountCents;
+      count += 1;
+      monthly.set(monthKey(t.date), (monthly.get(monthKey(t.date)) ?? 0) + amountCents);
+      const c = categories.get(id ?? "uncategorized") ?? { label, totalCents: 0, count: 0 };
+      categories.set(id ?? "uncategorized", { label, totalCents: c.totalCents + amountCents, count: c.count + 1 });
+      const m = merchants.get(t.merchant) ?? { totalCents: 0, count: 0 };
+      merchants.set(t.merchant, { totalCents: m.totalCents + amountCents, count: m.count + 1 });
+      hits.push({ date: t.date, merchant: t.merchant, amountCents, label });
+    }
+    const top = <T extends { totalCents: number }>(rows: T[]) => rows.sort((a, b) => b.totalCents - a.totalCents).slice(0, 6);
+    hits.sort((a, b) => b.amountCents - a.amountCents || b.date.localeCompare(a.date));
+    return {
+      from: query.from,
+      to: query.to,
+      kind: query.kind,
+      totalCents,
+      count,
+      matchedCategories: matched.map((c) => c.label),
+      byMonth: months.map((month) => ({ month, totalCents: monthly.get(month) ?? 0 })),
+      byCategory: top([...categories].map(([categoryId, c]) => ({ categoryId, ...c }))),
+      byMerchant: top([...merchants].map(([name, m]) => ({ merchant: name, ...m }))),
+      transactions: hits.slice(0, 25),
+      truncated: hits.length > 25,
+    };
+  });
+
   mount(app, deps, routes.listTopExpenses, async ({ userId, query }) => {
     const [{ catalog }, transactions] = await Promise.all([load(userId), transactionsOf(userId)]);
     const month = monthKey(deps.today());

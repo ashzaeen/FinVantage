@@ -15,6 +15,11 @@ Everything depends on this package, so a change here affects everyone.
 | `src/insights.ts` | The Overview's runway and savings rate, the credit cards overview, and goal milestones |
 | `src/planning.ts` | Safe to spend, attention, health score, goal funding, spending pace, budget suggestions, unusual charges, credit what-if, debt payoff, allocation drift, Copilot impact |
 | `src/transaction-insights.ts` | Transaction totals for a set of ids, and a month's spending patterns |
+| `src/account.ts` (transactions) | `Transaction.manual` and `hidden` are derived flags: set when listing, never stored or accepted in a body |
+| `src/changes.ts` | `ChangeRequest` and `ChangeDraft`: a change the Advisor proposes (add, edit or remove a transaction, a budget, a goal, a rule, a split, an account's terms, a subscription's status, and the tap-only ones), with a read-back and what undo needs. The Advisor never makes it |
+| `src/navigation.ts` | `APP_PAGES`, the only pages the Advisor may open, with `isAppHref` (a link is one of them, or a Transactions search), `pageHref` and the words said when one opens |
+| `src/period.ts` | Totals for any date range (`PeriodQuery`, `PeriodSummary`): spent, income or saved, by the monthly summary's rules |
+| `src/speech.ts` | Spoken replies: `SpeakRequest`/`SpeakResponse`, `speechChunks`, and `speakable` (amounts and dates written for the voice) |
 | `src/subscription.ts` | Subscriptions and bills, their flags, status and totals, the cancellation guide, and the drafted messages |
 | `src/live.ts` | Pushed messages |
 | `src/api.ts` | **The route table** |

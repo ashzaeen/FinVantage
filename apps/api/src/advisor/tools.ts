@@ -47,6 +47,13 @@ import { diffOutcomes, evaluatePurchase, simulate } from "@finvantage/simulator"
 import type { AppDeps } from "../deps";
 import { loadInputs, runSimulation } from "../services";
 import type { AdvisorBrief } from "./brief";
+import { listCard, periodCard, rangeLabel } from "./cards";
+import { briefingTools } from "./briefings";
+import { changeTools } from "./changes";
+import { moreChangeTools } from "./changes-more";
+import { tapOnlyTools } from "./changes-tap";
+import { navigationTools } from "./navigation";
+import { none, tool } from "./tool-kit";
 import { buildVisual } from "./visuals";
 import { forModel, oddsRange, type AdvisorReadApi } from "./read-api";
 
@@ -59,28 +66,10 @@ export interface AdvisorToolContext {
   userTexts: string[];
   /** The user's name and email, which must never leave in a web search query. */
   privateNames: string[];
+  /** The saved chat this turn belongs to, if any. */
+  conversationId?: string | null;
 }
 
-function tool<S extends z.ZodObject>(
-  name: string,
-  description: string,
-  params: S,
-  run: (args: z.output<S>, turn: AdvisorTurnState) => Promise<AdvisorToolResult>,
-): AdvisorTool {
-  const { $schema: _schema, ...parameters } = z.toJSONSchema(params) as Record<string, unknown>;
-  return {
-    name,
-    description,
-    parameters,
-    run: async (raw, turn) => {
-      const parsed = params.safeParse(raw);
-      if (!parsed.success) throw new Error(`Bad arguments: ${parsed.error.issues.map((i) => i.message).join("; ")}`);
-      return run(parsed.data, turn);
-    },
-  };
-}
-
-const none = z.object({});
 
 /** A goal's change in the form the user sees it: ranges, never one number. */
 function describeImpact(i: GoalImpact) {
@@ -133,6 +122,7 @@ export function privacyProblem(query: string, privateNames: string[], isGrounded
  */
 export function advisorTools(ctx: AdvisorToolContext): AdvisorTool[] {
   const { api, deps, userId } = ctx;
+  const changeCtx = { api, deps, userId, conversationId: ctx.conversationId ?? null };
   const label = (id: string | null) => (id ? (ctx.brief.categoryLabels.get(id) ?? id) : "Uncategorized");
   /** Sources from this turn's web searches, so a card visual can link to them. */
   const webSources: Array<{ title: string; url: string }> = [];
@@ -146,6 +136,14 @@ export function advisorTools(ctx: AdvisorToolContext): AdvisorTool[] {
   };
 
   return [
+    // Tools that only propose a change. Nothing here saves anything: see changes.ts.
+    ...changeTools(changeCtx),
+    ...moreChangeTools(changeCtx),
+    ...tapOnlyTools(changeCtx),
+    ...navigationTools(),
+    // Read-only briefings from the app's planning routes. See briefings.ts.
+    ...briefingTools(changeCtx),
+
     tool(
       "search_transactions",
       "Find transactions by merchant, category, date range, amount, or direction. Newest first.",
@@ -192,6 +190,13 @@ export function advisorTools(ctx: AdvisorToolContext): AdvisorTool[] {
           },
           citation: `Transactions`,
           summary: [`${matches.length} matching transactions, ${formatUsd(totalCents)} net.`],
+          attachment: matches.length === 0 ? undefined : listCard({
+            title: "Matching Transactions",
+            source: `${matches.length} found`,
+            total: { label: "Net Total", valueCents: totalCents },
+            rows: shown.map((t) => ({ label: t.merchant, detail: `${t.date} · ${label(t.subcategory ?? t.category)}`, valueCents: t.amountCents })),
+            extra: matches.length - shown.length,
+          }),
         };
       },
     ),
@@ -215,8 +220,52 @@ export function advisorTools(ctx: AdvisorToolContext): AdvisorTool[] {
         }),
         citation: "Spending",
         summary: categories.slice(0, 3).map((c) => `${c.category}: ${formatUsd(c.spentCents)} this month.`),
+        attachment: listCard({
+          title: "Spending by Category",
+          source: "This month",
+          total: { label: "Total Spent", valueCents: summary.spentCents },
+          rows: categories.filter((c) => c.spentCents > 0).map((c) => ({ label: c.category, detail: null, valueCents: c.spentCents })),
+        }),
       };
     }),
+
+    tool(
+      "get_period_totals",
+      "What was spent, earned or saved between two dates, for any past month or range, optionally for one category or merchant. Totals are worked out in code by the same rules as the Spending page (spent leaves out transfers and saving). Use it for 'last month', 'in October', 'since January', 'on food', 'at Trader Joe's'. For this month so far, get_spending is enough. Dates are YYYY-MM-DD; work them out from today's date in the brief. A category is part of its name, such as food or dining.",
+      z.object({
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("First day, YYYY-MM-DD."),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("Last day, YYYY-MM-DD."),
+        kind: z.enum(["spent", "income", "saved"]).optional().describe("spent (default), income, or saved."),
+        category: z.string().optional().describe("Part of a category's name, such as food, dining or groceries."),
+        merchant: z.string().optional().describe("Part of a merchant's name."),
+      }),
+      async (a) => {
+        // Only the filters that were given: the client sends an undefined value as the text "undefined".
+        const result = await api.getPeriodSummary({
+          query: { from: a.from, to: a.to, kind: a.kind ?? "spent", ...(a.category?.trim() ? { category: a.category.trim() } : {}), ...(a.merchant?.trim() ? { merchant: a.merchant.trim() } : {}) },
+        });
+        const months = Math.max(1, result.byMonth.length);
+        const what = { spent: "spent", income: "earned", saved: "saved" }[result.kind];
+        return {
+          data: forModel({
+            period: rangeLabel(result.from, result.to),
+            kind: result.kind,
+            totalCents: result.totalCents,
+            transactionCount: result.count,
+            // Worked out here so the model never divides.
+            averagePerMonthCents: Math.round(result.totalCents / months),
+            matchedCategories: result.matchedCategories,
+            byMonth: result.byMonth,
+            biggestCategories: result.byCategory.map((c) => ({ category: c.label, totalCents: c.totalCents, transactions: c.count })),
+            biggestMerchants: result.byMerchant,
+            largestTransactions: result.transactions.slice(0, 8).map((t) => ({ date: t.date, merchant: t.merchant, amountCents: t.amountCents, category: t.label })),
+          }),
+          citation: "Spending history",
+          summary: [`${formatUsd(result.totalCents)} ${what}, ${rangeLabel(result.from, result.to)}${a.category ? `, ${result.matchedCategories.slice(0, 2).join(" and ")}` : ""}.`],
+          attachment: periodCard(result, a.merchant),
+        };
+      },
+    ),
 
     tool("get_budgets", "Every budget: limit, spent, remaining, where the month is heading, status, and a suggested limit.", none, async () => {
       const budgets = (await api.listBudgets()).map((b) => ({ ...b, category: label(b.category) }));
@@ -270,6 +319,14 @@ export function advisorTools(ctx: AdvisorToolContext): AdvisorTool[] {
           }),
           citation: "Subscriptions",
           summary: overview.subscriptions.slice(0, 4).map((s) => `${s.merchant}: ${s.monthlyCents === null ? "schedule unknown" : `${formatUsd(s.monthlyCents)} a month`}.`),
+          attachment: overview.subscriptions.length === 0 ? undefined : listCard({
+            title: "Subscriptions",
+            source: "Per month",
+            total: { label: "Total Per Month", valueCents: overview.subscriptionTotals.monthlyCents },
+            rows: [...overview.subscriptions]
+              .sort((x, y) => (y.monthlyCents ?? 0) - (x.monthlyCents ?? 0))
+              .map((s) => ({ label: s.merchant, detail: s.cadence, valueCents: s.monthlyCents ?? Math.abs(s.amountCents) })),
+          }),
         };
       },
     ),

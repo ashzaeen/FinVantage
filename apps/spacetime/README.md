@@ -47,3 +47,7 @@ without warning the team.
 - A reducer returns nothing. The caller picks IDs.
 
 `scripts/seed.mjs` is a working example.
+
+## Hidden transactions (publish needed)
+
+`hidden_transaction` records bank transactions a user hid, and `hide_transaction`, `unhide_transaction` and `delete_app_transaction` are the reducers the API calls (`packages/data/src/spacetime/ledger.ts`). The API reads the table tolerantly, so it works before this is published, but **hiding and deleting a transaction fail on Maincloud until the module is republished** (`spacetime publish`). Nothing in `apps/web/src/spacetime` needs regenerating: the web app does not subscribe to this table.

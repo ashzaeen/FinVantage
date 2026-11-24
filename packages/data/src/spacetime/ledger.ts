@@ -316,14 +316,18 @@ export class SpacetimeLedgerStore implements LedgerStore {
     await this.db.call("replace_app_accounts", [userId, accounts.map((a) => accountWire({ ...a, userId }))]);
   }
 
-  async listTransactions(userId: string, limit: number) {
-    const [bank, edits, manualAccounts] = await Promise.all([
+  async listTransactions(userId: string, limit: number, options: { includeHidden?: boolean } = {}) {
+    const [bank, edits, manualAccounts, hiddenRows] = await Promise.all([
       this.bankRows(userId, true),
       this.byUser<AppTransactionRow>("app_transaction", userId),
       this.byUser<AppAccountRow>("app_account", userId),
+      // Until the module that adds this table is published, nothing is hidden and lists still load.
+      this.byUser<{ transactionId: string }>("hidden_transaction", userId).catch(() => [] as Array<{ transactionId: string }>),
     ]);
     const mapped = snapshotsFromRows(bank).flatMap((s) => mapItemSnapshot(s, userId));
     const known = new Set([...mapped.flatMap((m) => m.accounts.map((a) => a.id)), ...manualAccounts.map((a) => a.id)]);
+    const bankIds = new Set(mapped.flatMap((m) => m.transactions).map((t) => t.id));
+    const hidden = new Set(hiddenRows.map((r) => r.transactionId));
     const byId = new Map(mapped.flatMap((m) => m.transactions).map((t) => [t.id, t]));
     for (const edit of edits) {
       const { userId: _userId, ...transaction } = edit;
@@ -331,24 +335,54 @@ export class SpacetimeLedgerStore implements LedgerStore {
     }
     return [...byId.values()]
       .filter((t) => known.has(t.accountId))
+      // Entered by hand = the user's own row whose id is not a bank transaction's. An edited copy of a bank one is not.
+      .map((t): Transaction => {
+        const manual = !bankIds.has(t.id) && edits.some((e) => e.id === t.id);
+        const isHidden = bankIds.has(t.id) && hidden.has(t.id);
+        return manual || isHidden ? { ...t, ...(manual ? { manual: true } : {}), ...(isHidden ? { hidden: true } : {}) } : t;
+      })
+      .filter((t) => options.includeHidden || !t.hidden)
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, limit);
   }
 
   async addTransaction(transaction: Omit<Transaction, "id">) {
-    const saved = Transaction.parse({ ...transaction, id: randomUUID() });
+    // `manual` and `hidden` are worked out on read, never taken from the caller.
+    const { manual: _manual, hidden: _hidden, ...fields } = transaction;
+    const saved = Transaction.parse({ ...fields, id: randomUUID() });
     // The reducer finds the owner from the account and fails if there is none.
     await this.db.call("save_app_transaction", [transactionWire(saved, "")]);
-    return saved;
+    return { ...saved, manual: true };
   }
 
   async updateTransaction(userId: string, id: string, transaction: Omit<Transaction, "id">) {
     const current = await this.listTransactions(userId, Number.MAX_SAFE_INTEGER);
     const accounts = await this.listAccounts(userId);
-    if (!current.some((t) => t.id === id) || !accounts.some((a) => a.id === transaction.accountId)) return null;
-    const updated = Transaction.parse({ ...transaction, id });
+    const before = current.find((t) => t.id === id);
+    if (!before || !accounts.some((a) => a.id === transaction.accountId)) return null;
+    const { manual: _manual, hidden: _hidden, ...fields } = transaction;
+    const updated = Transaction.parse({ ...fields, id });
     await this.db.call("save_app_transaction", [transactionWire(updated, userId)]);
-    return updated;
+    return before.manual ? { ...updated, manual: true } : updated;
+  }
+
+  async removeTransaction(userId: string, id: string) {
+    const found = (await this.listTransactions(userId, Number.MAX_SAFE_INTEGER, { includeHidden: true })).find((t) => t.id === id);
+    if (!found) return "not_found" as const;
+    if (found.manual) {
+      await this.db.call("delete_app_transaction", [id]);
+      return "deleted" as const;
+    }
+    await this.db.call("hide_transaction", [userId, id]);
+    return "hidden" as const;
+  }
+
+  async restoreTransaction(userId: string, id: string) {
+    const found = (await this.listTransactions(userId, Number.MAX_SAFE_INTEGER, { includeHidden: true })).find((t) => t.id === id);
+    if (!found?.hidden) return null;
+    await this.db.call("unhide_transaction", [id]);
+    const { hidden: _hidden, ...restored } = found;
+    return restored;
   }
 
   async listGoals(userId: string) {

@@ -120,35 +120,71 @@ export class MemoryLedgerStore implements LedgerStore {
     this.accounts = [...this.accounts.filter((a) => a.userId !== userId), ...accounts];
   }
 
-  async listTransactions(userId: string, limit: number) {
+  /** Ids of transactions entered by hand, and of bank ones the user hid, each keyed by user. Neither is stored on the row. */
+  private manualTransactionIds = new Set<string>();
+  private hiddenTransactionIds = new Set<string>();
+  private static key(userId: string, id: string) {
+    return `${userId}\u0000${id}`;
+  }
+
+  /** Marks a row `manual` or `hidden` when it is, leaving other rows exactly as they were. */
+  private flagged(userId: string, t: Transaction): Transaction {
+    const manual = this.manualTransactionIds.has(MemoryLedgerStore.key(userId, t.id));
+    const hidden = this.hiddenTransactionIds.has(MemoryLedgerStore.key(userId, t.id));
+    return manual || hidden ? { ...t, ...(manual ? { manual: true } : {}), ...(hidden ? { hidden: true } : {}) } : t;
+  }
+
+  async listTransactions(userId: string, limit: number, options: { includeHidden?: boolean } = {}) {
     const ids = new Set((await this.listAccounts(userId)).map((a) => a.id));
     // Bank transactions first, then the user's own: an edit of a bank transaction has its id and wins.
     const byId = new Map(this.bank(userId).flatMap((b) => b.transactions).map((t) => [t.id, t]));
     for (const t of this.transactions) if (ids.has(t.accountId)) byId.set(t.id, t);
     return [...byId.values()]
       .filter((t) => ids.has(t.accountId))
+      .map((t) => this.flagged(userId, t))
+      .filter((t) => options.includeHidden || !t.hidden)
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, limit);
   }
 
   async addTransaction(transaction: Omit<Transaction, "id">) {
-    const saved: Transaction = Transaction.parse({
-      ...transaction,
-      id: randomUUID(),
-    });
+    // `manual` and `hidden` are worked out on read, never taken from the caller.
+    const { manual: _manual, hidden: _hidden, ...fields } = transaction;
+    const saved: Transaction = Transaction.parse({ ...fields, id: randomUUID() });
     this.transactions.push(saved);
-    return saved;
+    const owner = this.accounts.find((a) => a.id === saved.accountId)?.userId;
+    if (owner) this.manualTransactionIds.add(MemoryLedgerStore.key(owner, saved.id));
+    return owner ? this.flagged(owner, saved) : saved;
+  }
+
+  async removeTransaction(userId: string, id: string) {
+    const found = (await this.listTransactions(userId, Number.MAX_SAFE_INTEGER, { includeHidden: true })).find((t) => t.id === id);
+    if (!found) return "not_found" as const;
+    const key = MemoryLedgerStore.key(userId, id);
+    if (this.manualTransactionIds.has(key)) {
+      this.transactions = this.transactions.filter((t) => t.id !== id);
+      this.manualTransactionIds.delete(key);
+      return "deleted" as const;
+    }
+    this.hiddenTransactionIds.add(key);
+    return "hidden" as const;
+  }
+
+  async restoreTransaction(userId: string, id: string) {
+    if (!this.hiddenTransactionIds.delete(MemoryLedgerStore.key(userId, id))) return null;
+    return (await this.listTransactions(userId, Number.MAX_SAFE_INTEGER)).find((t) => t.id === id) ?? null;
   }
 
   async updateTransaction(userId: string, id: string, transaction: Omit<Transaction, "id">) {
     const accounts = await this.listAccounts(userId);
     const current = await this.listTransactions(userId, Number.MAX_SAFE_INTEGER);
     if (!accounts.some((a) => a.id === transaction.accountId) || !current.some((t) => t.id === id)) return null;
-    const updated = Transaction.parse({ ...transaction, id });
+    const { manual: _manual, hidden: _hidden, ...fields } = transaction;
+    const updated = Transaction.parse({ ...fields, id });
     const index = this.transactions.findIndex((item) => item.id === id);
     if (index >= 0) this.transactions[index] = updated;
     else this.transactions.push(updated);
-    return updated;
+    return this.flagged(userId, updated);
   }
 
   async listGoals(userId: string) {
@@ -219,6 +255,7 @@ export class MemoryLedgerStore implements LedgerStore {
     for (const id of update.removedTransactionIds) {
       transactions.delete(id);
       this.transactions = this.transactions.filter((t) => t.id !== id);
+      this.hiddenTransactionIds.delete(MemoryLedgerStore.key(userId, id));
     }
     this.bankItems.set(update.item.item_id, {
       userId,
