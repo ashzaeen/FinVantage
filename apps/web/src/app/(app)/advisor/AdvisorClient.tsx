@@ -428,7 +428,11 @@ export function AdvisorClient({ initialConversationId, situation, personalPrompt
           </div>
 
           <div className="shrink-0 border-t border-line px-3 pb-2.5 pt-3 sm:px-5">
-            <form onSubmit={submit} className="flex items-end gap-2 rounded-2xl border border-line bg-inset p-2 transition focus-within:border-accent-ink focus-within:bg-card focus-within:shadow-[0_0_0_4px_rgba(84,74,247,0.08)]">
+            {/*
+              Call on its own at the left; Dictate and Mute side by side next to Send. On a phone the
+              message gets the whole first row and the buttons sit on a second one, in the same order.
+            */}
+            <form onSubmit={submit} className="flex flex-wrap items-end gap-x-2 gap-y-1 rounded-2xl border border-line bg-inset p-2 transition focus-within:border-accent-ink focus-within:bg-card focus-within:shadow-[0_0_0_4px_rgba(84,74,247,0.08)] sm:flex-nowrap">
               <textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
@@ -442,68 +446,61 @@ export function AdvisorClient({ initialConversationId, situation, personalPrompt
                 maxLength={4000}
                 placeholder={speech.listening ? "Listening…" : "Ask your Advisor…"}
                 aria-label="Message your Advisor"
-                className="max-h-32 min-h-10 max-lg:min-h-11 flex-1 resize-none bg-transparent px-2 py-2 text-sm text-ink rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink placeholder:text-muted"
+                className="order-1 max-h-32 min-h-10 w-full min-w-0 resize-none rounded-sm bg-transparent px-2 py-2 text-sm text-ink placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink max-lg:min-h-11 sm:order-2 sm:w-auto sm:flex-1"
               />
-              {speech.supported && (
-                <button
-                  type="button"
-                  onClick={toggleDictation}
-                  aria-pressed={speech.listening}
-                  aria-label={speech.listening ? "Stop Dictation" : "Start Dictation"}
-                  title={speech.listening ? "Stop dictation (Esc cancels)" : "Dictate your message"}
-                  className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition max-lg:h-11 max-lg:w-11 ${
-                    speech.listening ? "bg-accent text-white hover:bg-[var(--accent-hover)]" : "text-muted hover:bg-accent-soft hover:text-accent-ink"
-                  }`}
-                >
-                  {speech.listening && <span aria-hidden className="absolute inset-0 animate-ping rounded-xl bg-accent opacity-30 motion-reduce:hidden" />}
-                  {speech.listening ? <Square size={14} fill="currentColor" aria-hidden className="relative" /> : <Mic size={18} aria-hidden />}
-                </button>
-              )}
               {speech.supported && (
                 <button
                   type="button"
                   onClick={startCall}
                   aria-label="Start Voice Call"
                   title="Talk to your Advisor"
-                  className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted transition hover:bg-accent-soft hover:text-accent-ink max-lg:h-11 max-lg:w-11"
+                  className="order-2 flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-accent-soft px-3 text-sm font-semibold text-accent-ink transition hover:bg-accent-soft-hover max-lg:h-11 sm:order-1 sm:w-10 sm:px-0"
                 >
                   <Phone size={18} aria-hidden />
+                  <span className="sm:hidden">Call</span>
                 </button>
               )}
-              {speech.supported && (
-                <button
-                  type="button"
-                  onClick={() => (speaking ? stopReply() : setRepliesOn(!repliesOn))}
-                  aria-label={speaking ? "Stop Speaking" : repliesOn ? "Mute Spoken Replies" : "Read Replies Aloud"}
-                  title={speaking ? "Stop speaking" : repliesOn ? "Replies are read aloud after you dictate. Click to mute." : "Replies are muted. Click to read them aloud after you dictate."}
-                  className={`relative hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl transition sm:flex max-lg:h-11 max-lg:w-11 ${
-                    speaking ? "bg-accent-soft text-accent-ink" : "text-muted hover:bg-accent-soft hover:text-accent-ink"
-                  }`}
-                >
-                  {speaking && <span aria-hidden className="absolute inset-0 animate-ping rounded-xl bg-accent opacity-20 motion-reduce:hidden" />}
-                  {repliesOn ? <Volume2 size={18} aria-hidden className="relative" /> : <VolumeX size={18} aria-hidden className="relative" />}
-                </button>
-              )}
+              <div className="order-3 ml-auto flex shrink-0 items-center gap-0.5 sm:ml-0">
+                {speech.supported && (
+                  <button
+                    type="button"
+                    onClick={toggleDictation}
+                    aria-pressed={speech.listening}
+                    aria-label={speech.listening ? "Stop Dictation" : "Start Dictation"}
+                    title={speech.listening ? "Stop dictation (Esc cancels)" : "Dictate your message"}
+                    className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition max-lg:h-11 max-lg:w-11 ${
+                      speech.listening ? "bg-accent text-white hover:bg-[var(--accent-hover)]" : "text-muted hover:bg-accent-soft hover:text-accent-ink"
+                    }`}
+                  >
+                    {speech.listening && <span aria-hidden className="absolute inset-0 animate-ping rounded-xl bg-accent opacity-30 motion-reduce:hidden" />}
+                    {speech.listening ? <Square size={14} fill="currentColor" aria-hidden className="relative" /> : <Mic size={18} aria-hidden />}
+                  </button>
+                )}
+                {speech.supported && (
+                  <button
+                    type="button"
+                    onClick={() => (speaking ? stopReply() : setRepliesOn(!repliesOn))}
+                    aria-pressed={!repliesOn}
+                    aria-label={speaking ? "Stop Speaking" : repliesOn ? "Mute Spoken Replies" : "Read Replies Aloud"}
+                    title={speaking ? "Stop speaking" : repliesOn ? "Replies are read aloud after you dictate. Click to mute." : "Replies are muted. Click to read them aloud after you dictate."}
+                    className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition max-lg:h-11 max-lg:w-11 ${
+                      speaking ? "bg-accent-soft text-accent-ink" : "text-muted hover:bg-accent-soft hover:text-accent-ink"
+                    }`}
+                  >
+                    {speaking && <span aria-hidden className="absolute inset-0 animate-ping rounded-xl bg-accent opacity-20 motion-reduce:hidden" />}
+                    {repliesOn ? <Volume2 size={18} aria-hidden className="relative" /> : <VolumeX size={18} aria-hidden className="relative" />}
+                  </button>
+                )}
+              </div>
               <button
                 type="submit"
                 disabled={!draft.trim() || loading}
                 aria-label="Send"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-white max-lg:h-11 max-lg:w-11 transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="order-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-white transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40 max-lg:h-11 max-lg:w-11"
               >
                 <ArrowUp size={18} aria-hidden />
               </button>
             </form>
-            {speech.supported && (
-              // The speaker button in the row needs the room on phones, so its job moves here.
-              <button
-                type="button"
-                onClick={() => (speaking ? stopReply() : setRepliesOn(!repliesOn))}
-                className="mx-auto mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted hover:text-accent-ink sm:hidden"
-              >
-                {repliesOn ? <Volume2 size={14} aria-hidden /> : <VolumeX size={14} aria-hidden />}
-                {speaking ? "Stop Speaking" : `Spoken Replies: ${repliesOn ? "On" : "Off"}`}
-              </button>
-            )}
             {(speech.listening || speech.error) && (
               <p role={speech.error ? "alert" : "status"} className={`mt-2 text-center text-xs ${speech.error ? "text-loss" : "text-muted"}`}>
                 {speech.error || "Listening. Press the stop button when you're done, then review and send. Your browser's speech service hears the audio."}
