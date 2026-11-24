@@ -33,7 +33,7 @@ Phase 6 (voice navigation) is built too: the call now lives in `AdvisorCallProvi
 | 3 | `apps/web/src/lib/useVoiceCall.ts` | Drives the reducer: recognition, silence timer, send, speak, goodbye, clock |
 | 3 | `apps/web/src/lib/useMicLevel.ts` | Writes mic loudness to a `--level` CSS variable for the orb |
 | 3 | `apps/web/src/app/(app)/advisor/VoiceCall.tsx`, `apps/web/src/components/voice/AdvisorOrb.tsx`, end of `globals.css` | The call sheet and the orb (`.voice-*` styles, tokens only). The sheet is a dialog with a focus trap, Esc to end, Space to interrupt, and a body scroll lock |
-| 3 | `AdvisorClient.tsx` | `send` now takes `{ voice, autoSpeak, restoreDraft }` and returns the saved reply or `{ error }`. `startCall`, `sendTurn`, `speakTurn` and `closeCall` drive the sheet. Call button in the input row, "Talk to Your Advisor" on the empty state, and below 640px the speaker toggle becomes a text button under the form |
+| 3 | `AdvisorClient.tsx` | `send` now takes `{ voice, autoSpeak, restoreDraft }` and returns the saved reply or `{ error }`. `startCall`, `sendTurn`, `speakTurn` and `closeCall` drive the sheet. Call button in the input row, "Talk to Your Advisor" on the empty state, and in the input row Call is at the left with Dictate and Mute side by side beside Send (on a phone the message takes the first row and the buttons the second) |
 
 ## Decisions already made (do not re-ask)
 
