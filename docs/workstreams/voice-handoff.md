@@ -29,7 +29,7 @@ Phase 6 (voice navigation) is built too: the call now lives in `AdvisorCallProvi
 | 2 | `apps/api/src/app.test.ts` (end) | Two tests for spoken replies |
 | 2 | `apps/web/src/lib/useSpokenReplies.ts` | Plays a reply through one persistent `Audio` element, prefetching the next chunk, with a browser-voice fallback. Exposes `enabled`, `setEnabled`, `speaking`, `prime`, `speak(conversationId, message)`, `stop` |
 | 2 | `AdvisorClient.tsx` | Mic button, speaker toggle, `dictated` ref, replies spoken only after dictation |
-| 3 | `apps/web/src/lib/voice-call.ts` (+ test) | **Done.** Pure reducer `callReducer` with phases `listening \| thinking \| speaking \| ending`, constants `CALL_LIMIT_MS` (5 min), `CALL_WARN_MS` (30 s), `SILENCE_MS` (1.5 s), `GOODBYE`, `formatClock` |
+| 3 | `apps/web/src/lib/voice-call.ts` (+ test) | **Done.** Pure reducer `callReducer` with phases `listening \| thinking \| speaking \| ending`, constants `CALL_LIMIT_MS` (5 min), `CALL_WARN_MS` (30 s), `SILENCE_MS` (15 s), `GOODBYE`, `formatClock` |
 | 3 | `apps/web/src/lib/useVoiceCall.ts` | Drives the reducer: recognition, silence timer, send, speak, goodbye, clock |
 | 3 | `apps/web/src/lib/useMicLevel.ts` | Writes mic loudness to a `--level` CSS variable for the orb |
 | 3 | `apps/web/src/app/(app)/advisor/VoiceCall.tsx`, `apps/web/src/components/voice/AdvisorOrb.tsx`, end of `globals.css` | The call sheet and the orb (`.voice-*` styles, tokens only). The sheet is a dialog with a focus trap, Esc to end, Space to interrupt, and a body scroll lock |
@@ -44,7 +44,7 @@ Phase 1 and 2: see `docs/DECISIONS.md`. Phase 3, chosen by the dashboard owner o
 | Where the call lives | Full-screen sheet over the Advisor page. Ending it returns to the same conversation, transcript already saved |
 | Center visual | **Glowing orb** (the owner first picked an avatar, then said "let's use the orb for now"). An avatar can come later |
 | Turn-taking | Half-duplex: the mic is off while the Advisor speaks, because browser speech recognition cannot cancel echo. Tap the orb or press Space to interrupt |
-| End of a turn | About 1.5 seconds of silence |
+| End of a turn | 15 seconds of silence (changed from 1.5 on 2026-11-24) |
 | On screen | Live captions for both sides, plus the Advisor's chart cards (`AdvisorVisual`) sliding in under the orb |
 | Entry points | A Call button in the input row **and** a hero "Talk to Your Advisor" button on the empty state |
 | The cap | 5 minutes. A timer ring, a notice at 30 seconds left, then a spoken goodbye and the call closes |
