@@ -12,7 +12,7 @@ export const CALL_LIMIT_MS = 5 * 60_000;
 /** A notice appears this long before the end. */
 export const CALL_WARN_MS = 30_000;
 /** This much silence after the visitor's last word ends their turn. */
-export const SILENCE_MS = 1_500;
+export const SILENCE_MS = 15_000;
 
 export const GOODBYE = "That's the time limit for this call. Your conversation is saved in the chat.";
 export const WARNING_NOTICE = "30 seconds left in this call.";
